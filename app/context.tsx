@@ -5,14 +5,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // === DUMMY DATA ===
 export const CATEGORIES = ['All', 'Trending', 'Music', 'Movies', 'Drama', 'Sports', 'Crypto', 'Tech', 'Entertainment'];
 
+// ZDE JE TVŮJ PŮVODNÍ ZACHRÁNĚNÝ KÓD:
 export const MARKETS = [
-  // Zde jsou opravené přesné názvy tvých souborů z public složky
-  { id: 1, title: 'Will Taylor Swift & Travis Kelce get engaged?', volumeUsd: 1200000, volume: '$1.2M', endDate: 'Dec 31, 2026', category: 'Music', imageUrl: '/taylor.jpeg' },
-  { id: 2, title: 'Will Jake Paul knock out Mike Tyson?', volumeUsd: 850000, volume: '$850K', endDate: 'Jul 20, 2026', category: 'Sports', imageUrl: '/paul-tyson.jpg' },
-  { id: 3, title: 'Will Kylie Jenner announce another pregnancy this year?', volumeUsd: 420000, volume: '$420K', endDate: 'Dec 31, 2026', category: 'Entertainment', imageUrl: '/kylie.jpeg' },
-  { id: 4, title: 'Will TikTok be officially banned in the EU?', volumeUsd: 2100000, volume: '$2.1M', endDate: 'Dec 31, 2026', category: 'Tech', imageUrl: '/tiktok.png' },
-  { id: 5, title: 'Will MrBeast reach 500M subscribers by 2027?', volumeUsd: 3400000, volume: '$3.4M', endDate: 'Dec 31, 2026', category: 'Entertainment', imageUrl: '/mrbeast.jpeg' },
-  { id: 6, title: 'Will Ben Affleck & JLO finalize divorce this year?', volumeUsd: 150000, volume: '$150K', endDate: 'Dec 31, 2026', category: 'Drama', imageUrl: '/affleck.jpeg' },
+  { id: 1, category: 'Drama', imageUrl: '/taylor.jpeg', title: "Will Taylor Swift & Travis Kelce get engaged?", vibePrice: 0.73, noVibePrice: 0.27, volume: "$1.2M", volumeUsd: 1200000, endDate: "Dec 31, 2026" },
+  { id: 2, category: 'Sports', imageUrl: '/paul-tyson.jpg', title: "Will Jake Paul knock out Mike Tyson?", vibePrice: 0.45, noVibePrice: 0.55, volume: "$850K", volumeUsd: 850000, endDate: "Jul 20, 2026" },
+  { id: 3, category: 'Drama', imageUrl: '/kylie.jpeg', title: "Will Kylie Jenner announce another pregnancy this year?", vibePrice: 0.31, noVibePrice: 0.69, volume: "$420K", volumeUsd: 420000, endDate: "Dec 31, 2026" },
+  { id: 4, category: 'Tech', imageUrl: '/tiktok.png', title: "Will TikTok be officially banned in the EU?", vibePrice: 0.15, noVibePrice: 0.85, volume: "$2.1M", volumeUsd: 2100000, endDate: "Jan 1, 2027" },
+  { id: 5, category: 'Entertainment', imageUrl: '/mrbeast.jpeg', title: "Will MrBeast reach 500M subscribers by 2027?", vibePrice: 0.88, noVibePrice: 0.12, volume: "$3.4M", volumeUsd: 3400000, endDate: "Jan 1, 2027" },
+  { id: 6, category: 'Drama', imageUrl: '/affleck.jpeg', title: "Will Ben Affleck & JLo finalize divorce this month?", vibePrice: 0.92, noVibePrice: 0.08, volume: "$150K", volumeUsd: 150000, endDate: "Nov 30, 2026" }
 ];
 
 const INITIAL_MESSAGES = [
@@ -62,14 +62,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
   const [balance, setBalance] = useState(0);
+  
+  // Sladěno s tvými novými cenami z kódu
   const [marketPrices, setMarketPrices] = useState<Record<number, { vibe: number, noVibe: number }>>({
-    1: { vibe: 0.65, noVibe: 0.35 },
+    1: { vibe: 0.73, noVibe: 0.27 },
     2: { vibe: 0.45, noVibe: 0.55 },
-    3: { vibe: 0.80, noVibe: 0.20 },
-    4: { vibe: 0.30, noVibe: 0.70 },
-    5: { vibe: 0.90, noVibe: 0.10 },
-    6: { vibe: 0.60, noVibe: 0.40 },
+    3: { vibe: 0.31, noVibe: 0.69 },
+    4: { vibe: 0.15, noVibe: 0.85 },
+    5: { vibe: 0.88, noVibe: 0.12 },
+    6: { vibe: 0.92, noVibe: 0.08 },
   });
+  
   const [myBets, setMyBets] = useState<Array<{ marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number, entryPrice: number }>>([]);
   const [chatMessages, setChatMessages] = useState(INITIAL_MESSAGES);
   const [selectedMarket, setSelectedMarket] = useState<any | null>(null);
@@ -93,7 +96,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setBalance(500);
     alert(`Wallet Connected: ${mockAddress.slice(0, 6)}...${mockAddress.slice(-4)}\nYou received 500 USDC demo funds!`);
     
-    // Přidání hráče do žebříčku po přihlášení
     setDynamicLeaderboard(prev => {
       if (prev.find(u => u.id === 'me')) return prev;
       return [...prev, {
@@ -113,7 +115,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setWalletAddress("");
     setBalance(0);
     setMyBets([]);
-    setDynamicLeaderboard(INITIAL_LEADERBOARD); // Odstranění z žebříčku po odhlášení
+    setDynamicLeaderboard(INITIAL_LEADERBOARD);
   };
 
   const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE') => {
@@ -127,7 +129,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const currentPrice = type === 'VYBE' ? marketPrices[marketId].vibe : marketPrices[marketId].noVibe;
     setMyBets(prev => [...prev, { marketId, type, amount: betAmount, entryPrice: currentPrice }]);
 
-    // Update ceny na trhu po sázce (jednoduchá simulace AMM)
     setMarketPrices(prev => {
       const p = prev[marketId];
       if (type === 'VYBE') {
@@ -161,12 +162,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const resolveMarket = (marketId: number, outcome: 'VYBE' | 'NO_VYBE') => {
     setMarketStatus(prev => ({ ...prev, [marketId]: outcome }));
     
-    // Zjednodušené rozdělení výher (v reálu by bylo složitější)
     let winnings = 0;
     myBets.forEach(bet => {
       if (bet.marketId === marketId && bet.type === outcome) {
         const shares = bet.amount / bet.entryPrice;
-        winnings += (shares * 1); // 1 USDC za výherní share
+        winnings += (shares * 1);
       }
     });
 
@@ -174,7 +174,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setBalance(prev => prev + winnings);
       alert(`Market Resolved to ${outcome}! You won ${winnings.toFixed(2)} USDC!`);
       
-      // Update bodů v žebříčku
       setDynamicLeaderboard(prev => {
         const updated = prev.map(u => {
           if (u.id === 'me') return { ...u, points: u.points + Math.floor(winnings * 10) };
@@ -187,7 +186,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Aktualizace profilu v žebříčku, pokud si hráč změní jméno nebo fotku
   useEffect(() => {
     if (isLoggedIn) {
       setDynamicLeaderboard(prev => {
