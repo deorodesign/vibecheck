@@ -122,6 +122,8 @@ export default function Home() {
                 </button>
                 {isProfileOpen && (
                   <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    
+                    {/* Havička s peněženkou */}
                     <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
                       <div className="flex items-center justify-between mb-3">
                          <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Wallet</span>
@@ -139,18 +141,15 @@ export default function Home() {
                       </div>
                     </div>
                     
-                    {/* TADY JE TO NOVÉ TLAČÍTKO PROFILU S FILOZOFIÍ */}
-                    <div className="p-2 border-b border-zinc-100 dark:border-white/5">
-                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center justify-center gap-2 w-full px-3 py-3 text-[11px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-all">
-                        ⚡ Profile & Philosophy
-                      </Link>
-                    </div>
-
+                    {/* SEZNAM ODKAZŮ - Profil je teď hned na prvním místě! */}
                     <div className="p-2 flex flex-col gap-1">
+                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">
+                        <span>⚡</span> Profile & Philosophy
+                      </Link>
                       <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">How it Works</Link>
                       <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
                       <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
-                      <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
+                      <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
                     </div>
 
                     <div className="p-2 border-t border-zinc-100 dark:border-white/5">
@@ -158,6 +157,7 @@ export default function Home() {
                         Log Out
                       </button>
                     </div>
+
                   </div>
                 )}
               </div>
