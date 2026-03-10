@@ -175,8 +175,9 @@ export default function Profile() {
              </div>
 
              <div className="flex flex-col z-10 w-full overflow-hidden items-center md:items-start text-center md:text-left">
-               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-1 w-full">
-                 <h1 className="text-2xl md:text-4xl font-black italic uppercase text-zinc-900 dark:text-white tracking-tight break-all">
+               {/* OPRAVENÁ ČÁST PRO MOBIL - Zamezení přetékání jména a tužky */}
+               <div className="flex items-center justify-center md:justify-start gap-2 mb-1 w-full min-w-0">
+                 <h1 className="text-2xl md:text-4xl font-black italic uppercase text-zinc-900 dark:text-white tracking-tight truncate max-w-[75%] sm:max-w-none">
                    {nickname} 
                  </h1>
                  <button onClick={openSettings} className="text-xl md:text-2xl opacity-50 hover:opacity-100 hover:scale-110 transition-all cursor-pointer shrink-0">✏️</button>
