@@ -6,12 +6,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export const CATEGORIES = ['All', 'Trending', 'Music', 'Movies', 'Drama', 'Sports', 'Crypto', 'Tech', 'Entertainment'];
 
 export const MARKETS = [
-  { id: 1, title: 'Will Taylor Swift & Travis Kelce get engaged?', volumeUsd: 1200000, volume: '$1.2M', endDate: 'Dec 31, 2026', category: 'Music', imageUrl: 'https://images.unsplash.com/photo-1493225457224-05c21565576a?q=80&w=2653&auto=format&fit=crop' },
-  { id: 2, title: 'Will Jake Paul knock out Mike Tyson?', volumeUsd: 850000, volume: '$850K', endDate: 'Jul 20, 2026', category: 'Sports', imageUrl: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=2574&auto=format&fit=crop' },
-  { id: 3, title: 'Will Kylie Jenner announce another pregnancy this year?', volumeUsd: 420000, volume: '$420K', endDate: 'Dec 31, 2026', category: 'Entertainment', imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=2520&auto=format&fit=crop' },
-  { id: 4, title: 'Will TikTok be officially banned in the EU?', volumeUsd: 2100000, volume: '$2.1M', endDate: 'Dec 31, 2026', category: 'Tech', imageUrl: 'https://images.unsplash.com/photo-1611605698335-8b1569810432?q=80&w=2574&auto=format&fit=crop' },
-  { id: 5, title: 'Will MrBeast reach 500M subscribers by 2027?', volumeUsd: 3400000, volume: '$3.4M', endDate: 'Dec 31, 2026', category: 'Entertainment', imageUrl: 'https://images.unsplash.com/photo-1585007600263-71228e40c8d1?q=80&w=2670&auto=format&fit=crop' },
-  { id: 6, title: 'Will Ben Affleck & JLO finalize divorce this year?', volumeUsd: 150000, volume: '$150K', endDate: 'Dec 31, 2026', category: 'Drama', imageUrl: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=2670&auto=format&fit=crop' },
+  // TADY JSOU ZPĚT LOKÁLNÍ ODKAZY NA OBRÁZKY
+  // (Pokud se ti na webu nenačtou, stačí tady upravit název souboru podle toho, jak ho máš pojmenovaný ve složce public)
+  { id: 1, title: 'Will Taylor Swift & Travis Kelce get engaged?', volumeUsd: 1200000, volume: '$1.2M', endDate: 'Dec 31, 2026', category: 'Music', imageUrl: '/taylor.png' },
+  { id: 2, title: 'Will Jake Paul knock out Mike Tyson?', volumeUsd: 850000, volume: '$850K', endDate: 'Jul 20, 2026', category: 'Sports', imageUrl: '/jake.png' },
+  { id: 3, title: 'Will Kylie Jenner announce another pregnancy this year?', volumeUsd: 420000, volume: '$420K', endDate: 'Dec 31, 2026', category: 'Entertainment', imageUrl: '/kylie.png' },
+  { id: 4, title: 'Will TikTok be officially banned in the EU?', volumeUsd: 2100000, volume: '$2.1M', endDate: 'Dec 31, 2026', category: 'Tech', imageUrl: '/tiktok.png' },
+  { id: 5, title: 'Will MrBeast reach 500M subscribers by 2027?', volumeUsd: 3400000, volume: '$3.4M', endDate: 'Dec 31, 2026', category: 'Entertainment', imageUrl: '/mrbeast.png' },
+  { id: 6, title: 'Will Ben Affleck & JLO finalize divorce this year?', volumeUsd: 150000, volume: '$150K', endDate: 'Dec 31, 2026', category: 'Drama', imageUrl: '/ben.png' },
 ];
 
 const INITIAL_MESSAGES = [
