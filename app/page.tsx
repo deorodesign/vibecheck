@@ -16,7 +16,6 @@ export default function Home() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [flexMarket, setFlexMarket] = useState<any>(null);
   
-  // NOVÉ STAVY PRO SÁZKU
   const [betAmount, setBetAmount] = useState<string>("10");
   const [chatInput, setChatInput] = useState("");
   
@@ -51,18 +50,18 @@ export default function Home() {
     prevChatLengthRef.current = marketChat.length;
   }, [selectedMarket, marketChat.length]);
 
-  // UPRAVENÁ FUNKCE PRO SÁZKU S VLASTNÍ ČÁSTKOU
   const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
     e.stopPropagation();
-    const amount = parseFloat(betAmount);
+    const amountToBet = parseFloat(betAmount);
+    
     if (!isLoggedIn) {
       connectWallet();
-    } else if (isNaN(amount) || amount <= 0) {
-      alert("Please enter a valid amount");
-    } else if (amount > balance) {
+    } else if (isNaN(amountToBet) || amountToBet <= 0) {
+      alert("Please enter a valid amount.");
+    } else if (amountToBet > balance) {
       alert("Insufficient balance!");
     } else {
-      placeBet(marketId, type, amount); // Předáváme reálnou částku
+      placeBet(marketId, type, amountToBet);
     }
   };
 
@@ -136,6 +135,17 @@ export default function Home() {
                            <p className="text-zinc-900 dark:text-white font-bold text-sm italic uppercase truncate">{walletAddress}</p>
                          </div>
                       </div>
+                    </div>
+                    <div className="p-2 border-b border-zinc-100 dark:border-white/5">
+                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="block w-full text-center px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">
+                        View Profile ➔
+                      </Link>
+                    </div>
+                    <div className="p-2 flex flex-col gap-1">
+                      <Link href="/terms#technology" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Technology</Link>
+                      <Link href="/terms#policies" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Policies</Link>
+                      <Link href="/terms#rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules</Link>
+                      <Link href="/terms#rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Rewards</Link>
                     </div>
                     <div className="p-2 border-t border-zinc-100 dark:border-white/5">
                       <button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2.5 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-500/10 rounded-xl transition-colors">
@@ -235,6 +245,7 @@ export default function Home() {
             <div className="w-full h-[200px] md:h-[280px] rounded-[2rem] overflow-hidden relative shadow-xl border border-zinc-200 dark:border-white/5">
               <img src={selectedMarket.imageUrl} alt={selectedMarket.title} className={`absolute inset-0 w-full h-full object-cover ${isResolved ? 'grayscale' : ''}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-50/40 dark:from-[#0e0e12] dark:via-[#0e0e12]/40 to-transparent transition-colors duration-500"></div>
+              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-widest border border-white/10 z-20 shadow-lg">Vol: {selectedMarket.volume}</div>
             </div>
 
             <div className="flex flex-col gap-5 -mt-16 md:-mt-20 relative z-10 px-0 md:px-8">
@@ -243,7 +254,6 @@ export default function Home() {
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-5 md:p-6 shadow-md mx-4 md:mx-0">
                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Current Vybe Check</h3>
                 
-                {/* GRAF */}
                 <div className="relative h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center shadow-inner mb-6 border border-zinc-200 dark:border-white/5">
                   <div className="h-full bg-green-500 flex items-center px-4 justify-start relative shadow-[0_0_20px_rgba(34,197,94,0.6)] transition-all duration-500 ease-out" style={{ width: `${currentPrices.vibe * 100}%` }}>
                     <span className="text-white dark:text-black font-black italic text-sm z-10">{(currentPrices.vibe * 100).toFixed(0)}%</span>
@@ -253,7 +263,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* NOVÁ SEKCE PRO VÝBĚR ČÁSTKY */}
                 {!isResolved && (
                   <div className="mb-6 p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5">
                     <div className="flex justify-between items-center mb-3">
@@ -300,6 +309,7 @@ export default function Home() {
                   )}
                 </div>
               </div>
+              
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-6 md:p-8 shadow-md mx-4 md:mx-0">
                 <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4">Resolution Rules</h3>
                 <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
@@ -310,6 +320,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] shadow-md mx-4 md:mx-0 overflow-hidden flex flex-col h-[400px]">
                 <div className="p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between">
                    <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight flex items-center gap-2"><span className="text-xl">💬</span> Live Chat</h3>

@@ -16,20 +16,15 @@ export const MARKETS = [
 
 const INITIAL_MESSAGES = [
   { id: 1, marketId: 1, user: 'CryptoBro', text: 'She is wearing the ring already 👀', avatar: '', color: 'text-fuchsia-500', timestamp: '2026-03-01T10:00:00Z' },
-  { id: 2, marketId: 1, user: 'Swiftie99', text: 'No way, they are focusing on careers rn.', avatar: '', color: 'text-orange-500', timestamp: '2026-03-01T10:05:00Z' },
-  { id: 3, marketId: 2, user: 'FightFan', text: 'Jake has youth, but Mike has power. 50/50 tbh.', avatar: '', color: 'text-blue-500', timestamp: '2026-03-02T12:00:00Z' },
-  { id: 4, marketId: 4, user: 'TechInsider', text: 'EU regulations are getting strict, it might actually happen.', avatar: '', color: 'text-emerald-500', timestamp: '2026-03-03T09:30:00Z' }
+  { id: 2, marketId: 1, user: 'Swiftie99', text: 'No way, they are focusing on careers rn.', avatar: '', color: 'text-orange-500', timestamp: '2026-03-01T10:05:00Z' }
 ];
 
 const INITIAL_LEADERBOARD = [
   { id: '1', rank: 1, name: 'CryptoBro', address: '0x7f...92a1', points: 24500, color: 'from-yellow-400 to-yellow-600', avatar: '' },
   { id: '2', rank: 2, name: 'Satoshi99', address: '0x1A...4b2C', points: 18200, color: 'from-zinc-300 to-zinc-500', avatar: '' },
   { id: '3', rank: 3, name: 'VybeKing', address: '0x9C...11dF', points: 15840, color: 'from-orange-400 to-orange-600', avatar: '' },
-  { id: '4', rank: 4, name: 'WhaleAlert', address: '0x4D...88eE', points: 12100, color: 'from-blue-400 to-blue-600', avatar: '' },
-  { id: '5', rank: 5, name: 'DegenTrader', address: '0x2B...55fA', points: 9450, color: 'from-purple-400 to-purple-600', avatar: '' },
 ];
 
-// === CONTEXT DEFINITION ===
 interface AppContextType {
   isLoggedIn: boolean;
   walletAddress: string;
@@ -38,10 +33,7 @@ interface AppContextType {
   handleLogout: () => void;
   marketPrices: Record<number, { vibe: number, noVibe: number }>;
   myBets: Array<{ marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number, entryPrice: number }>;
-  
-  // OPRAVA 1: amount je teď volitelný (má otazník), takže staré kódy nehodí chybu
   placeBet: (marketId: number, type: 'VYBE' | 'NO_VYBE', amount?: number) => void;
-  
   chatMessages: Array<any>;
   sendChatMessage: (marketId: number, text: string, senderNickname?: string, senderAvatar?: string) => void;
   selectedMarket: any | null;
@@ -99,15 +91,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     setDynamicLeaderboard(prev => {
       if (prev.find(u => u.id === 'me')) return prev;
-      return [...prev, {
-        id: 'me',
-        rank: 0,
-        name: nickname,
-        address: mockAddress.slice(0, 6) + '...' + mockAddress.slice(-4),
-        points: 0,
-        color: 'from-fuchsia-500 to-orange-500',
-        avatar: avatarUrl
-      }].sort((a, b) => b.points - a.points).map((u, i) => ({ ...u, rank: i + 1 }));
+      return [...prev, { id: 'me', rank: 0, name: nickname, address: mockAddress.slice(0, 6) + '...' + mockAddress.slice(-4), points: 0, color: 'from-fuchsia-500 to-orange-500', avatar: avatarUrl }].sort((a, b) => b.points - a.points).map((u, i) => ({ ...u, rank: i + 1 }));
     });
   };
 
@@ -119,7 +103,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDynamicLeaderboard(INITIAL_LEADERBOARD);
   };
 
-  // OPRAVA 2: Fallback na 10 USDC a záchrana proti undefined (strict mode null check)
   const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number = 10) => {
     if (balance < amount) {
       alert("Insufficient funds!");
@@ -128,7 +111,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     setBalance(prev => prev - amount);
     
-    // Zde je pojistka, kdyby systém na chvíli market nenašel
     const currentMarketPrice = marketPrices[marketId] || { vibe: 0.5, noVibe: 0.5 };
     const currentPrice = type === 'VYBE' ? currentMarketPrice.vibe : currentMarketPrice.noVibe;
     
@@ -153,40 +135,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendChatMessage = (marketId: number, text: string, senderNickname: string = "PLAYER", senderAvatar: string = "") => {
-    const newMessage = {
-      id: Date.now(),
-      marketId,
-      user: senderNickname, 
-      text,
-      avatar: senderAvatar, 
-      color: "text-fuchsia-500", 
-      timestamp: new Date().toISOString()
-    };
+    const newMessage = { id: Date.now(), marketId, user: senderNickname, text, avatar: senderAvatar, color: "text-fuchsia-500", timestamp: new Date().toISOString() };
     setChatMessages(prev => [...prev, newMessage]);
   };
 
   const resolveMarket = (marketId: number, outcome: 'VYBE' | 'NO_VYBE') => {
     setMarketStatus(prev => ({ ...prev, [marketId]: outcome }));
-    
     let winnings = 0;
     myBets.forEach(bet => {
       if (bet.marketId === marketId && bet.type === outcome) {
-        const shares = bet.amount / bet.entryPrice;
-        winnings += (shares * 1);
+        winnings += (bet.amount / bet.entryPrice) * 1;
       }
     });
-
     if (winnings > 0) {
       setBalance(prev => prev + winnings);
       alert(`Market Resolved to ${outcome}! You won ${winnings.toFixed(2)} USDC!`);
-      
-      setDynamicLeaderboard(prev => {
-        const updated = prev.map(u => {
-          if (u.id === 'me') return { ...u, points: u.points + Math.floor(winnings * 10) };
-          return u;
-        });
-        return updated.sort((a, b) => b.points - a.points).map((u, i) => ({ ...u, rank: i + 1 }));
-      });
     } else {
       alert(`Market Resolved to ${outcome}. Better luck next time!`);
     }
@@ -194,26 +157,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoggedIn) {
-      setDynamicLeaderboard(prev => {
-        const exists = prev.find(u => u.id === 'me');
-        if (!exists) return prev;
-        const updated = prev.map(u => {
-          if (u.id === 'me') return { ...u, name: nickname, avatar: avatarUrl };
-          return u;
-        });
-        return updated;
-      });
+      setDynamicLeaderboard(prev => prev.map(u => u.id === 'me' ? { ...u, name: nickname, avatar: avatarUrl } : u));
     }
   }, [nickname, avatarUrl, isLoggedIn]);
 
   return (
-    <AppContext.Provider value={{
-      isLoggedIn, walletAddress, balance, connectWallet, handleLogout,
-      marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
-      selectedMarket, setSelectedMarket, avatarUrl, setAvatarUrl,
-      nickname, setNickname, isDarkMode, toggleDarkMode, addFunds,
-      marketStatus, resolveMarket, dynamicLeaderboard
-    }}>
+    <AppContext.Provider value={{ isLoggedIn, walletAddress, balance, connectWallet, handleLogout, marketPrices, myBets, placeBet, chatMessages, sendChatMessage, selectedMarket, setSelectedMarket, avatarUrl, setAvatarUrl, nickname, setNickname, isDarkMode, toggleDarkMode, addFunds, marketStatus, resolveMarket, dynamicLeaderboard }}>
       {children}
     </AppContext.Provider>
   );
