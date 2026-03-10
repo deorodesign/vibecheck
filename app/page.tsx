@@ -21,7 +21,10 @@ export default function Home() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const marketChat = selectedMarket ? chatMessages.filter((msg: any) => msg.marketId === selectedMarket.id) : [];  
+  
+  // Paměť pro správné scrollování
   const prevChatLengthRef = useRef(marketChat.length);
+  const prevMarketIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -33,16 +36,24 @@ export default function Home() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProfileOpen]);
 
+  // OPRAVENÁ LOGIKA SCROLLOVÁNÍ
   useEffect(() => {
-    if (selectedMarket) window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [selectedMarket]);
+    if (!selectedMarket) {
+      prevMarketIdRef.current = null;
+      return;
+    }
 
-  useEffect(() => {
-    if (selectedMarket && marketChat.length > prevChatLengthRef.current) {
+    if (selectedMarket.id !== prevMarketIdRef.current) {
+      // Pokud uživatel zrovna rozklikl novou kartu -> ZŮSTAŇ NAHOŘE
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      prevMarketIdRef.current = selectedMarket.id;
+    } else if (marketChat.length > prevChatLengthRef.current) {
+      // Pokud uživatel už na kartě je a přibyla zpráva -> SCROLLUJ DOLŮ V CHATU
       chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
+
     prevChatLengthRef.current = marketChat.length;
-  }, [marketChat.length, selectedMarket]);
+  }, [selectedMarket, marketChat.length]);
 
   const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
     e.stopPropagation();
@@ -208,7 +219,6 @@ export default function Home() {
     </div>
   );
 
-  // Vyskakovací okno pro FLEX je teď definované tady, aby k němu měly přístup obě části webu
   const flexModalContent = flexMarket && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setFlexMarket(null)}>
       <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
@@ -350,7 +360,6 @@ export default function Home() {
 
         </div>
         
-        {/* Zde je to přidané okno pro FLEX, teď bude fungovat i v detailu karty! */}
         {flexModalContent}
       </main>
     );
