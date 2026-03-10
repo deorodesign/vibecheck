@@ -8,7 +8,7 @@ export default function Home() {
   const { 
     isLoggedIn, walletAddress, balance, connectWallet, handleLogout,
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
-    selectedMarket, setSelectedMarket, avatarUrl, 
+    selectedMarket, setSelectedMarket, avatarUrl, nickname, // Přidán nickname z kontextu!
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard
   } = useAppContext();
 
@@ -20,7 +20,8 @@ export default function Home() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-const marketChat = selectedMarket ? chatMessages.filter((msg: any) => msg.marketId === selectedMarket.id) : [];  const prevChatLengthRef = useRef(marketChat.length);
+  const marketChat = selectedMarket ? chatMessages.filter((msg: any) => msg.marketId === selectedMarket.id) : [];  
+  const prevChatLengthRef = useRef(marketChat.length);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -49,9 +50,11 @@ const marketChat = selectedMarket ? chatMessages.filter((msg: any) => msg.market
     else placeBet(marketId, type);
   };
 
+  // Upravená funkce pro odeslání zprávy - teď posílá tvé skutečné jméno a fotku
   const handleSendChat = () => {
-    if (chatInput.trim() && selectedMarket) {
-      sendChatMessage(selectedMarket.id, chatInput);
+    if (chatInput.trim() && selectedMarket && isLoggedIn) {
+      // Předáváme nickname a avatarUrl přímo do funkce pro odeslání
+      sendChatMessage(selectedMarket.id, chatInput, nickname, avatarUrl);
       setChatInput("");
     }
   };
@@ -198,7 +201,6 @@ const marketChat = selectedMarket ? chatMessages.filter((msg: any) => msg.market
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                {/* OPRAVA CHYBY S TO LOCALESTRING */}
                 <span className={`font-black font-mono text-sm ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.points.toLocaleString('en-US')}</span>
               </div>
             </div>
@@ -301,9 +303,14 @@ const marketChat = selectedMarket ? chatMessages.filter((msg: any) => msg.market
                    ) : (
                      marketChat.map((msg: any) => (
                        <div key={msg.id} className="flex items-start gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                         {msg.avatar ? <img src={msg.avatar} alt={msg.user} className="w-5 h-5 rounded-full object-cover mt-1 flex-shrink-0" /> : <div className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-white/10 mt-1 flex-shrink-0"></div>}
+                         {/* Zobrazujeme opravdového avatara místo šedého kolečka */}
+                         {msg.avatar ? (
+                           <img src={msg.avatar} alt={msg.user} className="w-5 h-5 rounded-full object-cover mt-1 flex-shrink-0" />
+                         ) : (
+                           <div className={`w-5 h-5 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 mt-1 flex-shrink-0 opacity-80`}></div>
+                         )}
                          <div className="flex flex-col gap-1">
-                           <span className={`font-black uppercase tracking-widest text-[9px] ${msg.color}`}>{msg.user}</span>
+                           <span className={`font-black uppercase tracking-widest text-[9px] ${msg.color || 'text-fuchsia-500'}`}>{msg.user}</span>
                            <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed">{msg.text}</span>
                          </div>
                        </div>
