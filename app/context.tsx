@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 
 // === DUMMY DATA ===
 export const CATEGORIES = ['All', 'Trending', 'Music', 'Movies', 'Drama', 'Sports', 'Crypto', 'Tech', 'Entertainment'];
@@ -48,6 +48,7 @@ interface AppContextType {
   marketStatus: Record<number, 'VYBE' | 'NO_VYBE'>;
   resolveMarket: (marketId: number, outcome: 'VYBE' | 'NO_VYBE') => void;
   dynamicLeaderboard: Array<any>;
+  showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -57,6 +58,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [walletAddress, setWalletAddress] = useState("");
   const [balance, setBalance] = useState(0);
   
+  // TOAST STAV
+  const [toast, setToast] = useState<{msg: string, type: 'success' | 'error' | 'info'} | null>(null);
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const [marketPrices, setMarketPrices] = useState<Record<number, { vibe: number, noVibe: number }>>({
     1: { vibe: 0.73, noVibe: 0.27 },
     2: { vibe: 0.45, noVibe: 0.55 },
@@ -82,12 +87,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
+  // Funkce pro zobrazení moderní notifikace
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ msg, type });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
+
   const connectWallet = () => {
     setIsLoggedIn(true);
     const mockAddress = `0xbc88${Math.floor(Math.random() * 10000)}e4a3`;
     setWalletAddress(mockAddress);
     setBalance(500);
-    alert(`Wallet Connected: ${mockAddress.slice(0, 6)}...${mockAddress.slice(-4)}\nYou received 500 USDC demo funds!`);
+    showToast(`Wallet connected! You received 500 USDC demo funds.`, 'success');
     
     setDynamicLeaderboard(prev => {
       if (prev.find(u => u.id === 'me')) return prev;
@@ -101,11 +115,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setBalance(0);
     setMyBets([]);
     setDynamicLeaderboard(INITIAL_LEADERBOARD);
+    showToast("Logged out successfully.", "info");
   };
 
   const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number = 10) => {
     if (balance < amount) {
-      alert("Insufficient funds!");
+      showToast("Insufficient funds!", "error");
       return;
     }
     
@@ -126,12 +141,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    alert(`Successfully bought ${amount} USDC worth of ${type} shares!`);
+    showToast(`Successfully bought ${amount} USDC worth of ${type.replace('_', ' ')}!`, 'success');
   };
 
   const addFunds = () => {
     setBalance(prev => prev + 100);
-    alert("100 USDC Airdropped to your wallet!");
+    showToast("100 USDC Airdropped to your wallet!", "success");
   };
 
   const sendChatMessage = (marketId: number, text: string, senderNickname: string = "PLAYER", senderAvatar: string = "") => {
@@ -149,9 +164,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     if (winnings > 0) {
       setBalance(prev => prev + winnings);
-      alert(`Market Resolved to ${outcome}! You won ${winnings.toFixed(2)} USDC!`);
+      showToast(`Market Resolved to ${outcome}! You won ${winnings.toFixed(2)} USDC!`, 'success');
     } else {
-      alert(`Market Resolved to ${outcome}. Better luck next time!`);
+      showToast(`Market Resolved to ${outcome}. Better luck next time!`, 'info');
     }
   };
 
@@ -162,8 +177,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [nickname, avatarUrl, isLoggedIn]);
 
   return (
-    <AppContext.Provider value={{ isLoggedIn, walletAddress, balance, connectWallet, handleLogout, marketPrices, myBets, placeBet, chatMessages, sendChatMessage, selectedMarket, setSelectedMarket, avatarUrl, setAvatarUrl, nickname, setNickname, isDarkMode, toggleDarkMode, addFunds, marketStatus, resolveMarket, dynamicLeaderboard }}>
+    <AppContext.Provider value={{ isLoggedIn, walletAddress, balance, connectWallet, handleLogout, marketPrices, myBets, placeBet, chatMessages, sendChatMessage, selectedMarket, setSelectedMarket, avatarUrl, setAvatarUrl, nickname, setNickname, isDarkMode, toggleDarkMode, addFunds, marketStatus, resolveMarket, dynamicLeaderboard, showToast }}>
       {children}
+      
+      {/* Vykreslení TOAST okénka */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[9999] animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-full shadow-2xl border backdrop-blur-md whitespace-nowrap ${
+            toast.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400' :
+            toast.type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400' :
+            'bg-zinc-100/90 dark:bg-zinc-900/90 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white'
+          }`}>
+            <span className="text-lg">
+              {toast.type === 'success' ? '🔥' : toast.type === 'error' ? '🛑' : '💡'}
+            </span>
+            <span className="font-bold text-xs uppercase tracking-widest">{toast.msg}</span>
+          </div>
+        </div>
+      )}
     </AppContext.Provider>
   );
 }

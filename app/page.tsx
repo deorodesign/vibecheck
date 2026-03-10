@@ -9,7 +9,8 @@ export default function Home() {
     isLoggedIn, walletAddress, balance, connectWallet, handleLogout,
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
-    isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard
+    isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
+    showToast // NOVĚ NAČTENÁ FUNKCE PRO TOAST
   } = useAppContext();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -57,9 +58,9 @@ export default function Home() {
     if (!isLoggedIn) {
       connectWallet();
     } else if (isNaN(amountToBet) || amountToBet <= 0) {
-      alert("Please enter a valid amount.");
+      showToast("Please enter a valid amount.", "error"); // ZMĚNĚNO NA TOAST
     } else if (amountToBet > balance) {
-      alert("Insufficient balance!");
+      showToast("Insufficient balance!", "error"); // ZMĚNĚNO NA TOAST
     } else {
       placeBet(marketId, type, amountToBet);
     }
