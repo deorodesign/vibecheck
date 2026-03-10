@@ -87,13 +87,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
-  // Funkce pro zobrazení moderní notifikace
+  // Funkce pro zobrazení notifikace
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ msg, type });
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => {
       setToast(null);
-    }, 3000);
+    }, 3500); // Prodlouženo na 3.5s pro delší texty
   };
 
   const connectWallet = () => {
@@ -101,7 +101,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const mockAddress = `0xbc88${Math.floor(Math.random() * 10000)}e4a3`;
     setWalletAddress(mockAddress);
     setBalance(500);
-    showToast(`Wallet connected! You received 500 USDC demo funds.`, 'success');
+    showToast(`Wallet connected! You received 500 USDC.`, 'success');
     
     setDynamicLeaderboard(prev => {
       if (prev.find(u => u.id === 'me')) return prev;
@@ -141,7 +141,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    showToast(`Successfully bought ${amount} USDC worth of ${type.replace('_', ' ')}!`, 'success');
+    showToast(`Bought ${amount} USDC of ${type.replace('_', ' ')}!`, 'success');
   };
 
   const addFunds = () => {
@@ -164,7 +164,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     if (winnings > 0) {
       setBalance(prev => prev + winnings);
-      showToast(`Market Resolved to ${outcome}! You won ${winnings.toFixed(2)} USDC!`, 'success');
+      showToast(`Market Resolved! You won ${winnings.toFixed(2)} USDC!`, 'success');
     } else {
       showToast(`Market Resolved to ${outcome}. Better luck next time!`, 'info');
     }
@@ -180,18 +180,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{ isLoggedIn, walletAddress, balance, connectWallet, handleLogout, marketPrices, myBets, placeBet, chatMessages, sendChatMessage, selectedMarket, setSelectedMarket, avatarUrl, setAvatarUrl, nickname, setNickname, isDarkMode, toggleDarkMode, addFunds, marketStatus, resolveMarket, dynamicLeaderboard, showToast }}>
       {children}
       
-      {/* Vykreslení TOAST okénka */}
+      {/* OPRAVENÉ TOAST OKNO - SOLIDNÍ BARVY A RESPONZIVNÍ ŠÍŘKA */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[9999] animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-full shadow-2xl border backdrop-blur-md whitespace-nowrap ${
-            toast.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400' :
-            toast.type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400' :
-            'bg-zinc-100/90 dark:bg-zinc-900/90 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white'
+        <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[9999] animate-in slide-in-from-bottom-8 fade-in duration-300 w-[90vw] max-w-sm pointer-events-none">
+          <div className={`flex items-center justify-center gap-3 px-5 py-4 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.4)] border ${
+            toast.type === 'success' ? 'bg-green-600 border-green-500 text-white' :
+            toast.type === 'error' ? 'bg-red-600 border-red-500 text-white' :
+            'bg-zinc-900 dark:bg-white border-zinc-700 dark:border-zinc-200 text-white dark:text-zinc-900'
           }`}>
-            <span className="text-lg">
-              {toast.type === 'success' ? '🔥' : toast.type === 'error' ? '🛑' : '💡'}
+            <span className="text-lg shrink-0">
+              {toast.type === 'success' ? '✅' : toast.type === 'error' ? '🛑' : '💡'}
             </span>
-            <span className="font-bold text-xs uppercase tracking-widest">{toast.msg}</span>
+            <span className="font-black text-[11px] uppercase tracking-widest leading-relaxed text-center">
+              {toast.msg}
+            </span>
           </div>
         </div>
       )}
