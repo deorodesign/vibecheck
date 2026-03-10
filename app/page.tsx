@@ -37,21 +37,18 @@ export default function Home() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProfileOpen]);
 
-  // OPRAVA SCROLLOVÁNÍ - Nyní se vždy zaručeně vrátí nahoru, když jsi na hlavní stránce
   useEffect(() => {
     if (!selectedMarket) {
       window.scrollTo({ top: 0, behavior: 'instant' });
       prevMarketIdRef.current = null;
       return;
     }
-
     if (selectedMarket.id !== prevMarketIdRef.current) {
       window.scrollTo({ top: 0, behavior: 'instant' });
       prevMarketIdRef.current = selectedMarket.id;
     } else if (marketChat.length > prevChatLengthRef.current) {
       chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-
     prevChatLengthRef.current = marketChat.length;
   }, [selectedMarket, marketChat.length]);
 
@@ -62,11 +59,9 @@ export default function Home() {
     if (!isLoggedIn) {
       connectWallet();
     } else if (isNaN(amountToBet) || amountToBet <= 0) {
-      if (showToast) showToast("Please enter a valid amount.", "error");
-      else alert("Please enter a valid amount.");
+      showToast("Please enter a valid amount.", "error");
     } else if (amountToBet > balance) {
-      if (showToast) showToast("Insufficient balance!", "error");
-      else alert("Insufficient balance!");
+      showToast("Insufficient balance!", "error");
     } else {
       placeBet(marketId, type, amountToBet);
     }
@@ -103,8 +98,7 @@ export default function Home() {
   const headerContent = (
     <div className="sticky top-0 z-50 w-full flex flex-col items-center px-4 md:px-8 pt-6 pb-4 bg-zinc-50/90 dark:bg-[#0e0e12]/90 backdrop-blur-xl border-b border-zinc-200 dark:border-white/5 transition-colors duration-500">
       <div className="w-full max-w-7xl flex justify-between items-center mb-6">
-        {/* LOGO S NÁVRATEM */}
-        <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-500 cursor-pointer" onClick={() => { setSelectedMarket(null); window.scrollTo({ top: 0, behavior: 'instant' }); }}>Vybecheck</h1>
+        <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-500 cursor-pointer" onClick={() => { setSelectedMarket(null); window.scrollTo(0, 0); }}>Vybecheck</h1>
         <div className="flex items-center gap-2 md:gap-3">
           <button onClick={toggleDarkMode} className="w-10 h-10 flex items-center justify-center rounded-full border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-sm active:scale-95 transition-all text-black dark:text-white">
             {isDarkMode ? "☀️" : "🌙"}
@@ -144,10 +138,20 @@ export default function Home() {
                          </div>
                       </div>
                     </div>
-                    <div className="p-2 flex flex-col gap-1">
-                      <Link href="/terms#technology" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Technology</Link>
-                      <Link href="/terms#rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Rewards</Link>
+                    <div className="p-2 border-b border-zinc-100 dark:border-white/5">
+                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="block w-full text-center px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">
+                        View Profile ➔
+                      </Link>
                     </div>
+                    
+                    {/* NOVÉ ODKAZY DO STRÁNEK */}
+                    <div className="p-2 flex flex-col gap-1">
+                      <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">How it Works</Link>
+                      <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
+                      <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
+                      <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
+                    </div>
+
                     <div className="p-2 border-t border-zinc-100 dark:border-white/5">
                       <button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2.5 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-500/10 rounded-xl transition-colors">
                         Log Out
@@ -176,7 +180,7 @@ export default function Home() {
         <h3 className="text-zinc-900 dark:text-white font-black italic uppercase mb-6 flex items-center gap-2 tracking-tight"><span className="text-xl">🔥</span> Hot Now</h3>
         <div className="flex flex-col gap-5">
           {MARKETS.slice(0, 3).map(m => (
-            <div key={m.id} onClick={() => { setSelectedMarket(m); window.scrollTo({ top: 0, behavior: 'instant' }); setIsProfileOpen(false); }} className="flex gap-4 items-center cursor-pointer group">
+            <div key={m.id} onClick={() => { setSelectedMarket(m); window.scrollTo(0, 0); setIsProfileOpen(false); }} className="flex gap-4 items-center cursor-pointer group">
               <img src={m.imageUrl} alt={m.title} className="w-12 h-12 rounded-xl object-cover shadow-sm group-hover:scale-105 transition-transform" />
               <div className="flex-1">
                 <p className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-2 leading-tight group-hover:text-fuchsia-500 transition-colors">{m.title}</p>
@@ -363,7 +367,7 @@ export default function Home() {
             const winningOutcome = marketStatus[market.id];
 
             return (
-              <div key={market.id} onClick={() => { setSelectedMarket(market); window.scrollTo({ top: 0, behavior: 'instant' }); setIsProfileOpen(false); }} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
+              <div key={market.id} onClick={() => { setSelectedMarket(market); window.scrollTo(0, 0); setIsProfileOpen(false); }} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
                 <div className="h-44 w-full shrink-0 relative overflow-hidden">
                   <img src={market.imageUrl} alt={market.title} className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
                   <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" />
