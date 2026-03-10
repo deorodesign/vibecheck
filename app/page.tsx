@@ -139,10 +139,10 @@ export default function Home() {
                       </div>
                     </div>
                     
-                    {/* TADY JE TO CHYBĚJÍCÍ TLAČÍTKO PROFILU */}
+                    {/* TADY JE TO NOVÉ TLAČÍTKO PROFILU S FILOZOFIÍ */}
                     <div className="p-2 border-b border-zinc-100 dark:border-white/5">
-                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="block w-full text-center px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">
-                        View Profile ➔
+                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center justify-center gap-2 w-full px-3 py-3 text-[11px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-all">
+                        ⚡ Profile & Philosophy
                       </Link>
                     </div>
 
