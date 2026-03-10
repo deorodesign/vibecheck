@@ -277,8 +277,8 @@ export default function Home() {
                         className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-3 font-mono font-bold text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white"
                         placeholder="0.00"
                       />
-                      <button onClick={() => setBetAmount("10")} className="shrink-0 px-3 sm:px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">+10</button>
-                      <button onClick={() => setBetAmount("50")} className="shrink-0 px-3 sm:px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">+50</button>
+                      <button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 10).toString())} className="shrink-0 px-3 sm:px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">+10</button>
+                      <button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 50).toString())} className="shrink-0 px-3 sm:px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">+50</button>
                     </div>
                   </div>
                 )}
