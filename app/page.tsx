@@ -8,7 +8,7 @@ export default function Home() {
   const { 
     isLoggedIn, walletAddress, balance, connectWallet, handleLogout,
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
-    selectedMarket, setSelectedMarket, avatarUrl, nickname, // Přidán nickname z kontextu!
+    selectedMarket, setSelectedMarket, avatarUrl, nickname,
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard
   } = useAppContext();
 
@@ -50,10 +50,8 @@ export default function Home() {
     else placeBet(marketId, type);
   };
 
-  // Upravená funkce pro odeslání zprávy - teď posílá tvé skutečné jméno a fotku
   const handleSendChat = () => {
     if (chatInput.trim() && selectedMarket && isLoggedIn) {
-      // Předáváme nickname a avatarUrl přímo do funkce pro odeslání
       sendChatMessage(selectedMarket.id, chatInput, nickname, avatarUrl);
       setChatInput("");
     }
@@ -283,11 +281,18 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* TADY JE TEN NOVÝ RÁMEČEK PRO SPECIFICKÁ PRAVIDLA */}
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-6 md:p-8 shadow-md mx-4 md:mx-0">
                 <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4">Resolution Rules</h3>
                 <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                  <p className="mb-2">This market will resolve to <strong>VYBE</strong> if the specified event officially occurs before the resolution date.</p>
-                  <p>The primary resolution source for this market will be official announcements, credible news publications, or on-chain data verification. If the event does not occur by {selectedMarket.endDate}, the market resolves to <strong>NO VYBE</strong>.</p>
+                  <p className="mb-3">This market will resolve to <strong className="text-green-500">VYBE</strong> if the specified event officially occurs before the resolution date.</p>
+                  
+                  <div className="p-3 bg-zinc-50 dark:bg-black/30 rounded-xl border border-zinc-200 dark:border-white/5 mb-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Resolution Source:</p>
+                    <p className="text-zinc-900 dark:text-zinc-200">{selectedMarket.resolutionSource}</p>
+                  </div>
+
+                  <p>If the event does not occur by <strong>{selectedMarket.endDate}</strong>, the market resolves to <strong className="text-red-500">NO VYBE</strong>.</p>
                 </div>
               </div>
 
@@ -303,7 +308,6 @@ export default function Home() {
                    ) : (
                      marketChat.map((msg: any) => (
                        <div key={msg.id} className="flex items-start gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                         {/* Zobrazujeme opravdového avatara místo šedého kolečka */}
                          {msg.avatar ? (
                            <img src={msg.avatar} alt={msg.user} className="w-5 h-5 rounded-full object-cover mt-1 flex-shrink-0" />
                          ) : (

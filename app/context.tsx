@@ -5,14 +5,13 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // === DUMMY DATA ===
 export const CATEGORIES = ['All', 'Trending', 'Music', 'Movies', 'Drama', 'Sports', 'Crypto', 'Tech', 'Entertainment'];
 
-// ZDE JE TVŮJ PŮVODNÍ ZACHRÁNĚNÝ KÓD:
 export const MARKETS = [
-  { id: 1, category: 'Drama', imageUrl: '/taylor.jpeg', title: "Will Taylor Swift & Travis Kelce get engaged?", vibePrice: 0.73, noVibePrice: 0.27, volume: "$1.2M", volumeUsd: 1200000, endDate: "Dec 31, 2026" },
-  { id: 2, category: 'Sports', imageUrl: '/paul-tyson.jpg', title: "Will Jake Paul knock out Mike Tyson?", vibePrice: 0.45, noVibePrice: 0.55, volume: "$850K", volumeUsd: 850000, endDate: "Jul 20, 2026" },
-  { id: 3, category: 'Drama', imageUrl: '/kylie.jpeg', title: "Will Kylie Jenner announce another pregnancy this year?", vibePrice: 0.31, noVibePrice: 0.69, volume: "$420K", volumeUsd: 420000, endDate: "Dec 31, 2026" },
-  { id: 4, category: 'Tech', imageUrl: '/tiktok.png', title: "Will TikTok be officially banned in the EU?", vibePrice: 0.15, noVibePrice: 0.85, volume: "$2.1M", volumeUsd: 2100000, endDate: "Jan 1, 2027" },
-  { id: 5, category: 'Entertainment', imageUrl: '/mrbeast.jpeg', title: "Will MrBeast reach 500M subscribers by 2027?", vibePrice: 0.88, noVibePrice: 0.12, volume: "$3.4M", volumeUsd: 3400000, endDate: "Jan 1, 2027" },
-  { id: 6, category: 'Drama', imageUrl: '/affleck.jpeg', title: "Will Ben Affleck & JLo finalize divorce this month?", vibePrice: 0.92, noVibePrice: 0.08, volume: "$150K", volumeUsd: 150000, endDate: "Nov 30, 2026" }
+  { id: 1, category: 'Drama', imageUrl: '/taylor.jpeg', title: "Will Taylor Swift & Travis Kelce get engaged?", vibePrice: 0.73, noVibePrice: 0.27, volume: "$1.2M", volumeUsd: 1200000, endDate: "Dec 31, 2026", resolutionSource: "Official announcement via their social media accounts or confirmation by reputable outlets (People, TMZ)." },
+  { id: 2, category: 'Sports', imageUrl: '/paul-tyson.jpg', title: "Will Jake Paul knock out Mike Tyson?", vibePrice: 0.45, noVibePrice: 0.55, volume: "$850K", volumeUsd: 850000, endDate: "Jul 20, 2026", resolutionSource: "Official fight results announced in the ring and confirmed by the athletic commission." },
+  { id: 3, category: 'Drama', imageUrl: '/kylie.jpeg', title: "Will Kylie Jenner announce another pregnancy this year?", vibePrice: 0.31, noVibePrice: 0.69, volume: "$420K", volumeUsd: 420000, endDate: "Dec 31, 2026", resolutionSource: "Official confirmation directly from Kylie Jenner's social media or her official publicist." },
+  { id: 4, category: 'Tech', imageUrl: '/tiktok.png', title: "Will TikTok be officially banned in the EU?", vibePrice: 0.15, noVibePrice: 0.85, volume: "$2.1M", volumeUsd: 2100000, endDate: "Jan 1, 2027", resolutionSource: "Official legislative ruling published by the European Commission confirming a full ban." },
+  { id: 5, category: 'Entertainment', imageUrl: '/mrbeast.jpeg', title: "Will MrBeast reach 500M subscribers by 2027?", vibePrice: 0.88, noVibePrice: 0.12, volume: "$3.4M", volumeUsd: 3400000, endDate: "Jan 1, 2027", resolutionSource: "Subscriber count exactly as displayed on the official MrBeast YouTube channel." },
+  { id: 6, category: 'Drama', imageUrl: '/affleck.jpeg', title: "Will Ben Affleck & JLo finalize divorce this month?", vibePrice: 0.92, noVibePrice: 0.08, volume: "$150K", volumeUsd: 150000, endDate: "Nov 30, 2026", resolutionSource: "Public court records or official joint statement confirming the divorce is legally finalized." }
 ];
 
 const INITIAL_MESSAGES = [
@@ -63,7 +62,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [walletAddress, setWalletAddress] = useState("");
   const [balance, setBalance] = useState(0);
   
-  // Sladěno s tvými novými cenami z kódu
   const [marketPrices, setMarketPrices] = useState<Record<number, { vibe: number, noVibe: number }>>({
     1: { vibe: 0.73, noVibe: 0.27 },
     2: { vibe: 0.45, noVibe: 0.55 },
