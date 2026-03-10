@@ -139,7 +139,13 @@ export default function Home() {
                       </div>
                     </div>
                     
-                    {/* TOTO JSOU TY NOVÉ ODKAZY */}
+                    {/* TADY JE TO CHYBĚJÍCÍ TLAČÍTKO PROFILU */}
+                    <div className="p-2 border-b border-zinc-100 dark:border-white/5">
+                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="block w-full text-center px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">
+                        View Profile ➔
+                      </Link>
+                    </div>
+
                     <div className="p-2 flex flex-col gap-1">
                       <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">How it Works</Link>
                       <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
