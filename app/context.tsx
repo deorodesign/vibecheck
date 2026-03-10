@@ -38,7 +38,10 @@ interface AppContextType {
   handleLogout: () => void;
   marketPrices: Record<number, { vibe: number, noVibe: number }>;
   myBets: Array<{ marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number, entryPrice: number }>;
-  placeBet: (marketId: number, type: 'VYBE' | 'NO_VYBE') => void;
+  
+  // OPRAVA 1: amount je teď volitelný (má otazník), takže staré kódy nehodí chybu
+  placeBet: (marketId: number, type: 'VYBE' | 'NO_VYBE', amount?: number) => void;
+  
   chatMessages: Array<any>;
   sendChatMessage: (marketId: number, text: string, senderNickname?: string, senderAvatar?: string) => void;
   selectedMarket: any | null;
@@ -116,27 +119,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDynamicLeaderboard(INITIAL_LEADERBOARD);
   };
 
-  const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE') => {
-    if (balance < 10) {
-      alert("Insufficient funds! Minimum trade is 10 USDC.");
+  // OPRAVA 2: Fallback na 10 USDC a záchrana proti undefined (strict mode null check)
+  const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number = 10) => {
+    if (balance < amount) {
+      alert("Insufficient funds!");
       return;
     }
-    const betAmount = 10;
-    setBalance(prev => prev - betAmount);
     
-    const currentPrice = type === 'VYBE' ? marketPrices[marketId].vibe : marketPrices[marketId].noVibe;
-    setMyBets(prev => [...prev, { marketId, type, amount: betAmount, entryPrice: currentPrice }]);
+    setBalance(prev => prev - amount);
+    
+    // Zde je pojistka, kdyby systém na chvíli market nenašel
+    const currentMarketPrice = marketPrices[marketId] || { vibe: 0.5, noVibe: 0.5 };
+    const currentPrice = type === 'VYBE' ? currentMarketPrice.vibe : currentMarketPrice.noVibe;
+    
+    setMyBets(prev => [...prev, { marketId, type, amount: amount, entryPrice: currentPrice }]);
 
     setMarketPrices(prev => {
-      const p = prev[marketId];
+      const p = prev[marketId] || { vibe: 0.5, noVibe: 0.5 };
+      const moveFactor = Math.min(0.05, (amount / 500) * 0.1); 
       if (type === 'VYBE') {
-        return { ...prev, [marketId]: { vibe: Math.min(0.99, p.vibe + 0.02), noVibe: Math.max(0.01, p.noVibe - 0.02) } };
+        return { ...prev, [marketId]: { vibe: Math.min(0.99, p.vibe + moveFactor), noVibe: Math.max(0.01, p.noVibe - moveFactor) } };
       } else {
-        return { ...prev, [marketId]: { vibe: Math.max(0.01, p.vibe - 0.02), noVibe: Math.min(0.99, p.noVibe + 0.02) } };
+        return { ...prev, [marketId]: { vibe: Math.max(0.01, p.vibe - moveFactor), noVibe: Math.min(0.99, p.noVibe + moveFactor) } };
       }
     });
 
-    alert(`Successfully bought 10 USDC worth of ${type} shares at ${(currentPrice * 100).toFixed(0)}¢!`);
+    alert(`Successfully bought ${amount} USDC worth of ${type} shares!`);
   };
 
   const addFunds = () => {

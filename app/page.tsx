@@ -16,7 +16,10 @@ export default function Home() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [flexMarket, setFlexMarket] = useState<any>(null);
   
+  // NOVÉ STAVY PRO SÁZKU
+  const [betAmount, setBetAmount] = useState<string>("10");
   const [chatInput, setChatInput] = useState("");
+  
   const chatEndRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -48,10 +51,19 @@ export default function Home() {
     prevChatLengthRef.current = marketChat.length;
   }, [selectedMarket, marketChat.length]);
 
+  // UPRAVENÁ FUNKCE PRO SÁZKU S VLASTNÍ ČÁSTKOU
   const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
     e.stopPropagation();
-    if (!isLoggedIn) connectWallet();
-    else placeBet(marketId, type);
+    const amount = parseFloat(betAmount);
+    if (!isLoggedIn) {
+      connectWallet();
+    } else if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid amount");
+    } else if (amount > balance) {
+      alert("Insufficient balance!");
+    } else {
+      placeBet(marketId, type, amount); // Předáváme reálnou částku
+    }
   };
 
   const handleSendChat = () => {
@@ -124,10 +136,6 @@ export default function Home() {
                            <p className="text-zinc-900 dark:text-white font-bold text-sm italic uppercase truncate">{walletAddress}</p>
                          </div>
                       </div>
-                    </div>
-                    <div className="p-2 flex flex-col gap-1">
-                      <Link href="/terms#technology" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Technology</Link>
-                      <Link href="/terms#rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Rewards</Link>
                     </div>
                     <div className="p-2 border-t border-zinc-100 dark:border-white/5">
                       <button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2.5 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-500/10 rounded-xl transition-colors">
@@ -227,13 +235,15 @@ export default function Home() {
             <div className="w-full h-[200px] md:h-[280px] rounded-[2rem] overflow-hidden relative shadow-xl border border-zinc-200 dark:border-white/5">
               <img src={selectedMarket.imageUrl} alt={selectedMarket.title} className={`absolute inset-0 w-full h-full object-cover ${isResolved ? 'grayscale' : ''}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-50/40 dark:from-[#0e0e12] dark:via-[#0e0e12]/40 to-transparent transition-colors duration-500"></div>
-              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-widest border border-white/10 z-20 shadow-lg">Vol: {selectedMarket.volume}</div>
             </div>
 
             <div className="flex flex-col gap-5 -mt-16 md:-mt-20 relative z-10 px-0 md:px-8">
               <h1 className="text-3xl md:text-4xl font-black leading-tight tracking-tight text-zinc-900 dark:text-white uppercase italic drop-shadow-lg px-4 md:px-0">{selectedMarket.title}</h1>
+              
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-5 md:p-6 shadow-md mx-4 md:mx-0">
                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Current Vybe Check</h3>
+                
+                {/* GRAF */}
                 <div className="relative h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center shadow-inner mb-6 border border-zinc-200 dark:border-white/5">
                   <div className="h-full bg-green-500 flex items-center px-4 justify-start relative shadow-[0_0_20px_rgba(34,197,94,0.6)] transition-all duration-500 ease-out" style={{ width: `${currentPrices.vibe * 100}%` }}>
                     <span className="text-white dark:text-black font-black italic text-sm z-10">{(currentPrices.vibe * 100).toFixed(0)}%</span>
@@ -242,6 +252,28 @@ export default function Home() {
                     <span className="text-white dark:text-black font-black italic text-sm z-10">{(currentPrices.noVibe * 100).toFixed(0)}%</span>
                   </div>
                 </div>
+
+                {/* NOVÁ SEKCE PRO VÝBĚR ČÁSTKY */}
+                {!isResolved && (
+                  <div className="mb-6 p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5">
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount to Bet (USDC)</label>
+                      <span className="text-[10px] font-bold text-zinc-500">Bal: {balance.toFixed(2)}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input 
+                        type="number" 
+                        value={betAmount} 
+                        onChange={(e) => setBetAmount(e.target.value)}
+                        className="flex-1 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 font-mono font-bold text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white"
+                        placeholder="0.00"
+                      />
+                      <button onClick={() => setBetAmount("10")} className="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">10</button>
+                      <button onClick={() => setBetAmount("50")} className="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">50</button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-4">
                   {marketBetTotal > 0 && (
                     <div className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95">
@@ -251,19 +283,18 @@ export default function Home() {
                   )}
                   {isResolved ? (
                     <div className="w-full text-center p-6 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex flex-col items-center justify-center gap-2">
-                       <span className="text-xl">🛑</span>
-                       <h4 className="font-black italic uppercase text-zinc-900 dark:text-white">Market Resolved</h4>
+                       <h4 className="font-black italic uppercase text-zinc-900 dark:text-white text-xl">Market Resolved</h4>
                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-4">
                       <button onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className="group/btn flex flex-col items-center justify-center p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500 transition-all active:scale-95 shadow-sm">
                         <span className="text-green-600 dark:text-green-400 group-hover/btn:text-green-700 dark:group-hover/btn:text-black font-black text-xl md:text-2xl uppercase italic">VYBE</span>
-                        <span className="text-[10px] text-green-600/70 dark:text-green-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Buy @ {(currentPrices.vibe * 100).toFixed(0)}¢</span>
+                        <span className="text-[10px] text-green-600/70 dark:text-green-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {(currentPrices.vibe * 100).toFixed(0)}¢</span>
                       </button>
                       <button onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className="group/btn flex flex-col items-center justify-center p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500 transition-all active:scale-95 shadow-sm">
                         <span className="text-red-600 dark:text-red-400 group-hover/btn:text-red-700 dark:group-hover/btn:text-black font-black text-xl md:text-2xl uppercase italic">NO VYBE</span>
-                        <span className="text-[10px] text-red-600/70 dark:text-red-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Buy @ {(currentPrices.noVibe * 100).toFixed(0)}¢</span>
+                        <span className="text-[10px] text-red-600/70 dark:text-red-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {(currentPrices.noVibe * 100).toFixed(0)}¢</span>
                       </button>
                     </div>
                   )}
@@ -332,7 +363,6 @@ export default function Home() {
                 <div className="p-6 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
                   <h2 className="text-lg font-black leading-tight text-zinc-900 dark:text-white uppercase italic mb-4 line-clamp-2 h-12">{market.title}</h2>
                   
-                  {/* NOVÝ GRAF NA HLAVNÍ STRÁNCE */}
                   <div className="mb-4">
                     <div className="flex justify-between items-center mb-1.5 px-1">
                       <span className="text-[10px] font-black text-green-500 uppercase italic">{(currentPrices.vibe * 100).toFixed(0)}%</span>
