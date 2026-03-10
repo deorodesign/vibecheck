@@ -6,14 +6,13 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export const CATEGORIES = ['All', 'Trending', 'Music', 'Movies', 'Drama', 'Sports', 'Crypto', 'Tech', 'Entertainment'];
 
 export const MARKETS = [
-  // TADY JSOU ZPĚT LOKÁLNÍ ODKAZY NA OBRÁZKY
-  // (Pokud se ti na webu nenačtou, stačí tady upravit název souboru podle toho, jak ho máš pojmenovaný ve složce public)
-  { id: 1, title: 'Will Taylor Swift & Travis Kelce get engaged?', volumeUsd: 1200000, volume: '$1.2M', endDate: 'Dec 31, 2026', category: 'Music', imageUrl: '/taylor.png' },
-  { id: 2, title: 'Will Jake Paul knock out Mike Tyson?', volumeUsd: 850000, volume: '$850K', endDate: 'Jul 20, 2026', category: 'Sports', imageUrl: '/jake.png' },
-  { id: 3, title: 'Will Kylie Jenner announce another pregnancy this year?', volumeUsd: 420000, volume: '$420K', endDate: 'Dec 31, 2026', category: 'Entertainment', imageUrl: '/kylie.png' },
+  // Zde jsou opravené přesné názvy tvých souborů z public složky
+  { id: 1, title: 'Will Taylor Swift & Travis Kelce get engaged?', volumeUsd: 1200000, volume: '$1.2M', endDate: 'Dec 31, 2026', category: 'Music', imageUrl: '/taylor.jpeg' },
+  { id: 2, title: 'Will Jake Paul knock out Mike Tyson?', volumeUsd: 850000, volume: '$850K', endDate: 'Jul 20, 2026', category: 'Sports', imageUrl: '/paul-tyson.jpg' },
+  { id: 3, title: 'Will Kylie Jenner announce another pregnancy this year?', volumeUsd: 420000, volume: '$420K', endDate: 'Dec 31, 2026', category: 'Entertainment', imageUrl: '/kylie.jpeg' },
   { id: 4, title: 'Will TikTok be officially banned in the EU?', volumeUsd: 2100000, volume: '$2.1M', endDate: 'Dec 31, 2026', category: 'Tech', imageUrl: '/tiktok.png' },
-  { id: 5, title: 'Will MrBeast reach 500M subscribers by 2027?', volumeUsd: 3400000, volume: '$3.4M', endDate: 'Dec 31, 2026', category: 'Entertainment', imageUrl: '/mrbeast.png' },
-  { id: 6, title: 'Will Ben Affleck & JLO finalize divorce this year?', volumeUsd: 150000, volume: '$150K', endDate: 'Dec 31, 2026', category: 'Drama', imageUrl: '/ben.png' },
+  { id: 5, title: 'Will MrBeast reach 500M subscribers by 2027?', volumeUsd: 3400000, volume: '$3.4M', endDate: 'Dec 31, 2026', category: 'Entertainment', imageUrl: '/mrbeast.jpeg' },
+  { id: 6, title: 'Will Ben Affleck & JLO finalize divorce this year?', volumeUsd: 150000, volume: '$150K', endDate: 'Dec 31, 2026', category: 'Drama', imageUrl: '/affleck.jpeg' },
 ];
 
 const INITIAL_MESSAGES = [
@@ -146,14 +145,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     alert("100 USDC Airdropped to your wallet!");
   };
 
-  // ZDE JE TA UPRAVENÁ FUNKCE PRO CHAT:
   const sendChatMessage = (marketId: number, text: string, senderNickname: string = "PLAYER", senderAvatar: string = "") => {
     const newMessage = {
       id: Date.now(),
       marketId,
-      user: senderNickname, // Teď už to vezme tvé jméno z argumentu
+      user: senderNickname, 
       text,
-      avatar: senderAvatar, // A vezme to i tvou fotku z argumentu
+      avatar: senderAvatar, 
       color: "text-fuchsia-500", 
       timestamp: new Date().toISOString()
     };
