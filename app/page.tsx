@@ -10,7 +10,7 @@ export default function Home() {
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
-    showToast // NOVĚ NAČTENÁ FUNKCE PRO TOAST
+    showToast
   } = useAppContext();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -58,9 +58,9 @@ export default function Home() {
     if (!isLoggedIn) {
       connectWallet();
     } else if (isNaN(amountToBet) || amountToBet <= 0) {
-      showToast("Please enter a valid amount.", "error"); // ZMĚNĚNO NA TOAST
+      showToast("Please enter a valid amount.", "error");
     } else if (amountToBet > balance) {
-      showToast("Insufficient balance!", "error"); // ZMĚNĚNO NA TOAST
+      showToast("Insufficient balance!", "error");
     } else {
       placeBet(marketId, type, amountToBet);
     }
@@ -97,7 +97,9 @@ export default function Home() {
   const headerContent = (
     <div className="sticky top-0 z-50 w-full flex flex-col items-center px-4 md:px-8 pt-6 pb-4 bg-zinc-50/90 dark:bg-[#0e0e12]/90 backdrop-blur-xl border-b border-zinc-200 dark:border-white/5 transition-colors duration-500">
       <div className="w-full max-w-7xl flex justify-between items-center mb-6">
-        <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-500 cursor-pointer" onClick={() => setSelectedMarket(null)}>Vybecheck</h1>
+        {/* TADY JE TA OPRAVA LOGA - přidáno window.scrollTo */}
+        <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-500 cursor-pointer" onClick={() => { setSelectedMarket(null); window.scrollTo({ top: 0, behavior: 'instant' }); }}>Vybecheck</h1>
+        
         <div className="flex items-center gap-2 md:gap-3">
           <button onClick={toggleDarkMode} className="w-10 h-10 flex items-center justify-center rounded-full border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-sm active:scale-95 transition-all text-black dark:text-white">
             {isDarkMode ? "☀️" : "🌙"}
@@ -176,7 +178,7 @@ export default function Home() {
         <h3 className="text-zinc-900 dark:text-white font-black italic uppercase mb-6 flex items-center gap-2 tracking-tight"><span className="text-xl">🔥</span> Hot Now</h3>
         <div className="flex flex-col gap-5">
           {MARKETS.slice(0, 3).map(m => (
-            <div key={m.id} onClick={() => { setSelectedMarket(m); setIsProfileOpen(false); }} className="flex gap-4 items-center cursor-pointer group">
+            <div key={m.id} onClick={() => { setSelectedMarket(m); window.scrollTo({ top: 0, behavior: 'instant' }); setIsProfileOpen(false); }} className="flex gap-4 items-center cursor-pointer group">
               <img src={m.imageUrl} alt={m.title} className="w-12 h-12 rounded-xl object-cover shadow-sm group-hover:scale-105 transition-transform" />
               <div className="flex-1">
                 <p className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-2 leading-tight group-hover:text-fuchsia-500 transition-colors">{m.title}</p>
@@ -363,7 +365,7 @@ export default function Home() {
             const winningOutcome = marketStatus[market.id];
 
             return (
-              <div key={market.id} onClick={() => { setSelectedMarket(market); setIsProfileOpen(false); }} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
+              <div key={market.id} onClick={() => { setSelectedMarket(market); window.scrollTo({ top: 0, behavior: 'instant' }); setIsProfileOpen(false); }} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
                 <div className="h-44 w-full shrink-0 relative overflow-hidden">
                   <img src={market.imageUrl} alt={market.title} className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
                   <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" />
