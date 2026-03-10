@@ -274,11 +274,11 @@ export default function Home() {
                         type="number" 
                         value={betAmount} 
                         onChange={(e) => setBetAmount(e.target.value)}
-                        className="flex-1 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 font-mono font-bold text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white"
+                        className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-3 font-mono font-bold text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white"
                         placeholder="0.00"
                       />
-                      <button onClick={() => setBetAmount("10")} className="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">10</button>
-                      <button onClick={() => setBetAmount("50")} className="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">50</button>
+                      <button onClick={() => setBetAmount("10")} className="shrink-0 px-3 sm:px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">+10</button>
+                      <button onClick={() => setBetAmount("50")} className="shrink-0 px-3 sm:px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">+50</button>
                     </div>
                   </div>
                 )}
@@ -309,7 +309,6 @@ export default function Home() {
                   )}
                 </div>
               </div>
-              
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-6 md:p-8 shadow-md mx-4 md:mx-0">
                 <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4">Resolution Rules</h3>
                 <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
@@ -320,7 +319,6 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] shadow-md mx-4 md:mx-0 overflow-hidden flex flex-col h-[400px]">
                 <div className="p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between">
                    <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight flex items-center gap-2"><span className="text-xl">💬</span> Live Chat</h3>
