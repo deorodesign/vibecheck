@@ -163,41 +163,46 @@ export default function Profile() {
         
         <div className="w-full lg:flex-1 flex flex-col gap-8">
           
-          <div className="w-full bg-white dark:bg-[#18181b] rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-xl p-8 md:p-10 relative overflow-hidden flex items-center gap-6 md:gap-8">
+          <div className="w-full bg-white dark:bg-[#18181b] rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-xl p-6 md:p-10 relative overflow-hidden flex flex-col md:flex-row items-center gap-6 md:gap-8">
              <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-             <div className="w-24 h-24 md:w-32 md:h-32 rounded-full p-1 bg-gradient-to-tr from-fuchsia-500 to-orange-500 shadow-lg shrink-0">
+             
+             <div className="w-24 h-24 md:w-32 md:h-32 rounded-full p-1 bg-gradient-to-tr from-fuchsia-500 to-orange-500 shadow-lg shrink-0 z-10">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="User Avatar" className="w-full h-full rounded-full object-cover border-4 border-white dark:border-[#18181b]" />
                 ) : (
                   <div className="w-full h-full rounded-full bg-zinc-900 dark:bg-black border-4 border-white dark:border-[#18181b] flex items-center justify-center text-4xl md:text-5xl">👾</div>
                 )}
              </div>
-             <div className="flex flex-col z-10">
-               <h1 className="text-3xl md:text-4xl font-black italic uppercase text-zinc-900 dark:text-white flex items-center gap-3 tracking-tight mb-1">
-                 {nickname} 
-                 <button onClick={openSettings} className="text-xl md:text-2xl opacity-50 hover:opacity-100 hover:scale-110 transition-all cursor-pointer">✏️</button>
-               </h1>
-               <p className="text-xs font-mono text-zinc-500 mb-6">{shortAddress(walletAddress)}</p>
+
+             <div className="flex flex-col z-10 w-full overflow-hidden items-center md:items-start text-center md:text-left">
+               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-1 w-full">
+                 <h1 className="text-2xl md:text-4xl font-black italic uppercase text-zinc-900 dark:text-white tracking-tight break-all">
+                   {nickname} 
+                 </h1>
+                 <button onClick={openSettings} className="text-xl md:text-2xl opacity-50 hover:opacity-100 hover:scale-110 transition-all cursor-pointer shrink-0">✏️</button>
+               </div>
                
-               <div className="flex gap-4">
+               <p className="text-[10px] md:text-xs font-mono text-zinc-500 mb-6">{shortAddress(walletAddress)}</p>
+               
+               <div className="flex flex-wrap justify-center md:justify-start gap-4 md:gap-8 w-full">
                  <div>
-                   <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">Total Balance</p>
-                   <p className="text-2xl font-mono font-black text-zinc-900 dark:text-white">{balance.toFixed(2)} <span className="text-sm font-bold text-zinc-500">USDC</span></p>
+                   <p className="text-[9px] md:text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">Total Balance</p>
+                   <p className="text-xl md:text-2xl font-mono font-black text-zinc-900 dark:text-white">{balance.toFixed(2)} <span className="text-xs md:text-sm font-bold text-zinc-500">USDC</span></p>
                  </div>
                  
-                 <div className="pl-4 border-l border-zinc-200 dark:border-white/10">
-                   <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">Realized P&L</p>
+                 <div className="px-4 border-x md:border-r-0 border-zinc-200 dark:border-white/10">
+                   <p className="text-[9px] md:text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">Realized P&L</p>
                    <div className="flex flex-col">
-                     <span className={`text-2xl font-mono font-black ${totalPnL > 0 ? 'text-green-500' : totalPnL < 0 ? 'text-red-500' : 'text-zinc-500'}`}>
-                       {totalPnL > 0 ? '+' : ''}{totalPnL.toFixed(2)} <span className="text-sm font-bold opacity-70">USDC</span>
+                     <span className={`text-xl md:text-2xl font-mono font-black ${totalPnL > 0 ? 'text-green-500' : totalPnL < 0 ? 'text-red-500' : 'text-zinc-500'}`}>
+                       {totalPnL > 0 ? '+' : ''}{totalPnL.toFixed(2)} <span className="text-xs md:text-sm font-bold opacity-70">USDC</span>
                      </span>
-                     <span className="text-[10px] font-bold mt-0.5 tracking-widest text-zinc-500">
+                     <span className="text-[9px] font-bold mt-0.5 tracking-widest text-zinc-500">
                        <span className="text-green-500">{wins}W</span> / <span className="text-red-500">{losses}L</span>
                      </span>
                    </div>
                  </div>
 
-                 <div className="pl-4 border-l border-zinc-200 dark:border-white/10 hidden sm:block">
+                 <div className="hidden sm:block">
                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">Positions</p>
                    <p className="text-2xl font-mono font-black text-zinc-900 dark:text-white">{totalPositions}</p>
                  </div>
@@ -313,7 +318,6 @@ export default function Profile() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                    {/* OPRAVA: toLocaleString('en-US') */}
                     <span className={`font-black font-mono text-sm ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.points.toLocaleString('en-US')}</span>
                   </div>
                 </div>
