@@ -1,14 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Vložíme adresy přímo, aby je Next.js nemohl ignorovat
+const supabaseUrl = 'https://pjsyhytdguulabssuxmo.supabase.co'
+const supabaseKey = 'sb_publishable_qrGR0kONERt1eWf7opyV3w_JdHwVF8M'
 
-// Tohle nám do terminálu vypíše, jestli ty klíče vidí (jen pro test)
-if (!supabaseUrl || !supabaseKey) {
-  console.log("CHYBA: Klíče v .env.local nebyly nalezeny!");
-}
-
-export const supabase = createClient(
-  supabaseUrl || '', 
-  supabaseKey || ''
-)
+export const supabase = createClient(supabaseUrl, supabaseKey)
