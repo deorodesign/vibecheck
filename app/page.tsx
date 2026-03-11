@@ -10,7 +10,8 @@ export default function Home() {
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
-    showToast, isLoginModalOpen, setIsLoginModalOpen, loginWithTwitter
+    showToast, isLoginModalOpen, setIsLoginModalOpen, 
+    loginWithTwitter, loginWithDiscord, loginWithEmail // Správně vložené do Hooku!
   } = useAppContext();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -19,6 +20,7 @@ export default function Home() {
   
   const [betAmount, setBetAmount] = useState<string>("10");
   const [chatInput, setChatInput] = useState("");
+  const [emailInput, setEmailInput] = useState(""); // Stav pro Magic link
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -235,17 +237,40 @@ export default function Home() {
 
   const loginModalContent = isLoginModalOpen && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsLoginModalOpen(false)}>
-      <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-8 max-w-sm w-full shadow-2xl flex flex-col gap-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-         <div className="text-center">
+      <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+         <div className="text-center mb-2">
            <h2 className="text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">Log In</h2>
-           <p className="text-zinc-500 text-xs font-medium">Connect your socials to start trading culture.</p>
+           <p className="text-zinc-500 text-xs font-medium">Connect to start trading culture.</p>
          </div>
          
-         <button onClick={loginWithTwitter} className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-black text-white hover:bg-zinc-800 transition-all font-black uppercase tracking-widest text-sm shadow-md active:scale-95">
+         <button onClick={loginWithTwitter} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black hover:scale-105 transition-all font-black uppercase tracking-widest text-sm shadow-md active:scale-95">
            Continue with X
          </button>
          
-         <button onClick={() => setIsLoginModalOpen(false)} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors w-full">
+         <button onClick={loginWithDiscord} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-[#5865F2] text-white hover:bg-[#4752C4] hover:scale-105 transition-all font-black uppercase tracking-widest text-sm shadow-md active:scale-95">
+           Continue with Discord
+         </button>
+
+         <div className="relative flex items-center py-2">
+            <div className="flex-grow border-t border-zinc-200 dark:border-white/10"></div>
+            <span className="flex-shrink-0 mx-4 text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Or Email</span>
+            <div className="flex-grow border-t border-zinc-200 dark:border-white/10"></div>
+         </div>
+
+         <div className="flex flex-col gap-2">
+            <input 
+              type="email" 
+              placeholder="name@example.com"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors text-zinc-900 dark:text-white"
+            />
+            <button onClick={() => loginWithEmail(emailInput)} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-white/20 hover:scale-105 transition-all font-black uppercase tracking-widest text-sm active:scale-95">
+              Send Magic Link
+            </button>
+         </div>
+         
+         <button onClick={() => setIsLoginModalOpen(false)} className="mt-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors w-full">
            Cancel
          </button>
       </div>

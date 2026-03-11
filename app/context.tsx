@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from './lib/supabase'; // Tady importujeme náš nový databázový můstek!
+import { supabase } from './lib/supabase';
 
 export const MARKETS = [
   { id: 1, title: "Will Taylor Swift & Travis Kelce get engaged?", volume: "$1.2M", volumeUsd: 1200000, category: "Pop Culture", imageUrl: "https://images.unsplash.com/photo-1541250848049-b4f7141dca3f?q=80&w=800&auto=format&fit=crop", resolutionSource: "Official announcement on Instagram/X by either party." },
@@ -22,7 +22,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [nickname, setNickname] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false); // Nový stav pro okno
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [marketPrices, setMarketPrices] = useState<any>({});
   const [myBets, setMyBets] = useState<any[]>([]);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
@@ -38,21 +38,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     { id: 'me', rank: isLoggedIn ? 4 : 999, name: isLoggedIn ? nickname : 'PLAYER_ONE', address: isLoggedIn ? walletAddress : '0xbc...e4a3', points: isLoggedIn ? 12500 : 0, avatar: isLoggedIn ? avatarUrl : null, color: 'from-fuchsia-500 to-orange-500' },
   ].sort((a, b) => a.rank - b.rank);
 
-  // ZKONTROLUJEME PŘIHLÁŠENÍ V SUPABASE
   useEffect(() => {
     const checkUser = async (session: any) => {
       if (!session?.user) return;
-      
       const { user } = session;
       
-      // Zkusíme najít uživatele v naší tabulce
       let { data: dbUser, error } = await supabase.from('users').select('*').eq('id', user.id).single();
 
-      // Pokud ještě neexistuje, vytvoříme mu profil a dáme 500 USDC
       if (!dbUser) {
         const newUser = {
           id: user.id,
-          nickname: user.user_metadata.preferred_username || user.user_metadata.full_name || 'Vyber',
+          nickname: user.user_metadata.preferred_username || user.user_metadata.full_name || user.email?.split('@')[0] || 'Vyber',
           avatar_url: user.user_metadata.avatar_url || '',
           balance: 500.00,
           xp_points: 0
@@ -61,19 +57,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         dbUser = insertedUser;
       }
 
-      // Nastavíme aplikaci
       setIsLoggedIn(true);
-      setWalletAddress(dbUser.wallet_address || "Not set");
-      setBalance(dbUser.balance);
-      setNickname(dbUser.nickname);
-      setAvatarUrl(dbUser.avatar_url);
-      setIsLoginModalOpen(false); // Zavřeme okno
+      setWalletAddress(dbUser?.wallet_address || "Wallet not set");
+      setBalance(dbUser?.balance || 500);
+      setNickname(dbUser?.nickname || "Vyber");
+      setAvatarUrl(dbUser?.avatar_url || "");
+      setIsLoginModalOpen(false);
     };
 
-    // Zkontroluje relaci při startu
     supabase.auth.getSession().then(({ data: { session } }) => checkUser(session));
 
-    // Poslouchá na změny (přihlášení/odhlášení)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) checkUser(session);
       else setIsLoggedIn(false);
@@ -82,7 +75,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // INIT trhů (stejné jako předtím)
   useEffect(() => {
     if (Object.keys(marketPrices).length === 0) {
       const initialPrices: any = {};
@@ -97,18 +89,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // MÍSTO FAKE LOGU OTEVŘEME OKNO
-  const connectWallet = () => {
-    setIsLoginModalOpen(true);
+  const showToast = (text: string, type: 'success' | 'error') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // REÁLNÉ PŘIHLÁŠENÍ PŘES TWITTER
+  const connectWallet = () => setIsLoginModalOpen(true);
+
+  // --- LOGINS ---
   const loginWithTwitter = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'twitter',
-      options: { redirectTo: `${window.location.origin}/` }
-    });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'twitter', options: { redirectTo: `${window.location.origin}/` } });
     if (error) showToast("Error connecting to X.", "error");
+  };
+
+  const loginWithDiscord = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: `${window.location.origin}/` } });
+    if (error) showToast("Error connecting to Discord.", "error");
+  };
+
+  const loginWithEmail = async (email: string) => {
+    if (!email) {
+      showToast("Please enter an email address.", "error");
+      return;
+    }
+    const { error } = await supabase.auth.signInWithOtp({ email: email, options: { emailRedirectTo: `${window.location.origin}/` } });
+    if (error) {
+      showToast(error.message, "error");
+    } else {
+      showToast("Magic link sent! Check your email.", "success");
+      setIsLoginModalOpen(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -126,15 +136,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('dark');
   };
 
-  const showToast = (text: string, type: 'success' | 'error') => {
-    setToastMessage({ text, type });
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     setBalance(prev => prev - amount);
     setMyBets(prev => [...prev, { marketId, type, amount, entryPrice: marketPrices[marketId][type === 'VYBE' ? 'vibe' : 'noVibe'] * 100 }]);
-    
     setMarketPrices((prev: any) => {
       const current = prev[marketId];
       const move = Math.min(0.05, amount / 1000);
@@ -142,12 +146,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       newVibe = Math.max(0.01, Math.min(0.99, newVibe));
       return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
     });
-    showToast(`Successfully placed ${amount} USDC on ${type.replace('_', ' ')}!`, "success");
+    showToast(`Successfully placed ${amount} USDC!`, "success");
   };
 
   const sendChatMessage = (marketId: number, text: string, user: string, avatar: string) => {
-    const newMessage = { id: Date.now(), marketId, text, user, avatar, color: 'text-fuchsia-500' };
-    setChatMessages(prev => [...prev, newMessage]);
+    setChatMessages(prev => [...prev, { id: Date.now(), marketId, text, user, avatar, color: 'text-fuchsia-500' }]);
   };
 
   return (
@@ -156,7 +159,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
       selectedMarket, setSelectedMarket, avatarUrl, nickname,
       isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard, showToast,
-      isLoginModalOpen, setIsLoginModalOpen, loginWithTwitter // Exportujeme nové funkce
+      isLoginModalOpen, setIsLoginModalOpen, 
+      loginWithTwitter, loginWithDiscord, loginWithEmail // VYTAŽENÉ FUNKCE
     }}>
       {children}
       {toastMessage && (
