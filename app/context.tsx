@@ -108,7 +108,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       setIsLoggedIn(true);
-      setWalletAddress(dbUser?.wallet_address || "Wallet not set");
+      setWalletAddress(dbUser?.wallet_address || "0x" + user.id.substring(0, 6) + "..." + user.id.substring(user.id.length - 4));
       setBalance(dbUser?.balance || 500);
       setNickname(dbUser?.nickname || "Vyber");
       setAvatarUrl(dbUser?.avatar_url || "");
@@ -132,11 +132,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       initialPrices[1] = { vibe: 0.73, noVibe: 0.27 };
       setMarketPrices(initialPrices);
     }
-    if (typeof window !== 'undefined') {
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDarkMode(isDark);
-      if (isDark) document.documentElement.classList.add('dark');
-    }
   }, []);
 
   const showToast = (text: string, type: 'success' | 'error') => {
@@ -148,13 +143,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // --- LOGINS ---
   const loginWithTwitter = async () => {
-    // TADY JE TA OPRAVA Z 'twitter' NA 'x'
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'x', options: { redirectTo: `${window.location.origin}/` } });
+    // TADY JE TA DŮLEŽITÁ OPRAVA NA 'x'
+    const { error } = await supabase.auth.signInWithOAuth({ 
+      provider: 'x', 
+      options: { redirectTo: `${window.location.origin}/` } 
+    });
     if (error) showToast("Error connecting to X.", "error");
   };
 
   const loginWithDiscord = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: `${window.location.origin}/` } });
+    const { error } = await supabase.auth.signInWithOAuth({ 
+      provider: 'discord', 
+      options: { redirectTo: `${window.location.origin}/` } 
+    });
     if (error) showToast("Error connecting to Discord.", "error");
   };
 
@@ -163,7 +164,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       showToast("Please enter an email address.", "error");
       return;
     }
-    const { error } = await supabase.auth.signInWithOtp({ email: email, options: { emailRedirectTo: `${window.location.origin}/` } });
+    const { error } = await supabase.auth.signInWithOtp({ 
+      email: email, 
+      options: { emailRedirectTo: `${window.location.origin}/` } 
+    });
     if (error) {
       showToast(error.message, "error");
     } else {
@@ -188,8 +192,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
+    if (balance < amount) {
+      showToast("Insufficient balance!", "error");
+      return;
+    }
     setBalance(prev => prev - amount);
     setMyBets(prev => [...prev, { marketId, type, amount, entryPrice: marketPrices[marketId][type === 'VYBE' ? 'vibe' : 'noVibe'] * 100 }]);
+    
     setMarketPrices((prev: any) => {
       const current = prev[marketId];
       const move = Math.min(0.05, amount / 1000);
