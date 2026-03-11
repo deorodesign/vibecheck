@@ -10,7 +10,7 @@ export default function Home() {
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
-    showToast
+    showToast, isLoginModalOpen, setIsLoginModalOpen, loginWithTwitter
   } = useAppContext();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -233,6 +233,25 @@ export default function Home() {
     </div>
   );
 
+  const loginModalContent = isLoginModalOpen && (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsLoginModalOpen(false)}>
+      <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-8 max-w-sm w-full shadow-2xl flex flex-col gap-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+         <div className="text-center">
+           <h2 className="text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">Log In</h2>
+           <p className="text-zinc-500 text-xs font-medium">Connect your socials to start trading culture.</p>
+         </div>
+         
+         <button onClick={loginWithTwitter} className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-black text-white hover:bg-zinc-800 transition-all font-black uppercase tracking-widest text-sm shadow-md active:scale-95">
+           Continue with X
+         </button>
+         
+         <button onClick={() => setIsLoginModalOpen(false)} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors w-full">
+           Cancel
+         </button>
+      </div>
+    </div>
+  );
+
   if (selectedMarket) {
     const currentPrices = marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 };
     const marketBetTotal = myBets.filter((b: any) => b.marketId === selectedMarket.id).reduce((sum: number, b: any) => sum + b.amount, 0);
@@ -349,6 +368,7 @@ export default function Home() {
           {rightSidebar}
         </div>
         {flexModalContent}
+        {loginModalContent}
       </main>
     );
   }
@@ -405,6 +425,7 @@ export default function Home() {
         {rightSidebar}
       </div>
       {flexModalContent}
+      {loginModalContent}
     </main>
   );
 }
