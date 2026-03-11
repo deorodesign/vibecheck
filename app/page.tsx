@@ -100,8 +100,8 @@ export default function Home() {
       <div className="w-full max-w-7xl flex justify-between items-center mb-6">
         <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-500 cursor-pointer" onClick={() => { setSelectedMarket(null); window.scrollTo(0, 0); }}>Vybecheck</h1>
         <div className="flex items-center gap-2 md:gap-3">
-          <button onClick={toggleDarkMode} className="w-10 h-10 flex items-center justify-center rounded-full border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-sm active:scale-95 transition-all text-black dark:text-white">
-            {isDarkMode ? "☀️" : "🌙"}
+          <button onClick={toggleDarkMode} className="w-10 h-10 flex items-center justify-center rounded-full border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-sm active:scale-95 transition-all text-black dark:text-white font-bold text-xs uppercase">
+            {isDarkMode ? "LGT" : "DRK"}
           </button>
           {!isLoggedIn ? (
             <button onClick={connectWallet} className="px-6 py-2.5 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-black text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-md">Log In / Sign Up</button>
@@ -122,12 +122,10 @@ export default function Home() {
                 </button>
                 {isProfileOpen && (
                   <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    
-                    {/* Havička s peněženkou */}
                     <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
                       <div className="flex items-center justify-between mb-3">
                          <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Wallet</span>
-                         <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-1 text-[10px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">⚙️ Settings</Link>
+                         <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-1 text-[10px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Settings</Link>
                       </div>
                       <div className="flex items-center gap-3">
                          {avatarUrl ? (
@@ -141,15 +139,14 @@ export default function Home() {
                       </div>
                     </div>
                     
-                    {/* SEZNAM ODKAZŮ - Profil je teď hned na prvním místě! */}
                     <div className="p-2 flex flex-col gap-1">
-                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">
-                        <span>⚡</span> Profile & Philosophy
+                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center justify-center gap-2 w-full px-3 py-3 text-[11px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-all">
+                        Profile & Philosophy
                       </Link>
                       <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">How it Works</Link>
                       <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
                       <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
-                      <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
+                      <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
                     </div>
 
                     <div className="p-2 border-t border-zinc-100 dark:border-white/5">
@@ -157,7 +154,6 @@ export default function Home() {
                         Log Out
                       </button>
                     </div>
-
                   </div>
                 )}
               </div>
@@ -178,7 +174,7 @@ export default function Home() {
   const rightSidebar = (
     <div className="w-full lg:w-[320px] shrink-0 flex flex-col gap-6 lg:sticky lg:top-36 lg:self-start mt-8 lg:mt-0">
       <div className="bg-white dark:bg-[#18181b] rounded-[2rem] p-6 border border-zinc-200 dark:border-white/5 shadow-sm">
-        <h3 className="text-zinc-900 dark:text-white font-black italic uppercase mb-6 flex items-center gap-2 tracking-tight"><span className="text-xl">🔥</span> Hot Now</h3>
+        <h3 className="text-zinc-900 dark:text-white font-black italic uppercase mb-6 flex items-center gap-2 tracking-tight">Hot Now</h3>
         <div className="flex flex-col gap-5">
           {MARKETS.slice(0, 3).map(m => (
             <div key={m.id} onClick={() => { setSelectedMarket(m); window.scrollTo(0, 0); setIsProfileOpen(false); }} className="flex gap-4 items-center cursor-pointer group">
@@ -194,8 +190,8 @@ export default function Home() {
 
       <div className="bg-white dark:bg-[#18181b] rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 border-b border-zinc-200 dark:border-white/5 bg-gradient-to-br from-fuchsia-500/10 to-orange-500/10 relative">
-          <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight flex items-center gap-2 text-xl relative z-10"><span>🏆</span> Top Vybers</h3>
-          <p className="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10 bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">Top 5 win monthly airdrops! 🎁</p>
+          <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight flex items-center gap-2 text-xl relative z-10">Top Vybers</h3>
+          <p className="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10 bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">Top 5 win monthly airdrops!</p>
         </div>
         <div className="flex flex-col p-2">
           {dynamicLeaderboard.map((user: any) => (
@@ -231,7 +227,7 @@ export default function Home() {
            <h2 className="text-2xl font-black italic uppercase text-zinc-900 dark:text-white mb-1">Flex Your Position</h2>
            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest line-clamp-1">"{flexMarket.title}"</p>
          </div>
-         <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=I just bet on "%0A${encodeURIComponent(flexMarket.title)}"%0A%0AJoin me on Vybecheck! 🔥&url=https://vybecheck.com`, '_blank')} className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-black text-white hover:bg-zinc-800 dark:hover:bg-zinc-900 transition-colors font-black uppercase tracking-widest text-sm shadow-md">Post to X</button>
+         <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=I just bet on "%0A${encodeURIComponent(flexMarket.title)}"%0A%0AJoin me on Vybecheck!&url=https://vybecheck.com`, '_blank')} className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-black text-white hover:bg-zinc-800 dark:hover:bg-zinc-900 transition-colors font-black uppercase tracking-widest text-sm shadow-md">Post to X</button>
          <button onClick={() => setFlexMarket(null)} className="mt-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors w-full py-2">Close</button>
       </div>
     </div>
@@ -292,7 +288,7 @@ export default function Home() {
                 <div className="flex flex-col gap-4">
                   {marketBetTotal > 0 && (
                     <div className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95">
-                      <span className="font-black text-xs md:text-sm uppercase tracking-widest">✓ Vybechecked! ({marketBetTotal} USDC In Play)</span>
+                      <span className="font-black text-xs md:text-sm uppercase tracking-widest">Vybechecked! ({marketBetTotal} USDC In Play)</span>
                       <button onClick={(e) => handleFlex(e, selectedMarket)} className="flex items-center gap-1.5 bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-opacity shadow-md">FLEX</button>
                     </div>
                   )}
@@ -327,7 +323,7 @@ export default function Home() {
               </div>
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] shadow-md mx-4 md:mx-0 overflow-hidden flex flex-col h-[400px]">
                 <div className="p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between">
-                   <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight flex items-center gap-2"><span className="text-xl">💬</span> Live Chat</h3>
+                   <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight">Live Chat</h3>
                 </div>
                 <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 text-xs hide-scrollbar">
                    {marketChat.map((msg: any) => (

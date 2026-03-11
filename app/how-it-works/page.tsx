@@ -6,14 +6,13 @@ export default function HowItWorksPage() {
       <div className="w-full max-w-3xl bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-6 md:p-12 shadow-xl">
         <Link href="/" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold uppercase tracking-widest mb-8 inline-block transition-colors">← Back to Vybecheck</Link>
         
-        <h1 className="text-3xl md:text-5xl font-black uppercase italic tracking-tight text-zinc-900 dark:text-white mb-4 flex items-center gap-3">
-          <span className="text-4xl md:text-5xl">🧠</span> Vybecheck 101
+        <h1 className="text-3xl md:text-5xl font-black uppercase italic tracking-tight text-zinc-900 dark:text-white mb-4">
+          Vybecheck 101
         </h1>
         <p className="text-zinc-500 dark:text-zinc-400 font-medium mb-10 text-sm md:text-base">The idiot-proof guide to trading culture, drama, and internet history.</p>
         
         <div className="space-y-8 text-zinc-700 dark:text-zinc-300 leading-relaxed">
           
-          {/* KROK 1: ZÁKLADY */}
           <section className="p-6 md:p-8 bg-zinc-50 dark:bg-black/30 rounded-3xl border border-zinc-200 dark:border-white/5">
             <h2 className="text-xl font-black uppercase tracking-widest text-zinc-900 dark:text-white mb-4">1. The Basics: Yes or No?</h2>
             <p className="mb-6 font-medium">Every market on Vybecheck is a simple question. All you have to do is predict the outcome.</p>
@@ -30,7 +29,6 @@ export default function HowItWorksPage() {
             </div>
           </section>
 
-          {/* KROK 2: CENY A PROCENTA */}
           <section className="p-6 md:p-8 bg-white dark:bg-[#18181b] rounded-3xl border border-zinc-200 dark:border-white/5 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-fuchsia-500/10 rounded-full blur-[50px]"></div>
             <h2 className="text-xl font-black uppercase tracking-widest text-zinc-900 dark:text-white mb-4 relative z-10">2. The Math: Prices & Probabilities</h2>
@@ -42,7 +40,6 @@ export default function HowItWorksPage() {
             </ul>
           </section>
 
-          {/* KROK 3: PROČ SE CENA HÝBE */}
           <section className="p-6 md:p-8 bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-900 dark:to-black rounded-3xl border border-zinc-200 dark:border-white/5">
             <h2 className="text-xl font-black uppercase tracking-widest text-zinc-900 dark:text-white mb-4">3. Why does the price change?</h2>
             <p className="mb-4 font-medium">Just like the stock market, prices move based on <strong>supply and demand</strong>.</p>
@@ -53,10 +50,9 @@ export default function HowItWorksPage() {
             </div>
           </section>
 
-          {/* KROK 4: JAK SE VYHRÁVÁ */}
           <section className="p-6 md:p-8 bg-zinc-900 dark:bg-black rounded-3xl border border-zinc-800 dark:border-white/10 text-white shadow-2xl">
-            <h2 className="text-xl font-black uppercase tracking-widest text-white mb-4 flex items-center gap-2">
-              <span className="text-yellow-500">💰</span> 4. The Payoff: How you win
+            <h2 className="text-xl font-black uppercase tracking-widest text-white mb-4">
+              4. The Payoff: How you win
             </h2>
             <p className="mb-5 text-zinc-300 font-medium">When the deadline hits, the market "resolves" (closes) based on the official rules.</p>
             

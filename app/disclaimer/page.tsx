@@ -6,8 +6,8 @@ export default function DisclaimerPage() {
       <div className="w-full max-w-2xl bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-8 md:p-12 shadow-xl">
         <Link href="/" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold uppercase tracking-widest mb-8 inline-block transition-colors">← Back to Vybecheck</Link>
         
-        <h1 className="text-3xl md:text-4xl font-black uppercase italic tracking-tight text-zinc-900 dark:text-white mb-6 flex items-center gap-3">
-          <span className="text-4xl">⚠️</span> Legal Disclaimer
+        <h1 className="text-3xl md:text-4xl font-black uppercase italic tracking-tight text-zinc-900 dark:text-white mb-6">
+          Legal Disclaimer
         </h1>
         
         <div className="space-y-6 text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
