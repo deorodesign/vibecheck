@@ -129,7 +129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (Object.keys(marketPrices).length === 0) {
       const initialPrices: any = {};
       MARKETS.forEach(m => { initialPrices[m.id] = { vibe: 0.5, noVibe: 0.5 }; });
-      initialPrices[1] = { vibe: 0.73, noVibe: 0.27 }; // Taylor Swift specific initial
+      initialPrices[1] = { vibe: 0.73, noVibe: 0.27 };
       setMarketPrices(initialPrices);
     }
     if (typeof window !== 'undefined') {
@@ -148,7 +148,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // --- LOGINS ---
   const loginWithTwitter = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'twitter', options: { redirectTo: `${window.location.origin}/` } });
+    // TADY JE TA OPRAVA Z 'twitter' NA 'x'
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'x', options: { redirectTo: `${window.location.origin}/` } });
     if (error) showToast("Error connecting to X.", "error");
   };
 
