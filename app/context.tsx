@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
-// NOVÉ OPRAVENÉ TRHY (6 karet pro dokonalou mřížku)
+// TVOJE ORIGINÁLNÍ KARTY S LOKÁLNÍMI OBRÁZKY
 export const MARKETS = [
   { 
     id: 1, 
@@ -11,7 +11,7 @@ export const MARKETS = [
     volume: "$1.2M", 
     volumeUsd: 1200000, 
     category: "Pop Culture", 
-    imageUrl: "https://images.unsplash.com/photo-1470229722913-7c090be5f524?w=800&q=80", 
+    imageUrl: "/taylor.jpeg", 
     resolutionSource: "Official announcement on Instagram/X by either party." 
   },
   { 
@@ -20,7 +20,7 @@ export const MARKETS = [
     volume: "$850K", 
     volumeUsd: 850000, 
     category: "Sports", 
-    imageUrl: "https://images.unsplash.com/photo-1555597673-b21d5c935865?w=800&q=80", 
+    imageUrl: "/paul-tyson.jpg", 
     resolutionSource: "Official match decision." 
   },
   { 
@@ -29,35 +29,35 @@ export const MARKETS = [
     volume: "$420K", 
     volumeUsd: 420000, 
     category: "Pop Culture", 
-    imageUrl: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80", 
+    imageUrl: "/kylie.jpeg", 
     resolutionSource: "Confirmation via official social media." 
   },
   { 
     id: 4, 
-    title: "Will GTA VI be delayed to 2026?", 
+    title: "Will TikTok be banned in the EU by end of year?", 
     volume: "$2.1M", 
     volumeUsd: 2100000, 
-    category: "Gaming", 
-    imageUrl: "https://images.unsplash.com/photo-1533282960533-51328aa26626?w=800&q=80", 
-    resolutionSource: "Official Rockstar Games press release." 
+    category: "Tech & Politics", 
+    imageUrl: "/tiktok.png", 
+    resolutionSource: "Official EU legislation passage." 
   },
   { 
     id: 5, 
-    title: "Will TikTok be banned in the US by end of year?", 
-    volume: "$3.5M", 
-    volumeUsd: 3500000, 
-    category: "Tech & Politics", 
-    imageUrl: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=800&q=80", 
-    resolutionSource: "US Government legislation passage." 
+    title: "Will MrBeast reach 500M subscribers by 2027?", 
+    volume: "$3.4M", 
+    volumeUsd: 3400000, 
+    category: "Trending", 
+    imageUrl: "/mrbeast.jpeg", 
+    resolutionSource: "Official YouTube subscriber count." 
   },
   { 
     id: 6, 
-    title: "Will Bitcoin hit $100k before December?", 
-    volume: "$5.8M", 
-    volumeUsd: 5800000, 
-    category: "Trending", 
-    imageUrl: "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=800&q=80", 
-    resolutionSource: "Binance spot price tracking." 
+    title: "Will Ben Affleck & JLo finalize divorce this month?", 
+    volume: "$150K", 
+    volumeUsd: 150000, 
+    category: "Pop Culture", 
+    imageUrl: "/affleck.jpeg", 
+    resolutionSource: "Official court filing." 
   }
 ];
 
@@ -129,7 +129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (Object.keys(marketPrices).length === 0) {
       const initialPrices: any = {};
       MARKETS.forEach(m => { initialPrices[m.id] = { vibe: 0.5, noVibe: 0.5 }; });
-      initialPrices[1] = { vibe: 0.72, noVibe: 0.28 };
+      initialPrices[1] = { vibe: 0.73, noVibe: 0.27 }; // Taylor Swift specific initial
       setMarketPrices(initialPrices);
     }
     if (typeof window !== 'undefined') {
