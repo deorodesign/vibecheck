@@ -29,7 +29,6 @@ export default function Home() {
   const prevChatLengthRef = useRef(marketChat.length);
   const prevMarketIdRef = useRef<number | null>(null);
 
-  // 1. NAČTENÍ TRHU Z URL (Když někdo přijde z Twitteru)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -41,9 +40,8 @@ export default function Home() {
         }
       }
     }
-  }, []); // Spustí se jen jednou při načtení stránky
+  }, []); 
 
-  // 2. AKTUALIZACE URL PŘI KLIKNUTÍ NA KARTU
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -278,12 +276,17 @@ export default function Home() {
            <h2 className="text-2xl font-black italic uppercase text-zinc-900 dark:text-white mb-1">Flex Your Position</h2>
            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest line-clamp-1">"{flexMarket.title}"</p>
          </div>
-         {/* 3. TADY JE OPRAVENÉ TLAČÍTKO PRO TWITTER S DYNAMICKOU URL */}
+         {/* TADY JE OPRAVENÉ SDÍLENÍ NA TWITTER */}
          <button 
            onClick={() => {
-             const customUrl = `https://vybecheck.xyz/?market=${flexMarket.id}`;
-             const text = `I just bet on "%0A${flexMarket.title}"%0A%0AJoin me on Vybecheck!`;
-             window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(customUrl)}`, '_blank');
+             const baseUrl = window.location.origin; // Vezme tvoji reálnou aktuální doménu (.xyz nebo localhost)
+             const customUrl = `${baseUrl}/?market=${flexMarket.id}`;
+             const textToShare = `I just bet on\n"${flexMarket.title}"\n\nJoin me on Vybecheck!`;
+             
+             // encodeURIComponent je nutný pro oba parametry, jinak znaky jako "&" odkaz rozbijí!
+             const twitterIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(customUrl)}`;
+             
+             window.open(twitterIntentUrl, '_blank');
            }} 
            className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-black text-white hover:bg-zinc-800 dark:hover:bg-zinc-900 transition-colors font-black uppercase tracking-widest text-sm shadow-md"
          >
