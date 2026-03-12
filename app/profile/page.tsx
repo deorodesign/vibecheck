@@ -32,6 +32,10 @@ export default function ProfilePage() {
 
   if (!isLoggedIn) return null;
 
+  // Výpočet jednoduchých statistik z tvých sázek
+  const volumeTraded = myBets.reduce((acc: number, bet: any) => acc + bet.amount, 0);
+  const activeBetsCount = myBets.length;
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-6 font-sans flex flex-col items-center">
       {/* HEADER */}
@@ -48,17 +52,18 @@ export default function ProfilePage() {
 
       <div className="w-full max-w-2xl space-y-6">
         
-        {/* PROFILE BOX S MOŽNOSTÍ ÚPRAVY */}
-        <div className="bg-[#111] border border-zinc-800/50 rounded-3xl p-8 flex flex-col sm:flex-row items-center gap-6">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex-shrink-0 shadow-[0_0_20px_rgba(217,70,239,0.2)]" />
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+        {/* PROFILE BOX S MOŽNOSTÍ ÚPRAVY A STATISTIKAMI */}
+        <div className="bg-[#111] border border-zinc-800/50 rounded-3xl p-8 flex flex-col sm:flex-row items-center sm:items-start gap-8">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex-shrink-0 shadow-[0_0_30px_rgba(217,70,239,0.2)]" />
+          
+          <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full">
             {editMode ? (
-              <div className="flex flex-col sm:flex-row gap-3 items-center mb-1">
+              <div className="flex flex-col sm:flex-row gap-3 items-center mb-2">
                 <input 
                   type="text" 
                   value={newNick}
                   onChange={(e) => setNewNick(e.target.value.toUpperCase())}
-                  className="bg-black border border-zinc-700 text-white text-2xl font-black italic uppercase px-3 py-1 rounded-xl outline-none focus:border-fuchsia-500 w-full sm:w-48 text-center sm:text-left"
+                  className="bg-black border border-zinc-700 text-white text-3xl font-black italic uppercase px-3 py-1 rounded-xl outline-none focus:border-fuchsia-500 w-full sm:w-56 text-center sm:text-left"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && handleSaveNick()}
                 />
@@ -70,19 +75,37 @@ export default function ProfilePage() {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row items-center gap-4 mb-1">
-                <h2 className="text-3xl font-black italic uppercase tracking-wide">{nickname}</h2>
+              <div className="flex flex-col sm:flex-row items-center gap-4 mb-2">
+                <h2 className="text-4xl font-black italic uppercase tracking-wide">{nickname}</h2>
                 <button 
                   onClick={() => setEditMode(true)}
-                  className="text-zinc-500 hover:text-white text-xs font-bold tracking-widest transition border border-zinc-800 px-3 py-1 rounded-lg hover:border-zinc-500"
+                  className="text-zinc-500 hover:text-white text-xs font-bold tracking-widest transition border border-zinc-800 px-3 py-1 rounded-lg hover:border-zinc-500 mt-2 sm:mt-0"
                 >
                   EDIT
                 </button>
               </div>
             )}
-            <p className="text-zinc-500 font-bold tracking-widest text-xs mt-2 sm:mt-1">
+            
+            <p className="text-zinc-400 font-bold tracking-widest text-sm mb-6">
               BALANCE: <span className="text-green-500">{balance.toFixed(2)} USDC</span>
             </p>
+
+            {/* STATISTIKY (Ve stylu Polymarketu) */}
+            <div className="flex gap-6 sm:gap-10 border-t border-zinc-800/80 pt-5 w-full justify-center sm:justify-start">
+              <div className="flex flex-col">
+                <span className="text-zinc-500 text-[10px] font-bold tracking-widest uppercase mb-1">Volume Traded</span>
+                <span className="text-xl font-black italic">${volumeTraded.toFixed(2)}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-zinc-500 text-[10px] font-bold tracking-widest uppercase mb-1">Active Bets</span>
+                <span className="text-xl font-black italic">{activeBetsCount}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-zinc-500 text-[10px] font-bold tracking-widest uppercase mb-1">Net Return</span>
+                <span className="text-green-500 text-xl font-black italic">+0.00%</span>
+              </div>
+            </div>
+
           </div>
         </div>
 
