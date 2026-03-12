@@ -6,23 +6,35 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
-  const { nickname, balance, walletAddress, myBets, handleLogout, updateNickname, isLoggedIn } = useAppContext();
+  const { 
+    nickname, balance, walletAddress, myBets, handleLogout, 
+    updateNickname, updateWalletAddress, isLoggedIn // <-- Přidali jsme updateWalletAddress
+  } = useAppContext();
+  
   const router = useRouter();
   
-  // Stavy pro úpravu jména
+  // Stavy pro úpravy
   const [editMode, setEditMode] = useState(false);
   const [newNick, setNewNick] = useState("");
+  const [walletInput, setWalletInput] = useState("");
 
   useEffect(() => {
     if (!isLoggedIn) router.push('/');
     setNewNick(nickname);
-  }, [nickname, isLoggedIn, router]);
+    setWalletInput(walletAddress); // Načtení uložené peněženky do políčka
+  }, [nickname, walletAddress, isLoggedIn, router]);
 
   const handleSaveNick = () => {
     if (newNick.trim() !== '' && newNick !== nickname) {
       updateNickname(newNick);
     }
     setEditMode(false);
+  };
+
+  const handleSaveWallet = () => {
+    if (walletInput !== walletAddress) {
+      updateWalletAddress(walletInput);
+    }
   };
 
   const onLogout = () => {
@@ -32,7 +44,6 @@ export default function ProfilePage() {
 
   if (!isLoggedIn) return null;
 
-  // Výpočet jednoduchých statistik z tvých sázek
   const volumeTraded = myBets.reduce((acc: number, bet: any) => acc + bet.amount, 0);
   const activeBetsCount = myBets.length;
 
@@ -52,7 +63,7 @@ export default function ProfilePage() {
 
       <div className="w-full max-w-2xl space-y-6">
         
-        {/* PROFILE BOX S MOŽNOSTÍ ÚPRAVY A STATISTIKAMI */}
+        {/* PROFILE BOX */}
         <div className="bg-[#111] border border-zinc-800/50 rounded-3xl p-8 flex flex-col sm:flex-row items-center sm:items-start gap-8">
           <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex-shrink-0 shadow-[0_0_30px_rgba(217,70,239,0.2)]" />
           
@@ -67,22 +78,12 @@ export default function ProfilePage() {
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && handleSaveNick()}
                 />
-                <button 
-                  onClick={handleSaveNick}
-                  className="bg-white text-black text-xs font-bold px-4 py-2 rounded-xl hover:bg-zinc-200 transition"
-                >
-                  SAVE
-                </button>
+                <button onClick={handleSaveNick} className="bg-white text-black text-xs font-bold px-4 py-2 rounded-xl hover:bg-zinc-200 transition">SAVE</button>
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row items-center gap-4 mb-2">
                 <h2 className="text-4xl font-black italic uppercase tracking-wide">{nickname}</h2>
-                <button 
-                  onClick={() => setEditMode(true)}
-                  className="text-zinc-500 hover:text-white text-xs font-bold tracking-widest transition border border-zinc-800 px-3 py-1 rounded-lg hover:border-zinc-500 mt-2 sm:mt-0"
-                >
-                  EDIT
-                </button>
+                <button onClick={() => setEditMode(true)} className="text-zinc-500 hover:text-white text-xs font-bold tracking-widest transition border border-zinc-800 px-3 py-1 rounded-lg hover:border-zinc-500 mt-2 sm:mt-0">EDIT</button>
               </div>
             )}
             
@@ -90,7 +91,7 @@ export default function ProfilePage() {
               BALANCE: <span className="text-green-500">{balance.toFixed(2)} USDC</span>
             </p>
 
-            {/* STATISTIKY (Ve stylu Polymarketu) */}
+            {/* STATISTIKY */}
             <div className="flex gap-6 sm:gap-10 border-t border-zinc-800/80 pt-5 w-full justify-center sm:justify-start">
               <div className="flex flex-col">
                 <span className="text-zinc-500 text-[10px] font-bold tracking-widest uppercase mb-1">Volume Traded</span>
@@ -120,11 +121,15 @@ export default function ProfilePage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <input 
               type="text" 
-              placeholder="0x..." 
-              defaultValue={walletAddress}
+              placeholder="Paste your 0x... or Solana address here" 
+              value={walletInput}
+              onChange={(e) => setWalletInput(e.target.value)}
               className="flex-grow bg-[#0a0a0a] border border-zinc-800 text-white px-4 py-3 rounded-xl outline-none focus:border-fuchsia-500 text-sm font-mono"
             />
-            <button className="bg-white text-black font-bold uppercase tracking-widest text-xs px-6 py-3 rounded-xl hover:bg-zinc-200 transition">
+            <button 
+              onClick={handleSaveWallet}
+              className="bg-white text-black font-bold uppercase tracking-widest text-xs px-6 py-3 rounded-xl hover:bg-zinc-200 transition active:scale-95"
+            >
               SAVE
             </button>
           </div>
@@ -166,10 +171,7 @@ export default function ProfilePage() {
       </div>
 
       {/* LOGOUT BUTTON */}
-      <button 
-        onClick={onLogout}
-        className="mt-12 text-zinc-600 hover:text-red-500 font-bold tracking-widest text-xs uppercase transition-colors"
-      >
+      <button onClick={onLogout} className="mt-12 text-zinc-600 hover:text-red-500 font-bold tracking-widest text-xs uppercase transition-colors">
         LOG OUT & DISCONNECT
       </button>
 

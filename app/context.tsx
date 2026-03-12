@@ -3,62 +3,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
-// TVOJE ORIGINÁLNÍ KARTY S LOKÁLNÍMI OBRÁZKY
 export const MARKETS = [
-  { 
-    id: 1, 
-    title: "Will Taylor Swift & Travis Kelce get engaged?", 
-    volume: "$1.2M", 
-    volumeUsd: 1200000, 
-    category: "Pop Culture", 
-    imageUrl: "/taylor.jpeg", 
-    resolutionSource: "Official announcement on Instagram/X by either party." 
-  },
-  { 
-    id: 2, 
-    title: "Will Jake Paul knock out Mike Tyson?", 
-    volume: "$850K", 
-    volumeUsd: 850000, 
-    category: "Sports", 
-    imageUrl: "/paul-tyson.jpg", 
-    resolutionSource: "Official match decision." 
-  },
-  { 
-    id: 3, 
-    title: "Will Kylie Jenner announce another pregnancy this year?", 
-    volume: "$420K", 
-    volumeUsd: 420000, 
-    category: "Pop Culture", 
-    imageUrl: "/kylie.jpeg", 
-    resolutionSource: "Confirmation via official social media." 
-  },
-  { 
-    id: 4, 
-    title: "Will TikTok be banned in the EU by end of year?", 
-    volume: "$2.1M", 
-    volumeUsd: 2100000, 
-    category: "Tech & Politics", 
-    imageUrl: "/tiktok.png", 
-    resolutionSource: "Official EU legislation passage." 
-  },
-  { 
-    id: 5, 
-    title: "Will MrBeast reach 500M subscribers by 2027?", 
-    volume: "$3.4M", 
-    volumeUsd: 3400000, 
-    category: "Trending", 
-    imageUrl: "/mrbeast.jpeg", 
-    resolutionSource: "Official YouTube subscriber count." 
-  },
-  { 
-    id: 6, 
-    title: "Will Ben Affleck & JLo finalize divorce this month?", 
-    volume: "$150K", 
-    volumeUsd: 150000, 
-    category: "Pop Culture", 
-    imageUrl: "/affleck.jpeg", 
-    resolutionSource: "Official court filing." 
-  }
+  { id: 1, title: "Will Taylor Swift & Travis Kelce get engaged?", volume: "$1.2M", volumeUsd: 1200000, category: "Pop Culture", imageUrl: "/taylor.jpeg", resolutionSource: "Official announcement on Instagram/X by either party." },
+  { id: 2, title: "Will Jake Paul knock out Mike Tyson?", volume: "$850K", volumeUsd: 850000, category: "Sports", imageUrl: "/paul-tyson.jpg", resolutionSource: "Official match decision." },
+  { id: 3, title: "Will Kylie Jenner announce another pregnancy this year?", volume: "$420K", volumeUsd: 420000, category: "Pop Culture", imageUrl: "/kylie.jpeg", resolutionSource: "Confirmation via official social media." },
+  { id: 4, title: "Will TikTok be banned in the EU by end of year?", volume: "$2.1M", volumeUsd: 2100000, category: "Tech & Politics", imageUrl: "/tiktok.png", resolutionSource: "Official EU legislation passage." },
+  { id: 5, title: "Will MrBeast reach 500M subscribers by 2027?", volume: "$3.4M", volumeUsd: 3400000, category: "Trending", imageUrl: "/mrbeast.jpeg", resolutionSource: "Official YouTube subscriber count." },
+  { id: 6, title: "Will Ben Affleck & JLo finalize divorce this month?", volume: "$150K", volumeUsd: 150000, category: "Pop Culture", imageUrl: "/affleck.jpeg", resolutionSource: "Official court filing." }
 ];
 
 export const CATEGORIES = ['All', 'Trending', 'Pop Culture', 'Gaming', 'Sports', 'Tech & Politics'];
@@ -108,7 +59,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       setIsLoggedIn(true);
-      setWalletAddress(dbUser?.wallet_address || "0x" + user.id.substring(0, 6) + "..." + user.id.substring(user.id.length - 4));
+      // Pokud v databázi adresa je, načteme ji, jinak tam necháme prázdno (ať neukazujeme tu fake adresu začínající na 0x)
+      setWalletAddress(dbUser?.wallet_address || "");
       setBalance(dbUser?.balance || 500);
       setNickname(dbUser?.nickname || "Vyber");
       setAvatarUrl(dbUser?.avatar_url || "");
@@ -146,68 +98,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const connectWallet = () => setIsLoginModalOpen(true);
 
-  // --- LOGINS ---
   const loginWithTwitter = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ 
-      provider: 'x', 
-      options: { redirectTo: `${window.location.origin}/` } 
-    });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'x', options: { redirectTo: `${window.location.origin}/` } });
     if (error) showToast("Error connecting to X.", "error");
   };
 
   const loginWithDiscord = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ 
-      provider: 'discord', 
-      options: { redirectTo: `${window.location.origin}/` } 
-    });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: `${window.location.origin}/` } });
     if (error) showToast("Error connecting to Discord.", "error");
   };
 
   const loginWithEmail = async (email: string) => {
-    if (!email) {
-      showToast("Please enter an email address.", "error");
-      return;
-    }
-    const { error } = await supabase.auth.signInWithOtp({ 
-      email: email, 
-      options: { emailRedirectTo: `${window.location.origin}/` } 
-    });
-    if (error) {
-      showToast(error.message, "error");
-    } else {
-      showToast("Magic link sent! Check your email.", "success");
-      setIsLoginModalOpen(false);
-    }
+    if (!email) { showToast("Please enter an email address.", "error"); return; }
+    const { error } = await supabase.auth.signInWithOtp({ email: email, options: { emailRedirectTo: `${window.location.origin}/` } });
+    if (error) { showToast(error.message, "error"); } else { showToast("Magic link sent! Check your email.", "success"); setIsLoginModalOpen(false); }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setIsLoggedIn(false);
-    setWalletAddress("");
-    setBalance(0);
-    setNickname("");
-    setAvatarUrl("");
+    setIsLoggedIn(false); setWalletAddress(""); setBalance(0); setNickname(""); setAvatarUrl("");
     showToast("Logged out successfully.", "success");
   };
 
-  // --- UPDATE NICKNAME ---
   const updateNickname = async (newNickname: string) => {
     if (!isLoggedIn) return;
-    
     setNickname(newNickname);
-    
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
-      const { error } = await supabase
-        .from('users')
-        .update({ nickname: newNickname })
-        .eq('id', session.user.id);
-        
-      if (error) {
-        showToast("Error saving nickname.", "error");
-      } else {
-        showToast("Nickname updated!", "success");
-      }
+      const { error } = await supabase.from('users').update({ nickname: newNickname }).eq('id', session.user.id);
+      if (error) showToast("Error saving nickname.", "error"); else showToast("Nickname updated!", "success");
+    }
+  };
+
+  // --- NOVÁ FUNKCE PRO ULOŽENÍ PENĚŽENKY ---
+  const updateWalletAddress = async (newAddress: string) => {
+    if (!isLoggedIn) return;
+    setWalletAddress(newAddress);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { error } = await supabase.from('users').update({ wallet_address: newAddress }).eq('id', session.user.id);
+      if (error) showToast("Error saving wallet address.", "error"); else showToast("Payout wallet saved!", "success");
     }
   };
 
@@ -217,13 +147,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
-    if (balance < amount) {
-      showToast("Insufficient balance!", "error");
-      return;
-    }
+    if (balance < amount) { showToast("Insufficient balance!", "error"); return; }
     setBalance(prev => prev - amount);
     setMyBets(prev => [...prev, { marketId, type, amount, entryPrice: marketPrices[marketId][type === 'VYBE' ? 'vibe' : 'noVibe'] * 100 }]);
-    
     setMarketPrices((prev: any) => {
       const current = prev[marketId];
       const move = Math.min(0.05, amount / 1000);
@@ -244,9 +170,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
       selectedMarket, setSelectedMarket, avatarUrl, nickname,
       isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard, showToast,
-      isLoginModalOpen, setIsLoginModalOpen, 
-      loginWithTwitter, loginWithDiscord, loginWithEmail,
-      updateNickname // TADY JE PŘIDANÁ FUNKCE DO KONTEXTU
+      isLoginModalOpen, setIsLoginModalOpen, loginWithTwitter, loginWithDiscord, loginWithEmail,
+      updateNickname, updateWalletAddress // <-- Přidáno do kontextu
     }}>
       {children}
       {toastMessage && (
