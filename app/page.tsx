@@ -11,7 +11,7 @@ export default function Home() {
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
     showToast, isLoginModalOpen, setIsLoginModalOpen, 
-    loginWithTwitter, loginWithDiscord, loginWithEmail // Správně vložené do Hooku!
+    loginWithTwitter, loginWithDiscord, loginWithEmail
   } = useAppContext();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -20,7 +20,7 @@ export default function Home() {
   
   const [betAmount, setBetAmount] = useState<string>("10");
   const [chatInput, setChatInput] = useState("");
-  const [emailInput, setEmailInput] = useState(""); // Stav pro Magic link
+  const [emailInput, setEmailInput] = useState("");
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -342,15 +342,20 @@ export default function Home() {
                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-4">
-                      <button onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className="group/btn flex flex-col items-center justify-center p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500 transition-all active:scale-95 shadow-sm">
-                        <span className="text-green-600 dark:text-green-400 group-hover/btn:text-green-700 dark:group-hover/btn:text-black font-black text-xl md:text-2xl uppercase italic">VYBE</span>
-                        <span className="text-[10px] text-green-600/70 dark:text-green-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {(currentPrices.vibe * 100).toFixed(0)}¢</span>
-                      </button>
-                      <button onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className="group/btn flex flex-col items-center justify-center p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500 transition-all active:scale-95 shadow-sm">
-                        <span className="text-red-600 dark:text-red-400 group-hover/btn:text-red-700 dark:group-hover/btn:text-black font-black text-xl md:text-2xl uppercase italic">NO VYBE</span>
-                        <span className="text-[10px] text-red-600/70 dark:text-red-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {(currentPrices.noVibe * 100).toFixed(0)}¢</span>
-                      </button>
+                    <div className="flex flex-col gap-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        <button onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className="group/btn flex flex-col items-center justify-center p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500 transition-all active:scale-95 shadow-sm">
+                          <span className="text-green-600 dark:text-green-400 group-hover/btn:text-green-700 dark:group-hover/btn:text-black font-black text-xl md:text-2xl uppercase italic">VYBE</span>
+                          <span className="text-[10px] text-green-600/70 dark:text-green-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {(currentPrices.vibe * 100).toFixed(0)}¢</span>
+                        </button>
+                        <button onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className="group/btn flex flex-col items-center justify-center p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500 transition-all active:scale-95 shadow-sm">
+                          <span className="text-red-600 dark:text-red-400 group-hover/btn:text-red-700 dark:group-hover/btn:text-black font-black text-xl md:text-2xl uppercase italic">NO VYBE</span>
+                          <span className="text-[10px] text-red-600/70 dark:text-red-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {(currentPrices.noVibe * 100).toFixed(0)}¢</span>
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 text-center font-bold">
+                        By trading, you agree to the <Link href="/terms" className="underline hover:text-zinc-600 dark:hover:text-zinc-300">Terms & Conditions</Link>.
+                      </p>
                     </div>
                   )}
                 </div>
