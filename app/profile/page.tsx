@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 export default function ProfilePage() {
   const { 
     nickname, balance, walletAddress, myBets, handleLogout, 
-    updateNickname, updateWalletAddress, isLoggedIn, showToast // <-- Přidali jsme showToast
+    updateNickname, updateWalletAddress, isLoggedIn, isAuthLoading, showToast // <-- Přidáno isAuthLoading
   } = useAppContext();
   
   const router = useRouter();
@@ -19,10 +19,9 @@ export default function ProfilePage() {
   const [walletInput, setWalletInput] = useState("");
 
   useEffect(() => {
-    if (!isLoggedIn) router.push('/');
     setNewNick(nickname);
-    setWalletInput(walletAddress); // Načtení uložené peněženky do políčka
-  }, [nickname, walletAddress, isLoggedIn, router]);
+    setWalletInput(walletAddress);
+  }, [nickname, walletAddress]);
 
   const handleSaveNick = () => {
     if (newNick.trim() !== '' && newNick !== nickname) {
@@ -31,7 +30,6 @@ export default function ProfilePage() {
     setEditMode(false);
   };
 
-  // VYLEPŠENÁ FUNKCE PRO UKLÁDÁNÍ PENĚŽENKY
   const handleSaveWallet = () => {
     if (!walletInput.trim()) {
       showToast("Please enter a wallet address!", "error");
@@ -49,7 +47,30 @@ export default function ProfilePage() {
     router.push('/');
   };
 
-  if (!isLoggedIn) return null;
+  // 1. OBRANA: Pokud se ověřuje přihlášení v databázi, ukaž jen malé točící kolečko (spinner)
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // 2. OBRANA: Pokud už víme 100%, že uživatel přihlášený není, ukážeme mu tu tvou zprávu
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] text-white p-6 flex items-center justify-center font-sans">
+        <div className="bg-[#111] border border-zinc-800/50 rounded-3xl p-10 flex flex-col items-center max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-300">
+          <span className="text-4xl mb-4">👀</span>
+          <h2 className="text-2xl font-black italic uppercase text-white mb-2">Not Connected</h2>
+          <p className="text-zinc-500 text-sm font-medium mb-8 text-center">You need to log in to view your profile and bets.</p>
+          <Link href="/" className="bg-white text-black font-black uppercase tracking-widest text-xs px-6 py-4 rounded-xl hover:bg-zinc-200 transition active:scale-95 w-full text-center">
+            Go Home & Log In
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const volumeTraded = myBets.reduce((acc: number, bet: any) => acc + bet.amount, 0);
   const activeBetsCount = myBets.length;

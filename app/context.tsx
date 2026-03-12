@@ -18,6 +18,8 @@ const AppContext = createContext<any>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // <-- NOVÝ STAV: Načítá se přihlášení
+  
   const [walletAddress, setWalletAddress] = useState("");
   const [balance, setBalance] = useState(0);
   const [nickname, setNickname] = useState("");
@@ -41,9 +43,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const checkUser = async (session: any) => {
-      if (!session?.user) return;
-      const { user } = session;
+      if (!session?.user) {
+        setIsLoggedIn(false);
+        setIsAuthLoading(false); // Pokud není uživatel, vypneme načítání
+        return;
+      }
       
+      const { user } = session;
       let { data: dbUser, error } = await supabase.from('users').select('*').eq('id', user.id).single();
 
       if (!dbUser) {
@@ -59,19 +65,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       setIsLoggedIn(true);
-      // Pokud v databázi adresa je, načteme ji, jinak tam necháme prázdno (ať neukazujeme tu fake adresu začínající na 0x)
       setWalletAddress(dbUser?.wallet_address || "");
       setBalance(dbUser?.balance || 500);
       setNickname(dbUser?.nickname || "Vyber");
       setAvatarUrl(dbUser?.avatar_url || "");
       setIsLoginModalOpen(false);
+      setIsAuthLoading(false); // Ověřování dokončeno, vypneme načítání
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => checkUser(session));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) checkUser(session);
-      else setIsLoggedIn(false);
+      if (session) {
+        checkUser(session);
+      } else {
+        setIsLoggedIn(false);
+        setIsAuthLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -130,7 +140,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // --- NOVÁ FUNKCE PRO ULOŽENÍ PENĚŽENKY ---
   const updateWalletAddress = async (newAddress: string) => {
     if (!isLoggedIn) return;
     setWalletAddress(newAddress);
@@ -166,12 +175,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      isLoggedIn, walletAddress, balance, connectWallet, handleLogout,
+      isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout, // <-- isAuthLoading přidáno sem
       marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
       selectedMarket, setSelectedMarket, avatarUrl, nickname,
       isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard, showToast,
       isLoginModalOpen, setIsLoginModalOpen, loginWithTwitter, loginWithDiscord, loginWithEmail,
-      updateNickname, updateWalletAddress // <-- Přidáno do kontextu
+      updateNickname, updateWalletAddress
     }}>
       {children}
       {toastMessage && (
