@@ -29,6 +29,33 @@ export default function Home() {
   const prevChatLengthRef = useRef(marketChat.length);
   const prevMarketIdRef = useRef<number | null>(null);
 
+  // 1. NAČTENÍ TRHU Z URL (Když někdo přijde z Twitteru)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const marketId = params.get('market');
+      if (marketId) {
+        const targetMarket = MARKETS.find(m => m.id === parseInt(marketId));
+        if (targetMarket) {
+          setSelectedMarket(targetMarket);
+        }
+      }
+    }
+  }, []); // Spustí se jen jednou při načtení stránky
+
+  // 2. AKTUALIZACE URL PŘI KLIKNUTÍ NA KARTU
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (selectedMarket) {
+        url.searchParams.set('market', selectedMarket.id.toString());
+      } else {
+        url.searchParams.delete('market');
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [selectedMarket]);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -251,7 +278,17 @@ export default function Home() {
            <h2 className="text-2xl font-black italic uppercase text-zinc-900 dark:text-white mb-1">Flex Your Position</h2>
            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest line-clamp-1">"{flexMarket.title}"</p>
          </div>
-         <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=I just bet on "%0A${encodeURIComponent(flexMarket.title)}"%0A%0AJoin me on Vybecheck!&url=https://vybecheck.com`, '_blank')} className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-black text-white hover:bg-zinc-800 dark:hover:bg-zinc-900 transition-colors font-black uppercase tracking-widest text-sm shadow-md">Post to X</button>
+         {/* 3. TADY JE OPRAVENÉ TLAČÍTKO PRO TWITTER S DYNAMICKOU URL */}
+         <button 
+           onClick={() => {
+             const customUrl = `https://vybecheck.xyz/?market=${flexMarket.id}`;
+             const text = `I just bet on "%0A${flexMarket.title}"%0A%0AJoin me on Vybecheck!`;
+             window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(customUrl)}`, '_blank');
+           }} 
+           className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-black text-white hover:bg-zinc-800 dark:hover:bg-zinc-900 transition-colors font-black uppercase tracking-widest text-sm shadow-md"
+         >
+           Post to X
+         </button>
          <button onClick={() => setFlexMarket(null)} className="mt-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors w-full py-2">Close</button>
       </div>
     </div>
