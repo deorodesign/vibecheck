@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 export default function ProfilePage() {
   const { 
     nickname, balance, walletAddress, myBets, handleLogout, 
-    updateNickname, updateWalletAddress, isLoggedIn // <-- Přidali jsme updateWalletAddress
+    updateNickname, updateWalletAddress, isLoggedIn, showToast // <-- Přidali jsme showToast
   } = useAppContext();
   
   const router = useRouter();
@@ -31,10 +31,17 @@ export default function ProfilePage() {
     setEditMode(false);
   };
 
+  // VYLEPŠENÁ FUNKCE PRO UKLÁDÁNÍ PENĚŽENKY
   const handleSaveWallet = () => {
-    if (walletInput !== walletAddress) {
-      updateWalletAddress(walletInput);
+    if (!walletInput.trim()) {
+      showToast("Please enter a wallet address!", "error");
+      return;
     }
+    if (walletInput === walletAddress) {
+      showToast("This address is already saved.", "success");
+      return;
+    }
+    updateWalletAddress(walletInput);
   };
 
   const onLogout = () => {
