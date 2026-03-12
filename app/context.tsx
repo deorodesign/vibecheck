@@ -18,7 +18,7 @@ const AppContext = createContext<any>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(true); // <-- NOVÝ STAV: Načítá se přihlášení
+  const [isAuthLoading, setIsAuthLoading] = useState(true); 
   
   const [walletAddress, setWalletAddress] = useState("");
   const [balance, setBalance] = useState(0);
@@ -45,11 +45,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const checkUser = async (session: any) => {
       if (!session?.user) {
         setIsLoggedIn(false);
-        setIsAuthLoading(false); // Pokud není uživatel, vypneme načítání
+        setIsAuthLoading(false); 
         return;
       }
       
       const { user } = session;
+      
+      // 1. Načtení nebo vytvoření profilu uživatele
       let { data: dbUser, error } = await supabase.from('users').select('*').eq('id', user.id).single();
 
       if (!dbUser) {
@@ -64,13 +66,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         dbUser = insertedUser;
       }
 
+      // 2. Načtení všech sázek tohoto uživatele z databáze
+      const { data: dbBets } = await supabase.from('bets').select('*').eq('user_id', user.id);
+      if (dbBets) {
+        // Převedeme data z databáze do formátu, který používá náš frontend
+        const formattedBets = dbBets.map(b => ({
+          marketId: b.market_id,
+          type: b.type,
+          amount: Number(b.amount),
+          entryPrice: Number(b.entry_price)
+        }));
+        setMyBets(formattedBets);
+      }
+
       setIsLoggedIn(true);
       setWalletAddress(dbUser?.wallet_address || "");
-      setBalance(dbUser?.balance || 500);
+      setBalance(Number(dbUser?.balance) || 500);
       setNickname(dbUser?.nickname || "Vyber");
       setAvatarUrl(dbUser?.avatar_url || "");
       setIsLoginModalOpen(false);
-      setIsAuthLoading(false); // Ověřování dokončeno, vypneme načítání
+      setIsAuthLoading(false); 
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => checkUser(session));
@@ -81,6 +96,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         setIsLoggedIn(false);
         setIsAuthLoading(false);
+        setMyBets([]); // Při odhlášení vymažeme sázky z obrazovky
       }
     });
 
@@ -126,7 +142,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setIsLoggedIn(false); setWalletAddress(""); setBalance(0); setNickname(""); setAvatarUrl("");
+    setIsLoggedIn(false); setWalletAddress(""); setBalance(0); setNickname(""); setAvatarUrl(""); setMyBets([]);
     showToast("Logged out successfully.", "success");
   };
 
@@ -155,10 +171,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('dark');
   };
 
-  const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
+  // --- UPRAVENÁ FUNKCE PLACE BET ---
+  const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     if (balance < amount) { showToast("Insufficient balance!", "error"); return; }
-    setBalance(prev => prev - amount);
-    setMyBets(prev => [...prev, { marketId, type, amount, entryPrice: marketPrices[marketId][type === 'VYBE' ? 'vibe' : 'noVibe'] * 100 }]);
+    
+    const entryPrice = marketPrices[marketId][type === 'VYBE' ? 'vibe' : 'noVibe'] * 100;
+    const newBalance = balance - amount;
+
+    // 1. Okamžitá vizuální změna (aby to bylo pro uživatele bleskové)
+    setBalance(newBalance);
+    setMyBets(prev => [...prev, { marketId, type, amount, entryPrice }]);
+    
     setMarketPrices((prev: any) => {
       const current = prev[marketId];
       const move = Math.min(0.05, amount / 1000);
@@ -166,6 +189,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       newVibe = Math.max(0.01, Math.min(0.99, newVibe));
       return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
     });
+
+    // 2. Uložení do databáze na pozadí!
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      // Odečtení zůstatku
+      await supabase.from('users').update({ balance: newBalance }).eq('id', session.user.id);
+      
+      // Zapsání sázky
+      await supabase.from('bets').insert({
+        user_id: session.user.id,
+        market_id: marketId,
+        type: type,
+        amount: amount,
+        entry_price: entryPrice
+      });
+    }
+
     showToast(`Successfully placed ${amount} USDC!`, "success");
   };
 
@@ -175,7 +215,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout, // <-- isAuthLoading přidáno sem
+      isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout,
       marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
       selectedMarket, setSelectedMarket, avatarUrl, nickname,
       isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard, showToast,
