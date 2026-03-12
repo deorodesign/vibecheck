@@ -38,11 +38,11 @@ export default function Home() {
   const prevChatLengthRef = useRef(marketChat.length);
   const prevMarketIdRef = useRef<number | null>(null);
 
-  // 1. NAČTENÍ TRHU Z URL 
+  // 1. NAČTENÍ KARTY Z URL (vybecard)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const marketParam = params.get('market');
+      const marketParam = params.get('vybecard'); // <-- Změněno na vybecard
       
       if (marketParam) {
         // A) Zkusíme najít podle ID (kdyby někdo klikl na starý číselný odkaz)
@@ -60,14 +60,14 @@ export default function Home() {
     }
   }, []); 
 
-  // 2. ZMĚNA URL PŘI ROZKLIKNUTÍ KARTY (Na hezký text)
+  // 2. ZMĚNA URL PŘI ROZKLIKNUTÍ KARTY (Na vybecard)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       if (selectedMarket) {
-        url.searchParams.set('market', createSlug(selectedMarket.title));
+        url.searchParams.set('vybecard', createSlug(selectedMarket.title)); // <-- Změněno na vybecard
       } else {
-        url.searchParams.delete('market');
+        url.searchParams.delete('vybecard'); // <-- Změněno na vybecard
       }
       window.history.replaceState({}, '', url.toString());
     }
@@ -298,7 +298,7 @@ export default function Home() {
          <button 
            onClick={() => {
              const baseUrl = window.location.origin;
-             const customUrl = `${baseUrl}/?market=${createSlug(flexMarket.title)}`; // <-- Tady se na X odešle ta hezká adresa
+             const customUrl = `${baseUrl}/?vybecard=${createSlug(flexMarket.title)}`; // <-- Změněno na vybecard v X odkazu
              const textToShare = `I just bet on\n"${flexMarket.title}"\n\nJoin me on Vybecheck!`;
              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(customUrl)}`, '_blank');
            }} 
