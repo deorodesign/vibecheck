@@ -4,9 +4,18 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAppContext, MARKETS, CATEGORIES } from './context';
 
+// --- POMOCNÁ FUNKCE PRO GENEROVÁNÍ HEZKÝCH URL (Slugs) ---
+const createSlug = (title: string) => {
+  return title
+    .toLowerCase()
+    .replace(/&/g, 'and')          // Nahradí & za and (Ben Affleck and JLo)
+    .replace(/[^a-z0-9]+/g, '-')   // Nahradí všechny znaky a mezery pomlčkami
+    .replace(/(^-|-$)+/g, '');     // Smaže případné pomlčky na úplném začátku nebo konci
+};
+
 export default function Home() {
   const { 
-    isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout, // Přidáno isAuthLoading!
+    isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout,
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
@@ -29,12 +38,21 @@ export default function Home() {
   const prevChatLengthRef = useRef(marketChat.length);
   const prevMarketIdRef = useRef<number | null>(null);
 
+  // 1. NAČTENÍ TRHU Z URL 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const marketId = params.get('market');
-      if (marketId) {
-        const targetMarket = MARKETS.find(m => m.id === parseInt(marketId));
+      const marketParam = params.get('market');
+      
+      if (marketParam) {
+        // A) Zkusíme najít podle ID (kdyby někdo klikl na starý číselný odkaz)
+        let targetMarket = MARKETS.find(m => m.id.toString() === marketParam);
+        
+        // B) Pokud nenajde ID, hledá podle hezkého názvu (slug)
+        if (!targetMarket) {
+          targetMarket = MARKETS.find(m => createSlug(m.title) === marketParam);
+        }
+        
         if (targetMarket) {
           setSelectedMarket(targetMarket);
         }
@@ -42,11 +60,12 @@ export default function Home() {
     }
   }, []); 
 
+  // 2. ZMĚNA URL PŘI ROZKLIKNUTÍ KARTY (Na hezký text)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       if (selectedMarket) {
-        url.searchParams.set('market', selectedMarket.id.toString());
+        url.searchParams.set('market', createSlug(selectedMarket.title));
       } else {
         url.searchParams.delete('market');
       }
@@ -131,7 +150,6 @@ export default function Home() {
             {isDarkMode ? "LGT" : "DRK"}
           </button>
           
-          {/* ÚPRAVA PROTI PROBLIKÁVÁNÍ TLAČÍTEK */}
           {isAuthLoading ? (
             <div className="flex items-center gap-2">
                <div className="w-24 h-10 rounded-full bg-zinc-200 dark:bg-white/5 animate-pulse"></div>
@@ -152,7 +170,6 @@ export default function Home() {
                   )}
                   <span className="text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300 hidden sm:inline">{shortAddress(walletAddress)}</span>
                 </button>
-                {/* Otevřené profilové menu zachováno ... */}
                 {isProfileOpen && (
                   <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
@@ -243,9 +260,7 @@ export default function Home() {
         </div>
         <div className="flex flex-col p-2">
           {dynamicLeaderboard.map((user: any) => {
-            // ÚPRAVA PROTI POSKAKOVÁNÍ ŽEBŘÍČKU: Dokud nevíme, kdo jsi, tvou řádku neukážeme.
             if (user.id === 'me' && isAuthLoading) return null;
-
             return (
               <div key={user.id} className={`flex items-center justify-between p-4 rounded-2xl transition-colors ${user.id === 'me' ? 'bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/20' : 'hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
                 <div className="flex items-center gap-4">
@@ -283,7 +298,7 @@ export default function Home() {
          <button 
            onClick={() => {
              const baseUrl = window.location.origin;
-             const customUrl = `${baseUrl}/?market=${flexMarket.id}`;
+             const customUrl = `${baseUrl}/?market=${createSlug(flexMarket.title)}`; // <-- Tady se na X odešle ta hezká adresa
              const textToShare = `I just bet on\n"${flexMarket.title}"\n\nJoin me on Vybecheck!`;
              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(customUrl)}`, '_blank');
            }} 
