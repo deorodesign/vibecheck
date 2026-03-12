@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext, MARKETS, CATEGORIES } from './context';
 
 // --- POMOCNÁ FUNKCE PRO GENEROVÁNÍ HEZKÝCH URL (Slugs) ---
@@ -13,7 +14,11 @@ const createSlug = (title: string) => {
     .replace(/(^-|-$)+/g, '');     
 };
 
-export default function Home() {
+function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const vybecardParam = searchParams.get('vybecard');
+
   const { 
     isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout,
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
@@ -38,48 +43,33 @@ export default function Home() {
   const prevChatLengthRef = useRef(marketChat.length);
   const prevMarketIdRef = useRef<number | null>(null);
 
-  // 1. ZPRACOVÁNÍ HISTORIE PROHLÍŽEČE (Tlačítka Zpět / Vpřed)
+  // 1. ZPRACOVÁNÍ ADRESY PŘES NEXT.JS (Funguje i pro tlačítko Zpět)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const marketParam = params.get('vybecard');
-      if (marketParam) {
-        let targetMarket = MARKETS.find(m => m.id.toString() === marketParam) || MARKETS.find(m => createSlug(m.title) === marketParam);
-        setSelectedMarket(targetMarket || null);
-      } else {
+    if (vybecardParam) {
+      let targetMarket = MARKETS.find(m => m.id.toString() === vybecardParam) || MARKETS.find(m => createSlug(m.title) === vybecardParam);
+      if (targetMarket && targetMarket.id !== selectedMarket?.id) {
+        setSelectedMarket(targetMarket);
+      }
+    } else {
+      if (selectedMarket) {
         setSelectedMarket(null);
       }
-    };
-
-    // Hned po načtení zkontrolujeme URL
-    handlePopState();
-
-    // Zapneme "naslouchání" na to, když uživatel klikne v prohlížeči na Zpět
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [setSelectedMarket]);
-
-  // 2. AKTUALIZACE URL PŘI KLIKNUTÍ V APLIKACI (Vytvoření záznamu v historii)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const url = new URL(window.location.href);
-    const currentParam = url.searchParams.get('vybecard');
-    const newParam = selectedMarket ? createSlug(selectedMarket.title) : null;
-
-    // Pokud se stav opravdu změnil (neudělal to jen prohlížeč), zapíšeme to do historie
-    if (currentParam !== newParam) {
-      if (newParam) {
-        url.searchParams.set('vybecard', newParam);
-      } else {
-        url.searchParams.delete('vybecard');
-      }
-      // PUSHSTATE: Tohle vytvoří nový krok v prohlížeči, takže tlačítko Zpět tě nehodí pryč z webu!
-      window.history.pushState({}, '', url.toString());
     }
-  }, [selectedMarket]);
+  }, [vybecardParam]); // Reaguje vždy, když se změní URL adresa
+
+  // 2. FUNKCE PRO BEZPEČNÉ OTEVÍRÁNÍ A ZAVÍRÁNÍ
+  const openMarket = (market: any) => {
+    setSelectedMarket(market);
+    router.push(`/?vybecard=${createSlug(market.title)}`, { scroll: false });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    setIsProfileOpen(false);
+  };
+
+  const closeMarket = () => {
+    setSelectedMarket(null);
+    router.push('/', { scroll: false });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -93,12 +83,10 @@ export default function Home() {
 
   useEffect(() => {
     if (!selectedMarket) {
-      window.scrollTo({ top: 0, behavior: 'instant' });
       prevMarketIdRef.current = null;
       return;
     }
     if (selectedMarket.id !== prevMarketIdRef.current) {
-      window.scrollTo({ top: 0, behavior: 'instant' });
       prevMarketIdRef.current = selectedMarket.id;
     } else if (marketChat.length > prevChatLengthRef.current) {
       chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -152,7 +140,7 @@ export default function Home() {
   const headerContent = (
     <div className="sticky top-0 z-50 w-full flex flex-col items-center px-4 md:px-8 pt-6 pb-4 bg-zinc-50/90 dark:bg-[#0e0e12]/90 backdrop-blur-xl border-b border-zinc-200 dark:border-white/5 transition-colors duration-500">
       <div className="w-full max-w-7xl flex justify-between items-center mb-6">
-        <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-500 cursor-pointer" onClick={() => { setSelectedMarket(null); window.scrollTo(0, 0); }}>Vybecheck</h1>
+        <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-500 cursor-pointer" onClick={closeMarket}>Vybecheck</h1>
         <div className="flex items-center gap-2 md:gap-3">
           <button onClick={toggleDarkMode} className="w-10 h-10 flex items-center justify-center rounded-full border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-sm active:scale-95 transition-all text-black dark:text-white font-bold text-xs uppercase">
             {isDarkMode ? "LGT" : "DRK"}
@@ -250,7 +238,7 @@ export default function Home() {
         <h3 className="text-zinc-900 dark:text-white font-black italic uppercase mb-6 flex items-center gap-2 tracking-tight">Hot Now</h3>
         <div className="flex flex-col gap-5">
           {MARKETS.slice(0, 3).map(m => (
-            <div key={m.id} onClick={() => { setSelectedMarket(m); window.scrollTo(0, 0); setIsProfileOpen(false); }} className="flex gap-4 items-center cursor-pointer group">
+            <div key={m.id} onClick={() => openMarket(m)} className="flex gap-4 items-center cursor-pointer group">
               <img src={m.imageUrl} alt={m.title} className="w-12 h-12 rounded-xl object-cover shadow-sm group-hover:scale-105 transition-transform" />
               <div className="flex-1">
                 <p className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-2 leading-tight group-hover:text-fuchsia-500 transition-colors">{m.title}</p>
@@ -498,7 +486,7 @@ export default function Home() {
             const winningOutcome = marketStatus[market.id];
 
             return (
-              <div key={market.id} onClick={() => { setSelectedMarket(market); window.scrollTo(0, 0); setIsProfileOpen(false); }} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
+              <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
                 <div className="h-44 w-full shrink-0 relative overflow-hidden">
                   <img src={market.imageUrl} alt={market.title} className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
                   <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" />
@@ -541,5 +529,18 @@ export default function Home() {
       {flexModalContent}
       {loginModalContent}
     </main>
+  );
+}
+
+// Kvůli bezpečnosti Next.js (aby mohl bezpečně číst parametry z URL) musí být tento kód obalen do Suspense
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
