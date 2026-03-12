@@ -132,6 +132,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       initialPrices[1] = { vibe: 0.73, noVibe: 0.27 };
       setMarketPrices(initialPrices);
     }
+    if (typeof window !== 'undefined') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDarkMode(isDark);
+      if (isDark) document.documentElement.classList.add('dark');
+    }
   }, []);
 
   const showToast = (text: string, type: 'success' | 'error') => {
@@ -143,7 +148,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // --- LOGINS ---
   const loginWithTwitter = async () => {
-    // TADY JE TA DŮLEŽITÁ OPRAVA NA 'x'
     const { error } = await supabase.auth.signInWithOAuth({ 
       provider: 'x', 
       options: { redirectTo: `${window.location.origin}/` } 
@@ -186,6 +190,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showToast("Logged out successfully.", "success");
   };
 
+  // --- UPDATE NICKNAME ---
+  const updateNickname = async (newNickname: string) => {
+    if (!isLoggedIn) return;
+    
+    setNickname(newNickname);
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { error } = await supabase
+        .from('users')
+        .update({ nickname: newNickname })
+        .eq('id', session.user.id);
+        
+      if (error) {
+        showToast("Error saving nickname.", "error");
+      } else {
+        showToast("Nickname updated!", "success");
+      }
+    }
+  };
+
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
@@ -220,7 +245,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       selectedMarket, setSelectedMarket, avatarUrl, nickname,
       isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard, showToast,
       isLoginModalOpen, setIsLoginModalOpen, 
-      loginWithTwitter, loginWithDiscord, loginWithEmail
+      loginWithTwitter, loginWithDiscord, loginWithEmail,
+      updateNickname // TADY JE PŘIDANÁ FUNKCE DO KONTEXTU
     }}>
       {children}
       {toastMessage && (
