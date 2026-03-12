@@ -8,9 +8,9 @@ import { useAppContext, MARKETS, CATEGORIES } from './context';
 const createSlug = (title: string) => {
   return title
     .toLowerCase()
-    .replace(/&/g, 'and')          // Nahradí & za and (Ben Affleck and JLo)
-    .replace(/[^a-z0-9]+/g, '-')   // Nahradí všechny znaky a mezery pomlčkami
-    .replace(/(^-|-$)+/g, '');     // Smaže případné pomlčky na úplném začátku nebo konci
+    .replace(/&/g, 'and')          
+    .replace(/[^a-z0-9]+/g, '-')   
+    .replace(/(^-|-$)+/g, '');     
 };
 
 export default function Home() {
@@ -38,38 +38,46 @@ export default function Home() {
   const prevChatLengthRef = useRef(marketChat.length);
   const prevMarketIdRef = useRef<number | null>(null);
 
-  // 1. NAČTENÍ KARTY Z URL (vybecard)
+  // 1. ZPRACOVÁNÍ HISTORIE PROHLÍŽEČE (Tlačítka Zpět / Vpřed)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const marketParam = params.get('vybecard'); // <-- Změněno na vybecard
-      
-      if (marketParam) {
-        // A) Zkusíme najít podle ID (kdyby někdo klikl na starý číselný odkaz)
-        let targetMarket = MARKETS.find(m => m.id.toString() === marketParam);
-        
-        // B) Pokud nenajde ID, hledá podle hezkého názvu (slug)
-        if (!targetMarket) {
-          targetMarket = MARKETS.find(m => createSlug(m.title) === marketParam);
-        }
-        
-        if (targetMarket) {
-          setSelectedMarket(targetMarket);
-        }
-      }
-    }
-  }, []); 
+    if (typeof window === 'undefined') return;
 
-  // 2. ZMĚNA URL PŘI ROZKLIKNUTÍ KARTY (Na vybecard)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      if (selectedMarket) {
-        url.searchParams.set('vybecard', createSlug(selectedMarket.title)); // <-- Změněno na vybecard
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const marketParam = params.get('vybecard');
+      if (marketParam) {
+        let targetMarket = MARKETS.find(m => m.id.toString() === marketParam) || MARKETS.find(m => createSlug(m.title) === marketParam);
+        setSelectedMarket(targetMarket || null);
       } else {
-        url.searchParams.delete('vybecard'); // <-- Změněno na vybecard
+        setSelectedMarket(null);
       }
-      window.history.replaceState({}, '', url.toString());
+    };
+
+    // Hned po načtení zkontrolujeme URL
+    handlePopState();
+
+    // Zapneme "naslouchání" na to, když uživatel klikne v prohlížeči na Zpět
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [setSelectedMarket]);
+
+  // 2. AKTUALIZACE URL PŘI KLIKNUTÍ V APLIKACI (Vytvoření záznamu v historii)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const url = new URL(window.location.href);
+    const currentParam = url.searchParams.get('vybecard');
+    const newParam = selectedMarket ? createSlug(selectedMarket.title) : null;
+
+    // Pokud se stav opravdu změnil (neudělal to jen prohlížeč), zapíšeme to do historie
+    if (currentParam !== newParam) {
+      if (newParam) {
+        url.searchParams.set('vybecard', newParam);
+      } else {
+        url.searchParams.delete('vybecard');
+      }
+      // PUSHSTATE: Tohle vytvoří nový krok v prohlížeči, takže tlačítko Zpět tě nehodí pryč z webu!
+      window.history.pushState({}, '', url.toString());
     }
   }, [selectedMarket]);
 
@@ -298,7 +306,7 @@ export default function Home() {
          <button 
            onClick={() => {
              const baseUrl = window.location.origin;
-             const customUrl = `${baseUrl}/?vybecard=${createSlug(flexMarket.title)}`; // <-- Změněno na vybecard v X odkazu
+             const customUrl = `${baseUrl}/?vybecard=${createSlug(flexMarket.title)}`; 
              const textToShare = `I just bet on\n"${flexMarket.title}"\n\nJoin me on Vybecheck!`;
              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(customUrl)}`, '_blank');
            }} 
