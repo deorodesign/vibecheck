@@ -18,7 +18,7 @@ const AppContext = createContext<any>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(true); 
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // <-- TADY JE TA PROMĚNNÁ PROTI PROBLIKÁVÁNÍ
   
   const [walletAddress, setWalletAddress] = useState("");
   const [balance, setBalance] = useState(0);
@@ -51,7 +51,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       const { user } = session;
       
-      // 1. Načtení nebo vytvoření profilu uživatele
+      // 1. Zkontroluje / Vytvoří uživatele
       let { data: dbUser, error } = await supabase.from('users').select('*').eq('id', user.id).single();
 
       if (!dbUser) {
@@ -66,10 +66,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         dbUser = insertedUser;
       }
 
-      // 2. Načtení všech sázek tohoto uživatele z databáze
+      // 2. NAČTE HISTORII SÁZEK Z DATABÁZE
       const { data: dbBets } = await supabase.from('bets').select('*').eq('user_id', user.id);
       if (dbBets) {
-        // Převedeme data z databáze do formátu, který používá náš frontend
         const formattedBets = dbBets.map(b => ({
           marketId: b.market_id,
           type: b.type,
@@ -85,7 +84,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setNickname(dbUser?.nickname || "Vyber");
       setAvatarUrl(dbUser?.avatar_url || "");
       setIsLoginModalOpen(false);
-      setIsAuthLoading(false); 
+      setIsAuthLoading(false); // Ověřování hotovo, web se může odkrýt
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => checkUser(session));
@@ -96,7 +95,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         setIsLoggedIn(false);
         setIsAuthLoading(false);
-        setMyBets([]); // Při odhlášení vymažeme sázky z obrazovky
+        setMyBets([]); 
       }
     });
 
@@ -171,14 +170,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('dark');
   };
 
-  // --- UPRAVENÁ FUNKCE PLACE BET ---
+  // --- ODESLÁNÍ SÁZKY DO DATABÁZE S KONTROLOU CHYB ---
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     if (balance < amount) { showToast("Insufficient balance!", "error"); return; }
     
     const entryPrice = marketPrices[marketId][type === 'VYBE' ? 'vibe' : 'noVibe'] * 100;
     const newBalance = balance - amount;
 
-    // 1. Okamžitá vizuální změna (aby to bylo pro uživatele bleskové)
+    // 1. Vizualní změna hned, ať to na nic nečeká
     setBalance(newBalance);
     setMyBets(prev => [...prev, { marketId, type, amount, entryPrice }]);
     
@@ -190,20 +189,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
     });
 
-    // 2. Uložení do databáze na pozadí!
+    // 2. Uložení do databáze (KONEČNĚ!)
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
-      // Odečtení zůstatku
-      await supabase.from('users').update({ balance: newBalance }).eq('id', session.user.id);
       
-      // Zapsání sázky
-      await supabase.from('bets').insert({
+      // Odečteme uživateli peníze v DB
+      const { error: balanceError } = await supabase.from('users').update({ balance: newBalance }).eq('id', session.user.id);
+      if (balanceError) {
+        showToast("DB Error: " + balanceError.message, "error");
+        console.error(balanceError);
+      }
+      
+      // Vložíme sázku do DB
+      const { error: betError } = await supabase.from('bets').insert({
         user_id: session.user.id,
         market_id: marketId,
         type: type,
         amount: amount,
         entry_price: entryPrice
       });
+      if (betError) {
+        showToast("DB Error: " + betError.message, "error");
+        console.error(betError);
+      }
     }
 
     showToast(`Successfully placed ${amount} USDC!`, "success");
