@@ -6,7 +6,7 @@ import { useAppContext, MARKETS, CATEGORIES } from './context';
 
 export default function Home() {
   const { 
-    isLoggedIn, walletAddress, balance, connectWallet, handleLogout,
+    isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout, // Přidáno isAuthLoading!
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
@@ -131,83 +131,82 @@ export default function Home() {
             {isDarkMode ? "LGT" : "DRK"}
           </button>
           
-          {isLoggedIn && (
-            <div className="flex items-center gap-3 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 px-4 md:px-5 py-2.5 rounded-full shadow-sm cursor-default">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
-              <span className="text-xs md:text-sm font-mono font-bold text-zinc-900 dark:text-white">{balance.toFixed(2)} <span className="text-zinc-500 hidden md:inline">USDC</span></span>
+          {/* ÚPRAVA PROTI PROBLIKÁVÁNÍ TLAČÍTEK */}
+          {isAuthLoading ? (
+            <div className="flex items-center gap-2">
+               <div className="w-24 h-10 rounded-full bg-zinc-200 dark:bg-white/5 animate-pulse"></div>
+               <div className="w-20 h-10 rounded-full bg-zinc-200 dark:bg-white/5 animate-pulse"></div>
             </div>
-          )}
-
-          <div className="relative" ref={dropdownRef}>
-            <button onClick={() => setIsProfileOpen(!isProfileOpen)} className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 h-10 rounded-full border transition-all shadow-sm active:scale-95 ${isProfileOpen ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/30' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
-              {isLoggedIn ? (
-                <>
+          ) : isLoggedIn ? (
+            <>
+              <div className="flex items-center gap-3 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 px-4 md:px-5 py-2.5 rounded-full shadow-sm cursor-default">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                <span className="text-xs md:text-sm font-mono font-bold text-zinc-900 dark:text-white">{balance.toFixed(2)} <span className="text-zinc-500 hidden md:inline">USDC</span></span>
+              </div>
+              <div className="relative" ref={dropdownRef}>
+                <button onClick={() => setIsProfileOpen(!isProfileOpen)} className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 h-10 rounded-full border transition-all shadow-sm active:scale-95 ${isProfileOpen ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/30' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full object-cover border border-zinc-200 dark:border-white/20" />
                   ) : (
                     <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 border border-zinc-200 dark:border-white/20"></div>
                   )}
                   <span className="text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300 hidden sm:inline">{shortAddress(walletAddress)}</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 text-zinc-600 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-300 hidden sm:inline">MENU</span>
-                </>
-              )}
-            </button>
-            
-            {isProfileOpen && (
-              <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                
-                {isLoggedIn ? (
-                  <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
-                    <div className="flex items-center justify-between mb-3">
-                       <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Wallet</span>
-                       <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-1 text-[10px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Settings</Link>
+                </button>
+                {/* Otevřené profilové menu zachováno ... */}
+                {isProfileOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
+                      <div className="flex items-center justify-between mb-3">
+                         <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Wallet</span>
+                         <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-1 text-[10px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Settings</Link>
+                      </div>
+                      <div className="flex items-center gap-3">
+                         {avatarUrl ? (
+                           <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                         ) : (
+                           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex-shrink-0"></div>
+                         )}
+                         <div className="overflow-hidden">
+                           <p className="text-zinc-900 dark:text-white font-bold text-sm italic uppercase truncate">{walletAddress}</p>
+                         </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                       {avatarUrl ? (
-                         <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-                       ) : (
-                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex-shrink-0"></div>
-                       )}
-                       <div className="overflow-hidden">
-                         <p className="text-zinc-900 dark:text-white font-bold text-sm italic uppercase truncate">{walletAddress}</p>
-                       </div>
+                    <div className="p-2 flex flex-col gap-1">
+                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center justify-center gap-2 w-full px-3 py-3 text-[11px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-all">Profile & Philosophy</Link>
+                      <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">How it Works</Link>
+                      <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
+                      <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
+                      <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
                     </div>
-                  </div>
-                ) : (
-                  <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex flex-col items-center gap-3">
-                    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest text-center">Join the culture</p>
-                    <button onClick={() => { connectWallet(); setIsProfileOpen(false); }} className="w-full py-3 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-black text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md active:scale-95">
-                      Log In / Sign Up
-                    </button>
-                  </div>
-                )}
-                
-                <div className="p-2 flex flex-col gap-1">
-                  {isLoggedIn && (
-                    <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center justify-center gap-2 w-full px-3 py-3 text-[11px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-all">
-                      Profile & Philosophy
-                    </Link>
-                  )}
-                  <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">How it Works</Link>
-                  <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
-                  <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
-                  <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
-                </div>
-
-                {isLoggedIn && (
-                  <div className="p-2 border-t border-zinc-100 dark:border-white/5">
-                    <button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2.5 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-500/10 rounded-xl transition-colors">
-                      Log Out
-                    </button>
+                    <div className="p-2 border-t border-zinc-100 dark:border-white/5">
+                      <button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2.5 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-500/10 rounded-xl transition-colors">Log Out</button>
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <div className="relative" ref={dropdownRef}>
+              <button onClick={() => setIsProfileOpen(!isProfileOpen)} className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 h-10 rounded-full border transition-all shadow-sm active:scale-95 ${isProfileOpen ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/30' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
+                <svg className="w-5 h-5 text-zinc-600 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-300 hidden sm:inline">MENU</span>
+              </button>
+              {isProfileOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex flex-col items-center gap-3">
+                    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest text-center">Join the culture</p>
+                    <button onClick={() => { connectWallet(); setIsProfileOpen(false); }} className="w-full py-3 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-black text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md active:scale-95">Log In / Sign Up</button>
+                  </div>
+                  <div className="p-2 flex flex-col gap-1">
+                    <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">How it Works</Link>
+                    <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
+                    <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
+                    <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       {!selectedMarket && (
@@ -243,27 +242,32 @@ export default function Home() {
           <p className="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10 bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">Top 5 win monthly airdrops!</p>
         </div>
         <div className="flex flex-col p-2">
-          {dynamicLeaderboard.map((user: any) => (
-            <div key={user.id} className={`flex items-center justify-between p-4 rounded-2xl transition-colors ${user.id === 'me' ? 'bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/20' : 'hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
-              <div className="flex items-center gap-4">
-                <span className={`font-black italic text-lg w-4 ${user.rank === 1 ? 'text-yellow-500' : user.rank === 2 ? 'text-zinc-400' : user.rank === 3 ? 'text-amber-600' : 'text-zinc-300 dark:text-zinc-600'}`}>{user.rank}</span>
-                <div className="flex items-center gap-3">
-                  {user.avatar ? (
-                    <img src={user.avatar} className="w-8 h-8 rounded-full object-cover shadow-sm border border-zinc-200 dark:border-white/10" alt="Avatar" />
-                  ) : (
-                    <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${user.color} shadow-sm`}></div>
-                  )}
-                  <div className="flex flex-col">
-                    <span className={`font-bold text-xs ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.name}</span>
-                    <span className="text-[9px] font-mono text-zinc-500">{user.address}</span>
+          {dynamicLeaderboard.map((user: any) => {
+            // ÚPRAVA PROTI POSKAKOVÁNÍ ŽEBŘÍČKU: Dokud nevíme, kdo jsi, tvou řádku neukážeme.
+            if (user.id === 'me' && isAuthLoading) return null;
+
+            return (
+              <div key={user.id} className={`flex items-center justify-between p-4 rounded-2xl transition-colors ${user.id === 'me' ? 'bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/20' : 'hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
+                <div className="flex items-center gap-4">
+                  <span className={`font-black italic text-lg w-4 ${user.rank === 1 ? 'text-yellow-500' : user.rank === 2 ? 'text-zinc-400' : user.rank === 3 ? 'text-amber-600' : 'text-zinc-300 dark:text-zinc-600'}`}>{user.rank}</span>
+                  <div className="flex items-center gap-3">
+                    {user.avatar ? (
+                      <img src={user.avatar} className="w-8 h-8 rounded-full object-cover shadow-sm border border-zinc-200 dark:border-white/10" alt="Avatar" />
+                    ) : (
+                      <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${user.color} shadow-sm`}></div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className={`font-bold text-xs ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.name}</span>
+                      <span className="text-[9px] font-mono text-zinc-500">{user.address}</span>
+                    </div>
                   </div>
                 </div>
+                <div className="flex flex-col items-end">
+                  <span className={`font-black font-mono text-sm ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.points.toLocaleString('en-US')}</span>
+                </div>
               </div>
-              <div className="flex flex-col items-end">
-                <span className={`font-black font-mono text-sm ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.points.toLocaleString('en-US')}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -276,17 +280,12 @@ export default function Home() {
            <h2 className="text-2xl font-black italic uppercase text-zinc-900 dark:text-white mb-1">Flex Your Position</h2>
            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest line-clamp-1">"{flexMarket.title}"</p>
          </div>
-         {/* TADY JE OPRAVENÉ SDÍLENÍ NA TWITTER */}
          <button 
            onClick={() => {
-             const baseUrl = window.location.origin; // Vezme tvoji reálnou aktuální doménu (.xyz nebo localhost)
+             const baseUrl = window.location.origin;
              const customUrl = `${baseUrl}/?market=${flexMarket.id}`;
              const textToShare = `I just bet on\n"${flexMarket.title}"\n\nJoin me on Vybecheck!`;
-             
-             // encodeURIComponent je nutný pro oba parametry, jinak znaky jako "&" odkaz rozbijí!
-             const twitterIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(customUrl)}`;
-             
-             window.open(twitterIntentUrl, '_blank');
+             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(customUrl)}`, '_blank');
            }} 
            className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-black text-white hover:bg-zinc-800 dark:hover:bg-zinc-900 transition-colors font-black uppercase tracking-widest text-sm shadow-md"
          >
