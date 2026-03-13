@@ -3,15 +3,10 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAppContext, MARKETS, CATEGORIES } from './context';
+import { useAppContext, CATEGORIES } from './context'; // Smazán starý MARKETS import
 
-// --- POMOCNÁ FUNKCE PRO GENEROVÁNÍ HEZKÝCH URL (Slugs) ---
 const createSlug = (title: string) => {
-  return title
-    .toLowerCase()
-    .replace(/&/g, 'and')          
-    .replace(/[^a-z0-9]+/g, '-')   
-    .replace(/(^-|-$)+/g, '');     
+  return title.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');     
 };
 
 function HomeContent() {
@@ -20,6 +15,7 @@ function HomeContent() {
   const vybecardParam = searchParams.get('vybecard');
 
   const { 
+    markets, // <-- TADY BERE REÁLNÉ KARTY Z DATABÁZE
     isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout,
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage,
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
@@ -43,21 +39,20 @@ function HomeContent() {
   const prevChatLengthRef = useRef(marketChat.length);
   const prevMarketIdRef = useRef<number | null>(null);
 
-  // 1. ZPRACOVÁNÍ ADRESY PŘES NEXT.JS (Funguje i pro tlačítko Zpět)
   useEffect(() => {
+    // Čekáme, až se načtou trhy z DB, aby fungovaly hluboké odkazy
+    if (markets.length === 0) return; 
+
     if (vybecardParam) {
-      let targetMarket = MARKETS.find(m => m.id.toString() === vybecardParam) || MARKETS.find(m => createSlug(m.title) === vybecardParam);
+      let targetMarket = markets.find((m: any) => m.id.toString() === vybecardParam) || markets.find((m: any) => createSlug(m.title) === vybecardParam);
       if (targetMarket && targetMarket.id !== selectedMarket?.id) {
         setSelectedMarket(targetMarket);
       }
     } else {
-      if (selectedMarket) {
-        setSelectedMarket(null);
-      }
+      if (selectedMarket) setSelectedMarket(null);
     }
-  }, [vybecardParam]); // Reaguje vždy, když se změní URL adresa
+  }, [vybecardParam, markets]); 
 
-  // 2. FUNKCE PRO BEZPEČNÉ OTEVÍRÁNÍ A ZAVÍRÁNÍ
   const openMarket = (market: any) => {
     setSelectedMarket(market);
     router.push(`/?vybecard=${createSlug(market.title)}`, { scroll: false });
@@ -73,40 +68,26 @@ function HomeContent() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsProfileOpen(false);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsProfileOpen(false);
     }
     if (isProfileOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProfileOpen]);
 
   useEffect(() => {
-    if (!selectedMarket) {
-      prevMarketIdRef.current = null;
-      return;
-    }
-    if (selectedMarket.id !== prevMarketIdRef.current) {
-      prevMarketIdRef.current = selectedMarket.id;
-    } else if (marketChat.length > prevChatLengthRef.current) {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
+    if (!selectedMarket) { prevMarketIdRef.current = null; return; }
+    if (selectedMarket.id !== prevMarketIdRef.current) { prevMarketIdRef.current = selectedMarket.id; } 
+    else if (marketChat.length > prevChatLengthRef.current) { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }
     prevChatLengthRef.current = marketChat.length;
   }, [selectedMarket, marketChat.length]);
 
   const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
     e.stopPropagation();
     const amountToBet = parseFloat(betAmount);
-    
-    if (!isLoggedIn) {
-      connectWallet();
-    } else if (isNaN(amountToBet) || amountToBet <= 0) {
-      showToast("Please enter a valid amount.", "error");
-    } else if (amountToBet > balance) {
-      showToast("Insufficient balance!", "error");
-    } else {
-      placeBet(marketId, type, amountToBet);
-    }
+    if (!isLoggedIn) connectWallet();
+    else if (isNaN(amountToBet) || amountToBet <= 0) showToast("Please enter a valid amount.", "error");
+    else if (amountToBet > balance) showToast("Insufficient balance!", "error");
+    else placeBet(marketId, type, amountToBet);
   };
 
   const handleSendChat = () => {
@@ -116,18 +97,13 @@ function HomeContent() {
     }
   };
 
-  const handleFlex = (e: React.MouseEvent, market: any) => {
-    e.stopPropagation();
-    setFlexMarket(market);
-  };
-
   const shortAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "Not Connected";
   
-  let filteredMarkets = MARKETS;
+  let filteredMarkets = markets;
   if (activeCategory === 'Trending') {
-    filteredMarkets = [...MARKETS].sort((a, b) => b.volumeUsd - a.volumeUsd);
+    filteredMarkets = [...markets].sort((a, b) => b.volumeUsd - a.volumeUsd);
   } else if (activeCategory !== 'All') {
-    filteredMarkets = MARKETS.filter(m => m.category === activeCategory);
+    filteredMarkets = markets.filter((m: any) => m.category === activeCategory);
   }
 
   const sortedMarkets = [...filteredMarkets].sort((a, b) => {
@@ -237,7 +213,7 @@ function HomeContent() {
       <div className="bg-white dark:bg-[#18181b] rounded-[2rem] p-6 border border-zinc-200 dark:border-white/5 shadow-sm">
         <h3 className="text-zinc-900 dark:text-white font-black italic uppercase mb-6 flex items-center gap-2 tracking-tight">Hot Now</h3>
         <div className="flex flex-col gap-5">
-          {MARKETS.slice(0, 3).map(m => (
+          {markets.slice(0, 3).map((m: any) => (
             <div key={m.id} onClick={() => openMarket(m)} className="flex gap-4 items-center cursor-pointer group">
               <img src={m.imageUrl} alt={m.title} className="w-12 h-12 rounded-xl object-cover shadow-sm group-hover:scale-105 transition-transform" />
               <div className="flex-1">
@@ -349,15 +325,16 @@ function HomeContent() {
     </div>
   );
 
-  if (selectedMarket) {
-    const currentPrices = marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 };
-    const marketBetTotal = myBets.filter((b: any) => b.marketId === selectedMarket.id).reduce((sum: number, b: any) => sum + b.amount, 0);
-    const isResolved = !!marketStatus[selectedMarket.id];
-    const winningOutcome = marketStatus[selectedMarket.id];
-
-    return (
-      <main className="flex min-h-screen flex-col items-center font-sans bg-zinc-50 dark:bg-[#0e0e12] transition-colors duration-500 relative">
-        {headerContent}
+  return (
+    <main className="flex min-h-screen flex-col items-center font-sans bg-zinc-50 dark:bg-[#0e0e12] transition-colors duration-500 relative">
+      {headerContent}
+      
+      {markets.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-50">
+          <div className="w-12 h-12 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="font-bold text-xs uppercase tracking-widest text-zinc-500">Loading Vybecards...</p>
+        </div>
+      ) : selectedMarket ? (
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-8 py-6 px-4 animate-in slide-in-from-bottom-8 duration-500">
           <div className="w-full lg:flex-1 flex flex-col gap-6">
             <div className="w-full h-[200px] md:h-[280px] rounded-[2rem] overflow-hidden relative shadow-xl border border-zinc-200 dark:border-white/5">
@@ -373,11 +350,11 @@ function HomeContent() {
                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Current Vybe Check</h3>
                 
                 <div className="relative h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center shadow-inner mb-6 border border-zinc-200 dark:border-white/5">
-                  <div className="h-full bg-green-500 flex items-center px-4 justify-start relative shadow-[0_0_20px_rgba(34,197,94,0.6)] transition-all duration-500 ease-out" style={{ width: `${currentPrices.vibe * 100}%` }}>
-                    <span className="text-white dark:text-black font-black italic text-sm z-10">{(currentPrices.vibe * 100).toFixed(0)}%</span>
+                  <div className="h-full bg-green-500 flex items-center px-4 justify-start relative shadow-[0_0_20px_rgba(34,197,94,0.6)] transition-all duration-500 ease-out" style={{ width: `${(currentPrices?.vibe || 0.5) * 100}%` }}>
+                    <span className="text-white dark:text-black font-black italic text-sm z-10">{((currentPrices?.vibe || 0.5) * 100).toFixed(0)}%</span>
                   </div>
-                  <div className="h-full bg-red-500 flex items-center px-4 justify-end relative shadow-[0_0_20px_rgba(239,68,68,0.6)] transition-all duration-500 ease-out" style={{ width: `${currentPrices.noVibe * 100}%` }}>
-                    <span className="text-white dark:text-black font-black italic text-sm z-10">{(currentPrices.noVibe * 100).toFixed(0)}%</span>
+                  <div className="h-full bg-red-500 flex items-center px-4 justify-end relative shadow-[0_0_20px_rgba(239,68,68,0.6)] transition-all duration-500 ease-out" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }}>
+                    <span className="text-white dark:text-black font-black italic text-sm z-10">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span>
                   </div>
                 </div>
 
@@ -418,11 +395,11 @@ function HomeContent() {
                       <div className="grid grid-cols-2 gap-4">
                         <button onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className="group/btn flex flex-col items-center justify-center p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500 transition-all active:scale-95 shadow-sm">
                           <span className="text-green-600 dark:text-green-400 group-hover/btn:text-green-700 dark:group-hover/btn:text-black font-black text-xl md:text-2xl uppercase italic">VYBE</span>
-                          <span className="text-[10px] text-green-600/70 dark:text-green-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {(currentPrices.vibe * 100).toFixed(0)}¢</span>
+                          <span className="text-[10px] text-green-600/70 dark:text-green-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {((currentPrices?.vibe || 0.5) * 100).toFixed(0)}¢</span>
                         </button>
                         <button onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className="group/btn flex flex-col items-center justify-center p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500 transition-all active:scale-95 shadow-sm">
                           <span className="text-red-600 dark:text-red-400 group-hover/btn:text-red-700 dark:group-hover/btn:text-black font-black text-xl md:text-2xl uppercase italic">NO VYBE</span>
-                          <span className="text-[10px] text-red-600/70 dark:text-red-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {(currentPrices.noVibe * 100).toFixed(0)}¢</span>
+                          <span className="text-[10px] text-red-600/70 dark:text-red-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}¢</span>
                         </button>
                       </div>
                       <p className="text-[10px] text-zinc-400 text-center font-bold">
@@ -469,70 +446,63 @@ function HomeContent() {
           </div>
           {rightSidebar}
         </div>
-        {flexModalContent}
-        {loginModalContent}
-      </main>
-    );
-  }
+      ) : (
+        <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-8 py-8 px-4">
+          <div className="w-full lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            {sortedMarkets.map((market: any) => {
+              const currentPrices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5 };
+              const isResolved = !!marketStatus[market.id];
+              const winningOutcome = marketStatus[market.id];
 
-  return (
-    <main className="flex min-h-screen flex-col items-center font-sans bg-zinc-50 dark:bg-[#0e0e12] transition-colors duration-500 relative">
-      {headerContent}
-      <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-8 py-8 px-4">
-        <div className="w-full lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          {sortedMarkets.map((market) => {
-            const currentPrices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5 };
-            const isResolved = !!marketStatus[market.id];
-            const winningOutcome = marketStatus[market.id];
-
-            return (
-              <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
-                <div className="h-44 w-full shrink-0 relative overflow-hidden">
-                  <img src={market.imageUrl} alt={market.title} className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" />
-                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: {market.volume}</div>
-                </div>
-                
-                <div className="p-6 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
-                  <h2 className="text-lg font-black leading-tight text-zinc-900 dark:text-white uppercase italic mb-4 line-clamp-2 h-12">{market.title}</h2>
+              return (
+                <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
+                  <div className="h-44 w-full shrink-0 relative overflow-hidden">
+                    <img src={market.imageUrl} alt={market.title} className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" />
+                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: {market.volume}</div>
+                  </div>
                   
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center mb-1.5 px-1">
-                      <span className="text-[10px] font-black text-green-500 uppercase italic">{(currentPrices.vibe * 100).toFixed(0)}%</span>
-                      <span className="text-[10px] font-black text-red-500 uppercase italic">{(currentPrices.noVibe * 100).toFixed(0)}%</span>
+                  <div className="p-6 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
+                    <h2 className="text-lg font-black leading-tight text-zinc-900 dark:text-white uppercase italic mb-4 line-clamp-2 h-12">{market.title}</h2>
+                    
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-1.5 px-1">
+                        <span className="text-[10px] font-black text-green-500 uppercase italic">{((currentPrices?.vibe || 0.5) * 100).toFixed(0)}%</span>
+                        <span className="text-[10px] font-black text-red-500 uppercase italic">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="relative h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5">
+                        <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${(currentPrices?.vibe || 0.5) * 100}%` }} />
+                        <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }} />
+                      </div>
                     </div>
-                    <div className="relative h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5">
-                      <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${currentPrices.vibe * 100}%` }} />
-                      <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${currentPrices.noVibe * 100}%` }} />
-                    </div>
-                  </div>
 
-                  <div className="mt-auto flex flex-col gap-2">
-                    {isResolved ? (
-                      <div className="w-full text-center py-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="p-3 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-xs text-center transition-colors">Vybe</div>
-                        <div className="p-3 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-xs text-center transition-colors">No Vybe</div>
-                      </div>
-                    )}
+                    <div className="mt-auto flex flex-col gap-2">
+                      {isResolved ? (
+                        <div className="w-full text-center py-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-xs text-center transition-colors">Vybe</div>
+                          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-xs text-center transition-colors">No Vybe</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          {rightSidebar}
         </div>
-        {rightSidebar}
-      </div>
+      )}
+      
       {flexModalContent}
       {loginModalContent}
     </main>
   );
 }
 
-// Kvůli bezpečnosti Next.js (aby mohl bezpečně číst parametry z URL) musí být tento kód obalen do Suspense
 export default function Home() {
   return (
     <Suspense fallback={
