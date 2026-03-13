@@ -96,6 +96,12 @@ function HomeContent() {
     }
   };
 
+  // CHYBĚJÍCÍ FUNKCE PŘIDÁNA ZDE
+  const handleFlex = (e: React.MouseEvent, market: any) => {
+    e.stopPropagation();
+    setFlexMarket(market);
+  };
+
   const shortAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "Not Connected";
   
   let filteredMarkets = markets;
@@ -112,7 +118,6 @@ function HomeContent() {
     return aResolved ? 1 : -1; 
   });
 
-  // ---> OPRAVA: Definování proměnných pro detail trhu <---
   const isResolved = selectedMarket ? !!marketStatus[selectedMarket.id] : false;
   const winningOutcome = selectedMarket ? marketStatus[selectedMarket.id] : null;
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
@@ -443,4 +448,79 @@ function HomeContent() {
                 <div className="p-4 border-t border-zinc-200 dark:border-white/5 bg-white dark:bg-[#18181b]">
                   <div className="relative flex items-center">
                     <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendChat()} placeholder={isLoggedIn ? "Type a message..." : "Log in to chat..."} className="w-full bg-zinc-100 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-fuchsia-500 transition-colors text-zinc-900 dark:text-white" />
-                    <button onClick={handleSendChat} className="absolute right-2 p-2 text-zinc-400 hover:text-fuchsia-500 transition-colors"><svg className="w-4 h-4"
+                    <button onClick={handleSendChat} className="absolute right-2 p-2 text-zinc-400 hover:text-fuchsia-500 transition-colors"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {rightSidebar}
+        </div>
+      ) : (
+        <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-8 py-8 px-4">
+          <div className="w-full lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            {sortedMarkets.map((market: any) => {
+              const currentPrices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5 };
+              const isResolved = !!marketStatus[market.id];
+              const winningOutcome = marketStatus[market.id];
+
+              return (
+                <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
+                  <div className="h-44 w-full shrink-0 relative overflow-hidden">
+                    <img src={market.imageUrl} alt={market.title} className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" />
+                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: {market.volume}</div>
+                  </div>
+                  
+                  <div className="p-6 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
+                    <h2 className="text-lg font-black leading-tight text-zinc-900 dark:text-white uppercase italic mb-4 line-clamp-2 h-12">{market.title}</h2>
+                    
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-1.5 px-1">
+                        <span className="text-[10px] font-black text-green-500 uppercase italic">{((currentPrices?.vibe || 0.5) * 100).toFixed(0)}%</span>
+                        <span className="text-[10px] font-black text-red-500 uppercase italic">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="relative h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5">
+                        <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${(currentPrices?.vibe || 0.5) * 100}%` }} />
+                        <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="mt-auto flex flex-col gap-2">
+                      {isResolved ? (
+                        <div className="w-full text-center py-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-xs text-center transition-colors">Vybe</div>
+                          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-xs text-center transition-colors">No Vybe</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {rightSidebar}
+        </div>
+      )}
+      
+      {flexModalContent}
+      {loginModalContent}
+    </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
+  );
+}
