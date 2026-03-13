@@ -59,27 +59,81 @@ export default function AdminPanel() {
       setTitle('');
       setImageUrl('');
       setResolutionSource('');
-      fetchMarkets(); // Obnoví seznam dole
+      fetchMarkets();
     }
   };
 
-  // 3. Vyhodnocení karty v DATABÁZI
+  // === 3. VYHODNOCENÍ KARTY A VÝPLATA VÝHERCŮM (PAYOUT) ===
   const handleResolveMarket = async (id: number, outcome: 'VYBE' | 'NO_VYBE') => {
-    const confirmed = window.confirm(`Are you sure you want to resolve this market as ${outcome}?`);
+    const confirmed = window.confirm(`Are you absolutely sure you want to resolve this market as ${outcome}? This will process payouts and cannot be undone.`);
     if (!confirmed) return;
 
-    const { error } = await supabase.from('markets').update({
+    // A) Uzamčení trhu v databázi
+    const { error: updateError } = await supabase.from('markets').update({
       is_resolved: true,
       winning_outcome: outcome
     }).eq('id', id);
 
-    if (error) {
-      showToast("Error resolving: " + error.message, "error");
-    } else {
-      showToast("Market resolved!", "success");
-      // POZNÁMKA: Tady v budoucnu přidáme funkci, která projede sázky a připíše lidem výhry!
-      fetchMarkets();
+    if (updateError) {
+      showToast("Error resolving: " + updateError.message, "error");
+      return;
     }
+
+    // B) Zpracování výplat (PAYOUTS)
+    showToast(`Processing payouts for ${outcome} winners...`, "success");
+
+    // B1. Získání všech sázek pro tento trh
+    const { data: allBets, error: betsError } = await supabase
+      .from('bets')
+      .select('*')
+      .eq('market_id', id);
+
+    if (betsError || !allBets) {
+      showToast("Error fetching bets for payouts.", "error");
+      fetchMarkets();
+      return;
+    }
+
+    // B2. Vyfiltrování výherních sázek
+    const winningBets = allBets.filter(bet => bet.type === outcome);
+    
+    let totalPaidOut = 0;
+    let winnersCount = 0;
+
+    // B3. Výpočet a odeslání peněz každému výherci
+    for (const bet of winningBets) {
+      // Výpočet výhry: Vklad / (Kurz při nákupu / 100). Např. 10 USDC / (50¢ / 100) = 20 USDC výhra.
+      const entryPriceDecimal = Number(bet.entry_price) / 100;
+      const payoutAmount = Number(bet.amount) / entryPriceDecimal;
+      
+      // Získáme aktuální zůstatek uživatele
+      const { data: userData } = await supabase
+        .from('users')
+        .select('balance')
+        .eq('id', bet.user_id)
+        .single();
+        
+      if (userData) {
+        const newBalance = Number(userData.balance) + payoutAmount;
+        
+        // Připíšeme mu výhru
+        await supabase
+          .from('users')
+          .update({ balance: newBalance })
+          .eq('id', bet.user_id);
+          
+        totalPaidOut += payoutAmount;
+        winnersCount++;
+      }
+    }
+
+    if (winnersCount > 0) {
+      showToast(`Market resolved! Paid out ${totalPaidOut.toFixed(2)} USDC to ${winnersCount} winners.`, "success");
+    } else {
+      showToast("Market resolved! No winning bets to pay out.", "success");
+    }
+
+    fetchMarkets();
   };
 
   return (
