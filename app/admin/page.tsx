@@ -1,52 +1,191 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAppContext, MARKETS } from '../context';
+import { useAppContext, CATEGORIES } from '../context';
+import { supabase } from '../lib/supabase';
 
 export default function AdminPanel() {
-  const { marketStatus, resolveMarket, isDarkMode } = useAppContext();
+  const { isDarkMode, showToast } = useAppContext();
+  
+  const [markets, setMarkets] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Stavy pro formulář nové karty
+  const availableCategories = CATEGORIES.filter((c: string) => c !== 'All');
+  const [title, setTitle] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [category, setCategory] = useState(availableCategories[0]);
+  const [resolutionSource, setResolutionSource] = useState('');
+
+  // 1. Načtení trhů z DATABÁZE
+  const fetchMarkets = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('markets')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (data) setMarkets(data);
+    if (error) showToast("Error loading markets", "error");
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchMarkets();
+  }, []);
+
+  // 2. Vytvoření nové karty do DATABÁZE
+  const handleCreateMarket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !imageUrl || !resolutionSource) {
+      showToast("Please fill all fields!", "error");
+      return;
+    }
+
+    const { error } = await supabase.from('markets').insert({
+      title,
+      image_url: imageUrl,
+      category,
+      resolution_source: resolutionSource,
+      volume_usd: 0,
+      is_resolved: false
+    });
+
+    if (error) {
+      showToast("Error: " + error.message, "error");
+    } else {
+      showToast("Vybecard created successfully!", "success");
+      setTitle('');
+      setImageUrl('');
+      setResolutionSource('');
+      fetchMarkets(); // Obnoví seznam dole
+    }
+  };
+
+  // 3. Vyhodnocení karty v DATABÁZI
+  const handleResolveMarket = async (id: number, outcome: 'VYBE' | 'NO_VYBE') => {
+    const confirmed = window.confirm(`Are you sure you want to resolve this market as ${outcome}?`);
+    if (!confirmed) return;
+
+    const { error } = await supabase.from('markets').update({
+      is_resolved: true,
+      winning_outcome: outcome
+    }).eq('id', id);
+
+    if (error) {
+      showToast("Error resolving: " + error.message, "error");
+    } else {
+      showToast("Market resolved!", "success");
+      // POZNÁMKA: Tady v budoucnu přidáme funkci, která projede sázky a připíše lidem výhry!
+      fetchMarkets();
+    }
+  };
 
   return (
     <main className={`flex min-h-screen flex-col items-center p-8 font-sans ${isDarkMode ? 'bg-[#0e0e12] text-white' : 'bg-zinc-50 text-zinc-900'} transition-colors duration-500`}>
-      <div className="w-full max-w-4xl">
-        <div className="flex justify-between items-center mb-10">
-          <h1 className="text-3xl font-black uppercase italic text-fuchsia-500">🔒 Secret Admin Panel</h1>
-          <Link href="/" className="px-4 py-2 bg-zinc-800 text-white rounded-xl font-bold text-xs">Back to App</Link>
+      <div className="w-full max-w-4xl space-y-8">
+        
+        {/* HLAVIČKA */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-black uppercase italic text-fuchsia-500 flex items-center gap-3">
+            <span>🔒</span> Secret Admin Panel
+          </h1>
+          <Link href="/" className="px-5 py-2.5 bg-zinc-800 text-white rounded-xl font-bold text-xs hover:bg-zinc-700 transition-colors shadow-lg">
+            Back to App
+          </Link>
         </div>
 
-        <div className="bg-white dark:bg-[#18181b] p-6 rounded-[2rem] border border-zinc-200 dark:border-white/10 shadow-xl">
-          <h2 className="text-xl font-bold mb-6">Resolve Markets (Simulate Oracle)</h2>
+        {/* FORMULÁŘ PRO VYTVOŘENÍ NOVÉ KARTY */}
+        <div className="bg-white dark:bg-[#18181b] p-8 rounded-[2rem] border border-zinc-200 dark:border-white/10 shadow-xl">
+          <h2 className="text-xl font-black italic uppercase mb-6">Create New Vybecard</h2>
+          <form onSubmit={handleCreateMarket} className="flex flex-col gap-4">
+            
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Market Title (Question)</label>
+              <input 
+                type="text" value={title} onChange={e => setTitle(e.target.value)}
+                placeholder="e.g. Will GTA VI be delayed to 2026?"
+                className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Image URL</label>
+                <input 
+                  type="text" value={imageUrl} onChange={e => setImageUrl(e.target.value)}
+                  placeholder="https://.../image.jpg"
+                  className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Category</label>
+                <select 
+                  value={category} onChange={e => setCategory(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors appearance-none"
+                >
+                  {availableCategories.map((c: string) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Resolution Source (Rules)</label>
+              <input 
+                type="text" value={resolutionSource} onChange={e => setResolutionSource(e.target.value)}
+                placeholder="e.g. Official announcement on Rockstar Games X account."
+                className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors"
+              />
+            </div>
+
+            <button type="submit" className="mt-2 w-full py-4 rounded-xl bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white font-black uppercase tracking-widest text-sm hover:scale-[1.01] transition-all shadow-lg active:scale-95">
+              Deploy to Web
+            </button>
+          </form>
+        </div>
+
+        {/* SEZNAM AKTIVNÍCH KARET V DATABÁZI */}
+        <div className="bg-white dark:bg-[#18181b] p-8 rounded-[2rem] border border-zinc-200 dark:border-white/10 shadow-xl">
+          <h2 className="text-xl font-black italic uppercase mb-6">Manage Active Markets</h2>
           
-          <div className="flex flex-col gap-4">
-            {MARKETS.map(market => {
-              const status = marketStatus[market.id];
-              
-              return (
-                <div key={market.id} className="flex flex-col md:flex-row items-center justify-between p-4 bg-zinc-50 dark:bg-black/50 rounded-xl border border-zinc-200 dark:border-white/5">
-                  <div className="flex items-center gap-4 mb-4 md:mb-0">
-                    <img src={market.imageUrl} className="w-12 h-12 rounded-lg object-cover" />
-                    <span className="font-bold text-sm max-w-[250px]">{market.title}</span>
+          {isLoading ? (
+             <div className="text-center py-10 text-zinc-500 font-bold text-sm animate-pulse">Loading markets from database...</div>
+          ) : markets.length === 0 ? (
+             <div className="text-center py-10 text-zinc-500 font-bold text-sm">No markets in database yet. Create one above!</div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {markets.map(market => (
+                <div key={market.id} className={`flex flex-col md:flex-row items-center justify-between p-4 rounded-2xl border ${market.is_resolved ? 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/5 opacity-70' : 'bg-zinc-50 dark:bg-black/50 border-zinc-200 dark:border-white/10 shadow-sm'}`}>
+                  
+                  <div className="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-auto">
+                    <img src={market.image_url} alt="market" className="w-14 h-14 rounded-xl object-cover border border-zinc-200 dark:border-white/10" />
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm max-w-[300px] leading-tight">{market.title}</span>
+                      <span className="text-[10px] text-zinc-500 font-mono mt-1">ID: {market.id} | Vol: ${market.volume_usd}</span>
+                    </div>
                   </div>
                   
-                  {status ? (
-                    <div className="px-4 py-2 bg-zinc-200 dark:bg-white/10 rounded-lg text-xs font-bold uppercase">
-                      Resolved: <span className={status === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{status}</span>
+                  {market.is_resolved ? (
+                    <div className="px-5 py-2.5 bg-zinc-200 dark:bg-black rounded-xl text-xs font-black uppercase tracking-widest border border-zinc-300 dark:border-white/10 shrink-0">
+                      Winner: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
-                      <button onClick={() => resolveMarket(market.id, 'VYBE')} className="px-4 py-2 bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase hover:bg-green-500 hover:text-white transition-colors">
+                    <div className="flex gap-2 shrink-0 w-full md:w-auto">
+                      <button onClick={() => handleResolveMarket(market.id, 'VYBE')} className="flex-1 md:flex-none px-4 py-3 bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white dark:hover:bg-green-500 dark:hover:text-black transition-colors active:scale-95">
                         Set VYBE
                       </button>
-                      <button onClick={() => resolveMarket(market.id, 'NO_VYBE')} className="px-4 py-2 bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 rounded-lg text-xs font-bold uppercase hover:bg-red-500 hover:text-white transition-colors">
+                      <button onClick={() => handleResolveMarket(market.id, 'NO_VYBE')} className="flex-1 md:flex-none px-4 py-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white dark:hover:bg-red-500 dark:hover:text-black transition-colors active:scale-95">
                         Set NO VYBE
                       </button>
                     </div>
                   )}
                 </div>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
+
       </div>
     </main>
   );
