@@ -18,7 +18,7 @@ const AppContext = createContext<any>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(true); // <-- TADY JE TA PROMĚNNÁ PROTI PROBLIKÁVÁNÍ
+  const [isAuthLoading, setIsAuthLoading] = useState(true); 
   
   const [walletAddress, setWalletAddress] = useState("");
   const [balance, setBalance] = useState(0);
@@ -41,6 +41,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     { id: 'me', rank: isLoggedIn ? 4 : 999, name: isLoggedIn ? nickname : 'PLAYER_ONE', address: isLoggedIn ? walletAddress : '0xbc...e4a3', points: isLoggedIn ? 12500 : 0, avatar: isLoggedIn ? avatarUrl : null, color: 'from-fuchsia-500 to-orange-500' },
   ].sort((a, b) => a.rank - b.rank);
 
+  // === NAČTĚNÍ PROFILU A SÁZEK ===
   useEffect(() => {
     const checkUser = async (session: any) => {
       if (!session?.user) {
@@ -48,12 +49,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setIsAuthLoading(false); 
         return;
       }
-      
       const { user } = session;
-      
-      // 1. Zkontroluje / Vytvoří uživatele
-      let { data: dbUser, error } = await supabase.from('users').select('*').eq('id', user.id).single();
-
+      let { data: dbUser } = await supabase.from('users').select('*').eq('id', user.id).single();
       if (!dbUser) {
         const newUser = {
           id: user.id,
@@ -65,8 +62,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const { data: insertedUser } = await supabase.from('users').insert(newUser).select().single();
         dbUser = insertedUser;
       }
-
-      // 2. NAČTE HISTORII SÁZEK Z DATABÁZE
       const { data: dbBets } = await supabase.from('bets').select('*').eq('user_id', user.id);
       if (dbBets) {
         const formattedBets = dbBets.map(b => ({
@@ -77,29 +72,68 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }));
         setMyBets(formattedBets);
       }
-
       setIsLoggedIn(true);
       setWalletAddress(dbUser?.wallet_address || "");
       setBalance(Number(dbUser?.balance) || 500);
       setNickname(dbUser?.nickname || "Vyber");
       setAvatarUrl(dbUser?.avatar_url || "");
       setIsLoginModalOpen(false);
-      setIsAuthLoading(false); // Ověřování hotovo, web se může odkrýt
+      setIsAuthLoading(false); 
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => checkUser(session));
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        checkUser(session);
-      } else {
-        setIsLoggedIn(false);
-        setIsAuthLoading(false);
-        setMyBets([]); 
-      }
+      if (session) checkUser(session);
+      else { setIsLoggedIn(false); setIsAuthLoading(false); setMyBets([]); }
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // === MULTIPLAYER CHAT LOGIKA ===
+  useEffect(() => {
+    // 1. Načtení existující historie chatu při startu
+    const fetchChatHistory = async () => {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .order('created_at', { ascending: true }) // Od nejstarších po nejnovější
+        .limit(500);
+        
+      if (data) {
+        const formatted = data.map(msg => ({
+          id: msg.id,
+          marketId: msg.market_id,
+          text: msg.text,
+          user: msg.nickname,
+          avatar: msg.avatar_url,
+          color: 'text-fuchsia-500'
+        }));
+        setChatMessages(formatted);
+      }
+    };
+    
+    fetchChatHistory();
+
+    // 2. Přihlášení k Realtime kanálu
+    const chatChannel = supabase.channel('public:chat_messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+        // Jakmile do databáze spadne nová zpráva, okamžitě ji přidáme na obrazovku!
+        const newMsg = payload.new;
+        setChatMessages(prev => [...prev, {
+          id: newMsg.id,
+          marketId: newMsg.market_id,
+          text: newMsg.text,
+          user: newMsg.nickname,
+          avatar: newMsg.avatar_url,
+          color: 'text-fuchsia-500'
+        }]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(chatChannel);
+    };
   }, []);
 
   useEffect(() => {
@@ -122,65 +156,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const connectWallet = () => setIsLoginModalOpen(true);
-
-  const loginWithTwitter = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'x', options: { redirectTo: `${window.location.origin}/` } });
-    if (error) showToast("Error connecting to X.", "error");
-  };
-
-  const loginWithDiscord = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: `${window.location.origin}/` } });
-    if (error) showToast("Error connecting to Discord.", "error");
-  };
-
+  const loginWithTwitter = async () => { await supabase.auth.signInWithOAuth({ provider: 'x', options: { redirectTo: `${window.location.origin}/` } }); };
+  const loginWithDiscord = async () => { await supabase.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: `${window.location.origin}/` } }); };
   const loginWithEmail = async (email: string) => {
-    if (!email) { showToast("Please enter an email address.", "error"); return; }
+    if (!email) return;
     const { error } = await supabase.auth.signInWithOtp({ email: email, options: { emailRedirectTo: `${window.location.origin}/` } });
-    if (error) { showToast(error.message, "error"); } else { showToast("Magic link sent! Check your email.", "success"); setIsLoginModalOpen(false); }
+    if (error) showToast(error.message, "error"); else { showToast("Magic link sent!", "success"); setIsLoginModalOpen(false); }
   };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false); setWalletAddress(""); setBalance(0); setNickname(""); setAvatarUrl(""); setMyBets([]);
-    showToast("Logged out successfully.", "success");
   };
 
   const updateNickname = async (newNickname: string) => {
     if (!isLoggedIn) return;
     setNickname(newNickname);
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const { error } = await supabase.from('users').update({ nickname: newNickname }).eq('id', session.user.id);
-      if (error) showToast("Error saving nickname.", "error"); else showToast("Nickname updated!", "success");
-    }
+    if (session?.user) await supabase.from('users').update({ nickname: newNickname }).eq('id', session.user.id);
   };
 
   const updateWalletAddress = async (newAddress: string) => {
     if (!isLoggedIn) return;
     setWalletAddress(newAddress);
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const { error } = await supabase.from('users').update({ wallet_address: newAddress }).eq('id', session.user.id);
-      if (error) showToast("Error saving wallet address.", "error"); else showToast("Payout wallet saved!", "success");
-    }
+    if (session?.user) await supabase.from('users').update({ wallet_address: newAddress }).eq('id', session.user.id);
   };
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
+  const toggleDarkMode = () => { setIsDarkMode(!isDarkMode); document.documentElement.classList.toggle('dark'); };
 
-  // --- ODESLÁNÍ SÁZKY DO DATABÁZE S KONTROLOU CHYB ---
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     if (balance < amount) { showToast("Insufficient balance!", "error"); return; }
-    
     const entryPrice = marketPrices[marketId][type === 'VYBE' ? 'vibe' : 'noVibe'] * 100;
     const newBalance = balance - amount;
 
-    // 1. Vizualní změna hned, ať to na nic nečeká
     setBalance(newBalance);
     setMyBets(prev => [...prev, { marketId, type, amount, entryPrice }]);
-    
     setMarketPrices((prev: any) => {
       const current = prev[marketId];
       const move = Math.min(0.05, amount / 1000);
@@ -189,36 +199,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
     });
 
-    // 2. Uložení do databáze (KONEČNĚ!)
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
-      
-      // Odečteme uživateli peníze v DB
-      const { error: balanceError } = await supabase.from('users').update({ balance: newBalance }).eq('id', session.user.id);
-      if (balanceError) {
-        showToast("DB Error: " + balanceError.message, "error");
-        console.error(balanceError);
-      }
-      
-      // Vložíme sázku do DB
-      const { error: betError } = await supabase.from('bets').insert({
-        user_id: session.user.id,
-        market_id: marketId,
-        type: type,
-        amount: amount,
-        entry_price: entryPrice
-      });
-      if (betError) {
-        showToast("DB Error: " + betError.message, "error");
-        console.error(betError);
-      }
+      await supabase.from('users').update({ balance: newBalance }).eq('id', session.user.id);
+      await supabase.from('bets').insert({ user_id: session.user.id, market_id: marketId, type: type, amount: amount, entry_price: entryPrice });
     }
-
     showToast(`Successfully placed ${amount} USDC!`, "success");
   };
 
-  const sendChatMessage = (marketId: number, text: string, user: string, avatar: string) => {
-    setChatMessages(prev => [...prev, { id: Date.now(), marketId, text, user, avatar, color: 'text-fuchsia-500' }]);
+  // === UPRAVENÉ ODESÍLÁNÍ ZPRÁV DO DATABÁZE ===
+  const sendChatMessage = async (marketId: number, text: string, user: string, avatar: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+
+    // My tu zprávu jen pošleme do databáze. Jakmile se tam uloží, náš Realtime Listener (viz useEffect nahoře)
+    // ji uvidí a okamžitě ji sám propíše do obrazovky nám i všem ostatním lidem na webu.
+    const { error } = await supabase.from('chat_messages').insert({
+      market_id: marketId,
+      user_id: session.user.id,
+      nickname: user,
+      avatar_url: avatar,
+      text: text
+    });
+
+    if (error) {
+      showToast("Error sending message.", "error");
+      console.error(error);
+    }
   };
 
   return (
