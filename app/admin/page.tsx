@@ -39,7 +39,7 @@ async function getCroppedImg(imageSrc: string, pixelCrop: any): Promise<Blob | n
   return new Promise((resolve) => {
     canvas.toBlob((file) => {
       resolve(file);
-    }, 'image/jpeg', 0.9); // Kvalita 90%
+    }, 'image/jpeg', 0.9); // Quality 90%
   });
 }
 
@@ -58,7 +58,7 @@ export default function AdminPanel() {
   const [markets, setMarkets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Stavy pro formulář
+  // Form states
   const availableCategories = CATEGORIES.filter((c: string) => c !== 'All' && c !== 'Trending');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [title, setTitle] = useState('');
@@ -66,18 +66,18 @@ export default function AdminPanel() {
   const [resolutionSource, setResolutionSource] = useState('');
   const [volumeUsd, setVolumeUsd] = useState('0');
 
-  // Stavy pro obrázky a CROPPER
-  const [imageUrl, setImageUrl] = useState(''); // Textové URL
-  const [imageSrc, setImageSrc] = useState<string | null>(null); // Zdroj pro ořezávačku
+  // Image and CROPPER states
+  const [imageUrl, setImageUrl] = useState(''); 
+  const [imageSrc, setImageSrc] = useState<string | null>(null); 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [isCropping, setIsCropping] = useState(false);
-  const [croppedImagePreview, setCroppedImagePreview] = useState<string | null>(null); // Náhled po ořezu
-  const [finalImageBlob, setFinalImageBlob] = useState<Blob | null>(null); // Soubor připravený na Supabase
+  const [croppedImagePreview, setCroppedImagePreview] = useState<string | null>(null); 
+  const [finalImageBlob, setFinalImageBlob] = useState<Blob | null>(null); 
   const [isUploading, setIsUploading] = useState(false);
 
-  // 1. Načtení trhů
+  // 1. Fetch markets
   const fetchMarkets = async () => {
     setIsLoading(true);
     const { data, error } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
@@ -88,7 +88,7 @@ export default function AdminPanel() {
 
   useEffect(() => { fetchMarkets(); }, []);
 
-  // 2. Vyčištění formuláře
+  // 2. Reset form
   const resetForm = () => {
     setEditingId(null);
     setTitle('');
@@ -101,14 +101,14 @@ export default function AdminPanel() {
     setVolumeUsd('0');
   };
 
-  // 3. Logika pro Cropper
+  // 3. Cropper logic
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       let imageDataUrl = await readFile(file);
       setImageSrc(imageDataUrl);
       setIsCropping(true);
-      setImageUrl(''); // Vymaže URL pole
+      setImageUrl(''); 
     }
   };
 
@@ -131,7 +131,7 @@ export default function AdminPanel() {
     }
   };
 
-  // 4. Uložení (Nahrání obrázku -> Uložení do DB)
+  // 4. Submit (Upload Image -> Save to DB)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || (!imageUrl && !finalImageBlob) || !resolutionSource) {
@@ -142,7 +142,6 @@ export default function AdminPanel() {
     setIsUploading(true);
     let finalImageUrlToSave = imageUrl;
 
-    // Pokud uživatel nahrál a ořízl fotku
     if (finalImageBlob) {
       showToast("Uploading cropped image...", "success");
       const fileName = `vybe_${Date.now()}.jpg`;
@@ -158,7 +157,6 @@ export default function AdminPanel() {
         return;
       }
 
-      // Získání veřejné URL
       const { data: publicUrlData } = supabase.storage.from('vybecards').getPublicUrl(filePath);
       finalImageUrlToSave = publicUrlData.publicUrl;
     }
@@ -182,7 +180,7 @@ export default function AdminPanel() {
     setIsUploading(false);
   };
 
-  // 5. Kliknutí na Edit
+  // 5. Edit click
   const handleEditClick = (market: any) => {
     setEditingId(market.id);
     setTitle(market.title);
@@ -195,7 +193,7 @@ export default function AdminPanel() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 6. Vymazání
+  // 6. Delete
   const handleDeleteMarket = async (id: number) => {
     const confirmed = window.confirm("Are you sure you want to delete this market?");
     if (!confirmed) return;
@@ -204,7 +202,7 @@ export default function AdminPanel() {
     else { showToast("Market deleted!", "success"); fetchMarkets(); }
   };
 
-  // 7. Vyhodnocení a Výplaty
+  // 7. Resolve and Payouts
   const handleResolveMarket = async (id: number, outcome: 'VYBE' | 'NO_VYBE') => {
     const confirmed = window.confirm(`Resolve as ${outcome}? This processes payouts!`);
     if (!confirmed) return;
@@ -236,10 +234,10 @@ export default function AdminPanel() {
     <main className={`flex min-h-screen flex-col items-center p-8 font-sans ${isDarkMode ? 'bg-[#0e0e12] text-white' : 'bg-zinc-50 text-zinc-900'} transition-colors duration-500`}>
       <div className="w-full max-w-4xl space-y-8 relative">
         
-        {/* MODÁLNÍ OKNO PRO OŘEZÁVÁNÍ FOTKY */}
+        {/* MODAL FOR IMAGE CROPPING */}
         {isCropping && imageSrc && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
-            <div className="w-full max-w-2xl bg-[#18181b] rounded-3xl overflow-hidden border border-white/10 flex flex-col h-[80vh]">
+            <div className="w-full max-w-3xl bg-[#18181b] rounded-3xl overflow-hidden border border-white/10 flex flex-col h-[85vh]">
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/50">
                 <h3 className="font-black italic uppercase text-white tracking-widest text-lg">Crop Your Image</h3>
                 <button onClick={() => { setIsCropping(false); setImageSrc(null); }} className="text-zinc-500 hover:text-white font-bold text-xs uppercase">Cancel</button>
@@ -249,7 +247,7 @@ export default function AdminPanel() {
                   image={imageSrc}
                   crop={crop}
                   zoom={zoom}
-                  aspect={1} // Natvrdo vynucený ČTVEREC 1:1
+                  aspect={16 / 9} // <--- TADY JE TA OPRAVA (16:9 Landscape)
                   onCropChange={setCrop}
                   onCropComplete={onCropComplete}
                   onZoomChange={setZoom}
@@ -268,7 +266,7 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* HLAVIČKA */}
+        {/* HEADER */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-black uppercase italic text-fuchsia-500 flex items-center gap-3">
             <span>🔒</span> Ultra God Mode
@@ -276,7 +274,7 @@ export default function AdminPanel() {
           <Link href="/" className="px-5 py-2.5 bg-zinc-800 text-white rounded-xl font-bold text-xs hover:bg-zinc-700 transition-colors shadow-lg">Back to App</Link>
         </div>
 
-        {/* FORMULÁŘ */}
+        {/* FORM */}
         <div className="bg-white dark:bg-[#18181b] p-8 rounded-[2rem] border border-zinc-200 dark:border-white/10 shadow-xl relative overflow-hidden">
           {editingId && <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-fuchsia-500 to-orange-500"></div>}
           <div className="flex justify-between items-center mb-6">
@@ -290,9 +288,9 @@ export default function AdminPanel() {
               <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Will GTA VI be delayed to 2026?" className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors" />
             </div>
 
-            {/* SEKCE OBRÁZKŮ */}
+            {/* IMAGE SECTION */}
             <div className="p-4 bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl flex flex-col gap-4">
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Card Image (Square Format)</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Card Image (16:9 Landscape)</label>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="flex flex-col gap-3">
@@ -307,8 +305,8 @@ export default function AdminPanel() {
                   </div>
                   {croppedImagePreview && (
                     <div className="mt-2 flex items-center gap-4 bg-green-500/10 border border-green-500/30 p-3 rounded-xl animate-in fade-in zoom-in">
-                      <img src={croppedImagePreview} alt="Cropped preview" className="w-12 h-12 rounded-lg object-cover shadow-md" />
-                      <span className="text-[10px] text-green-500 font-black uppercase tracking-widest">Image Cropped & Ready!</span>
+                      <img src={croppedImagePreview} alt="Cropped preview" className="w-16 h-9 rounded-lg object-cover shadow-md" />
+                      <span className="text-[10px] text-green-500 font-black uppercase tracking-widest">Image Cropped!</span>
                     </div>
                   )}
                 </div>
@@ -354,7 +352,7 @@ export default function AdminPanel() {
           </form>
         </div>
 
-        {/* SEZNAM KARET (Skryto při ořezávání pro lepší přehlednost) */}
+        {/* MARKET LIST */}
         {!isCropping && (
           <div className="bg-white dark:bg-[#18181b] p-8 rounded-[2rem] border border-zinc-200 dark:border-white/10 shadow-xl">
             <h2 className="text-xl font-black italic uppercase mb-6">Manage Active Markets</h2>
@@ -369,7 +367,7 @@ export default function AdminPanel() {
                   <div key={market.id} className={`flex flex-col lg:flex-row items-center justify-between p-4 rounded-2xl border ${market.is_resolved ? 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/5 opacity-70' : 'bg-zinc-50 dark:bg-black/50 border-zinc-200 dark:border-white/10 shadow-sm'}`}>
                     
                     <div className="flex items-center gap-4 mb-4 lg:mb-0 w-full lg:w-auto">
-                      <img src={market.image_url} alt="market" className="w-14 h-14 rounded-xl object-cover border border-zinc-200 dark:border-white/10 shadow-sm" />
+                      <img src={market.image_url} alt="market" className="w-16 h-9 rounded-md object-cover border border-zinc-200 dark:border-white/10 shadow-sm" />
                       <div className="flex flex-col">
                         <span className="font-bold text-sm max-w-[300px] leading-tight">{market.title}</span>
                         <span className="text-[10px] text-zinc-500 font-mono mt-1">ID: {market.id} | Vol: ${market.volume_usd} | {market.category}</span>
