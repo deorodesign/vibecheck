@@ -124,7 +124,7 @@ export default function AdminPanel() {
         setFinalImageBlob(croppedImage);
         setCroppedImagePreview(URL.createObjectURL(croppedImage));
         setIsCropping(false);
-        setImageSrc(null);
+        setImageSrc(null); // Reset src to allow re-cropping of the same file later if needed
       }
     } catch (e) {
       showToast("Error cropping image", "error");
@@ -239,7 +239,7 @@ export default function AdminPanel() {
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
             <div className="w-full max-w-3xl bg-[#18181b] rounded-3xl overflow-hidden border border-white/10 flex flex-col h-[85vh]">
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/50">
-                <h3 className="font-black italic uppercase text-white tracking-widest text-lg">Crop Your Image</h3>
+                <h3 className="font-black italic uppercase text-white tracking-widest text-lg">Crop Your Image (16:9)</h3>
                 <button onClick={() => { setIsCropping(false); setImageSrc(null); }} className="text-zinc-500 hover:text-white font-bold text-xs uppercase">Cancel</button>
               </div>
               <div className="relative flex-1 bg-black">
@@ -247,7 +247,7 @@ export default function AdminPanel() {
                   image={imageSrc}
                   crop={crop}
                   zoom={zoom}
-                  aspect={16 / 9} // 16:9 Landscape ratio
+                  aspect={16 / 9} // Perfect landscape ratio for your cards
                   onCropChange={setCrop}
                   onCropComplete={onCropComplete}
                   onZoomChange={setZoom}
@@ -300,6 +300,7 @@ export default function AdminPanel() {
                       type="file" 
                       accept="image/*"
                       onChange={onFileChange}
+                      onClick={(e) => (e.currentTarget.value = '')} // This fixes the bug where picking the same image twice does nothing
                       className="w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 transition-all cursor-pointer" 
                     />
                   </div>
