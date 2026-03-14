@@ -1,9 +1,56 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Cropper from 'react-easy-crop';
 import { useAppContext, CATEGORIES } from '../context';
 import { supabase } from '../lib/supabase';
+
+// --- POMOCNÉ FUNKCE PRO OŘEZ OBRÁZKU ---
+const createImage = (url: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.src = url;
+  });
+
+async function getCroppedImg(imageSrc: string, pixelCrop: any): Promise<Blob | null> {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve) => {
+    canvas.toBlob((file) => {
+      resolve(file);
+    }, 'image/jpeg', 0.9); // Kvalita 90%
+  });
+}
+
+function readFile(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(reader.result as string), false);
+    reader.readAsDataURL(file);
+  });
+}
+// --------------------------------------
 
 export default function AdminPanel() {
   const { isDarkMode, showToast } = useAppContext();
@@ -15,12 +62,20 @@ export default function AdminPanel() {
   const availableCategories = CATEGORIES.filter((c: string) => c !== 'All' && c !== 'Trending');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [title, setTitle] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null); // Nový stav pro soubor z PC
-  const [isUploading, setIsUploading] = useState(false); // Stav nahrávání
   const [category, setCategory] = useState(availableCategories[0]);
   const [resolutionSource, setResolutionSource] = useState('');
   const [volumeUsd, setVolumeUsd] = useState('0');
+
+  // Stavy pro obrázky a CROPPER
+  const [imageUrl, setImageUrl] = useState(''); // Textové URL
+  const [imageSrc, setImageSrc] = useState<string | null>(null); // Zdroj pro ořezávačku
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [isCropping, setIsCropping] = useState(false);
+  const [croppedImagePreview, setCroppedImagePreview] = useState<string | null>(null); // Náhled po ořezu
+  const [finalImageBlob, setFinalImageBlob] = useState<Blob | null>(null); // Soubor připravený na Supabase
+  const [isUploading, setIsUploading] = useState(false);
 
   // 1. Načtení trhů
   const fetchMarkets = async () => {
@@ -38,33 +93,64 @@ export default function AdminPanel() {
     setEditingId(null);
     setTitle('');
     setImageUrl('');
-    setImageFile(null);
+    setImageSrc(null);
+    setCroppedImagePreview(null);
+    setFinalImageBlob(null);
     setCategory(availableCategories[0]);
     setResolutionSource('');
     setVolumeUsd('0');
   };
 
-  // 3. Uložení (Nahrání obrázku -> Uložení do DB)
+  // 3. Logika pro Cropper
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      let imageDataUrl = await readFile(file);
+      setImageSrc(imageDataUrl);
+      setIsCropping(true);
+      setImageUrl(''); // Vymaže URL pole
+    }
+  };
+
+  const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const handleCropSave = async () => {
+    try {
+      if (!imageSrc || !croppedAreaPixels) return;
+      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
+      if (croppedImage) {
+        setFinalImageBlob(croppedImage);
+        setCroppedImagePreview(URL.createObjectURL(croppedImage));
+        setIsCropping(false);
+        setImageSrc(null);
+      }
+    } catch (e) {
+      showToast("Error cropping image", "error");
+    }
+  };
+
+  // 4. Uložení (Nahrání obrázku -> Uložení do DB)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || (!imageUrl && !imageFile) || !resolutionSource) {
-      showToast("Please fill all required fields or select an image!", "error");
+    if (!title || (!imageUrl && !finalImageBlob) || !resolutionSource) {
+      showToast("Please fill all required fields or upload/paste an image!", "error");
       return;
     }
 
     setIsUploading(true);
-    let finalImageUrl = imageUrl;
+    let finalImageUrlToSave = imageUrl;
 
-    // Pokud uživatel vybral soubor z PC, nahrajeme ho na Supabase Storage
-    if (imageFile) {
-      showToast("Uploading image...", "success");
-      const fileExt = imageFile.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+    // Pokud uživatel nahrál a ořízl fotku
+    if (finalImageBlob) {
+      showToast("Uploading cropped image...", "success");
+      const fileName = `vybe_${Date.now()}.jpg`;
       const filePath = `images/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('vybecards')
-        .upload(filePath, imageFile);
+        .upload(filePath, finalImageBlob);
 
       if (uploadError) {
         showToast("Image upload failed: " + uploadError.message, "error");
@@ -72,26 +158,21 @@ export default function AdminPanel() {
         return;
       }
 
-      // Získání veřejné URL adresy nahraného obrázku
-      const { data: publicUrlData } = supabase.storage
-        .from('vybecards')
-        .getPublicUrl(filePath);
-
-      finalImageUrl = publicUrlData.publicUrl;
+      // Získání veřejné URL
+      const { data: publicUrlData } = supabase.storage.from('vybecards').getPublicUrl(filePath);
+      finalImageUrlToSave = publicUrlData.publicUrl;
     }
 
     if (editingId) {
-      // ÚPRAVA (EDIT)
       const { error } = await supabase.from('markets').update({
-        title, image_url: finalImageUrl, category, resolution_source: resolutionSource, volume_usd: Number(volumeUsd) || 0
+        title, image_url: finalImageUrlToSave, category, resolution_source: resolutionSource, volume_usd: Number(volumeUsd) || 0
       }).eq('id', editingId);
 
       if (error) showToast("Error updating: " + error.message, "error");
       else { showToast("Vybecard updated successfully!", "success"); resetForm(); fetchMarkets(); }
     } else {
-      // VYTVOŘENÍ (CREATE)
       const { error } = await supabase.from('markets').insert({
-        title, image_url: finalImageUrl, category, resolution_source: resolutionSource, volume_usd: Number(volumeUsd) || 0, is_resolved: false
+        title, image_url: finalImageUrlToSave, category, resolution_source: resolutionSource, volume_usd: Number(volumeUsd) || 0, is_resolved: false
       });
 
       if (error) showToast("Error: " + error.message, "error");
@@ -101,35 +182,35 @@ export default function AdminPanel() {
     setIsUploading(false);
   };
 
-  // 4. Kliknutí na Edit
+  // 5. Kliknutí na Edit
   const handleEditClick = (market: any) => {
     setEditingId(market.id);
     setTitle(market.title);
     setImageUrl(market.image_url);
-    setImageFile(null); // Resetujeme případný vybraný soubor
+    setCroppedImagePreview(null);
+    setFinalImageBlob(null);
     setCategory(market.category);
     setResolutionSource(market.resolution_source);
     setVolumeUsd(market.volume_usd?.toString() || '0');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 5. Vymazání
+  // 6. Vymazání
   const handleDeleteMarket = async (id: number) => {
-    const confirmed = window.confirm("Are you sure you want to delete this market? This cannot be undone.");
+    const confirmed = window.confirm("Are you sure you want to delete this market?");
     if (!confirmed) return;
-    
     const { error } = await supabase.from('markets').delete().eq('id', id);
-    if (error) showToast("Cannot delete (market might have active bets).", "error");
+    if (error) showToast("Cannot delete.", "error");
     else { showToast("Market deleted!", "success"); fetchMarkets(); }
   };
 
-  // 6. Vyhodnocení a Výplaty
+  // 7. Vyhodnocení a Výplaty
   const handleResolveMarket = async (id: number, outcome: 'VYBE' | 'NO_VYBE') => {
-    const confirmed = window.confirm(`Are you sure you want to resolve this market as ${outcome}? This will process payouts!`);
+    const confirmed = window.confirm(`Resolve as ${outcome}? This processes payouts!`);
     if (!confirmed) return;
 
     const { error: updateError } = await supabase.from('markets').update({ is_resolved: true, winning_outcome: outcome }).eq('id', id);
-    if (updateError) { showToast("Error resolving: " + updateError.message, "error"); return; }
+    if (updateError) return;
 
     showToast(`Processing payouts for ${outcome}...`, "success");
     const { data: allBets } = await supabase.from('bets').select('*').eq('market_id', id);
@@ -139,29 +220,58 @@ export default function AdminPanel() {
       let totalPaidOut = 0; let winnersCount = 0;
 
       for (const bet of winningBets) {
-        const entryPriceDecimal = Number(bet.entry_price) / 100;
-        const payoutAmount = Number(bet.amount) / entryPriceDecimal;
+        const payoutAmount = Number(bet.amount) / (Number(bet.entry_price) / 100);
         const { data: userData } = await supabase.from('users').select('balance').eq('id', bet.user_id).single();
-          
         if (userData) {
           await supabase.from('users').update({ balance: Number(userData.balance) + payoutAmount }).eq('id', bet.user_id);
           totalPaidOut += payoutAmount; winnersCount++;
         }
       }
       if (winnersCount > 0) showToast(`Paid out ${totalPaidOut.toFixed(2)} USDC to ${winnersCount} winners.`, "success");
-      else showToast("Resolved! No winning bets to pay out.", "success");
     }
     fetchMarkets();
   };
 
   return (
     <main className={`flex min-h-screen flex-col items-center p-8 font-sans ${isDarkMode ? 'bg-[#0e0e12] text-white' : 'bg-zinc-50 text-zinc-900'} transition-colors duration-500`}>
-      <div className="w-full max-w-4xl space-y-8">
+      <div className="w-full max-w-4xl space-y-8 relative">
         
+        {/* MODÁLNÍ OKNO PRO OŘEZÁVÁNÍ FOTKY */}
+        {isCropping && imageSrc && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
+            <div className="w-full max-w-2xl bg-[#18181b] rounded-3xl overflow-hidden border border-white/10 flex flex-col h-[80vh]">
+              <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/50">
+                <h3 className="font-black italic uppercase text-white tracking-widest text-lg">Crop Your Image</h3>
+                <button onClick={() => { setIsCropping(false); setImageSrc(null); }} className="text-zinc-500 hover:text-white font-bold text-xs uppercase">Cancel</button>
+              </div>
+              <div className="relative flex-1 bg-black">
+                <Cropper
+                  image={imageSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1} // Natvrdo vynucený ČTVEREC 1:1
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
+                />
+              </div>
+              <div className="p-6 bg-black/50 border-t border-white/10 flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Zoom</span>
+                  <input type="range" value={zoom} min={1} max={3} step={0.1} aria-labelledby="Zoom" onChange={(e) => setZoom(Number(e.target.value))} className="flex-1 accent-fuchsia-500" />
+                </div>
+                <button onClick={handleCropSave} className="w-full py-4 rounded-xl bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white font-black uppercase tracking-widest text-sm hover:scale-[1.01] active:scale-95 transition-all shadow-lg">
+                  Confirm Crop
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* HLAVIČKA */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-black uppercase italic text-fuchsia-500 flex items-center gap-3">
-            <span>🔒</span> God Mode
+            <span>🔒</span> Ultra God Mode
           </h1>
           <Link href="/" className="px-5 py-2.5 bg-zinc-800 text-white rounded-xl font-bold text-xs hover:bg-zinc-700 transition-colors shadow-lg">Back to App</Link>
         </div>
@@ -182,31 +292,27 @@ export default function AdminPanel() {
 
             {/* SEKCE OBRÁZKŮ */}
             <div className="p-4 bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl flex flex-col gap-4">
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Card Image (Choose ONE method)</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Card Image (Square Format)</label>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-bold text-zinc-400">Option A: Upload from Computer</span>
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    onChange={e => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        setImageFile(e.target.files[0]);
-                        setImageUrl(''); // Vymaže URL, pokud uživatel nahrává soubor
-                      }
-                    }}
-                    className="w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-fuchsia-500 file:text-white hover:file:bg-fuchsia-600 transition-all cursor-pointer" 
-                  />
-                  {imageFile && <span className="text-[10px] text-green-500 font-bold mt-1">File selected: {imageFile.name}</span>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                <div className="flex flex-col gap-3">
+                  <span className="text-xs font-bold text-zinc-400">Option A: Upload & Crop</span>
+                  <div className="relative overflow-hidden">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={onFileChange}
+                      className="w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 transition-all cursor-pointer" 
+                    />
+                  </div>
+                  {croppedImagePreview && (
+                    <div className="mt-2 flex items-center gap-4 bg-green-500/10 border border-green-500/30 p-3 rounded-xl animate-in fade-in zoom-in">
+                      <img src={croppedImagePreview} alt="Cropped preview" className="w-12 h-12 rounded-lg object-cover shadow-md" />
+                      <span className="text-[10px] text-green-500 font-black uppercase tracking-widest">Image Cropped & Ready!</span>
+                    </div>
+                  )}
                 </div>
                 
-                <div className="hidden md:flex flex-col items-center">
-                  <div className="w-px h-8 bg-zinc-200 dark:bg-white/10"></div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 my-2">OR</span>
-                  <div className="w-px h-8 bg-zinc-200 dark:bg-white/10"></div>
-                </div>
-
                 <div className="flex flex-col gap-1.5">
                   <span className="text-xs font-bold text-zinc-400">Option B: Paste Image URL</span>
                   <input 
@@ -214,7 +320,8 @@ export default function AdminPanel() {
                     value={imageUrl} 
                     onChange={e => {
                       setImageUrl(e.target.value);
-                      setImageFile(null); // Vymaže soubor, pokud uživatel píše URL
+                      setFinalImageBlob(null);
+                      setCroppedImagePreview(null);
                     }} 
                     placeholder="https://.../image.jpg" 
                     className="w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors" 
@@ -242,55 +349,57 @@ export default function AdminPanel() {
             </div>
 
             <button disabled={isUploading} type="submit" className={`mt-2 w-full py-4 rounded-xl bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white font-black uppercase tracking-widest text-sm shadow-lg transition-all ${isUploading ? 'opacity-70 cursor-wait' : 'hover:scale-[1.01] active:scale-95'}`}>
-              {isUploading ? 'Deploying & Uploading...' : (editingId ? 'Update Vybecard' : 'Deploy to Web')}
+              {isUploading ? 'Processing...' : (editingId ? 'Update Vybecard' : 'Deploy to Web')}
             </button>
           </form>
         </div>
 
-        {/* SEZNAM KARET */}
-        <div className="bg-white dark:bg-[#18181b] p-8 rounded-[2rem] border border-zinc-200 dark:border-white/10 shadow-xl">
-          <h2 className="text-xl font-black italic uppercase mb-6">Manage Active Markets</h2>
-          
-          {isLoading ? (
-             <div className="text-center py-10 text-zinc-500 font-bold text-sm animate-pulse">Loading markets from database...</div>
-          ) : markets.length === 0 ? (
-             <div className="text-center py-10 text-zinc-500 font-bold text-sm">No markets yet.</div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {markets.map(market => (
-                <div key={market.id} className={`flex flex-col lg:flex-row items-center justify-between p-4 rounded-2xl border ${market.is_resolved ? 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/5 opacity-70' : 'bg-zinc-50 dark:bg-black/50 border-zinc-200 dark:border-white/10 shadow-sm'}`}>
-                  
-                  <div className="flex items-center gap-4 mb-4 lg:mb-0 w-full lg:w-auto">
-                    <img src={market.image_url} alt="market" className="w-14 h-14 rounded-xl object-cover border border-zinc-200 dark:border-white/10" />
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm max-w-[300px] leading-tight">{market.title}</span>
-                      <span className="text-[10px] text-zinc-500 font-mono mt-1">ID: {market.id} | Vol: ${market.volume_usd} | {market.category}</span>
+        {/* SEZNAM KARET (Skryto při ořezávání pro lepší přehlednost) */}
+        {!isCropping && (
+          <div className="bg-white dark:bg-[#18181b] p-8 rounded-[2rem] border border-zinc-200 dark:border-white/10 shadow-xl">
+            <h2 className="text-xl font-black italic uppercase mb-6">Manage Active Markets</h2>
+            
+            {isLoading ? (
+               <div className="text-center py-10 text-zinc-500 font-bold text-sm animate-pulse">Loading markets from database...</div>
+            ) : markets.length === 0 ? (
+               <div className="text-center py-10 text-zinc-500 font-bold text-sm">No markets yet.</div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {markets.map(market => (
+                  <div key={market.id} className={`flex flex-col lg:flex-row items-center justify-between p-4 rounded-2xl border ${market.is_resolved ? 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/5 opacity-70' : 'bg-zinc-50 dark:bg-black/50 border-zinc-200 dark:border-white/10 shadow-sm'}`}>
+                    
+                    <div className="flex items-center gap-4 mb-4 lg:mb-0 w-full lg:w-auto">
+                      <img src={market.image_url} alt="market" className="w-14 h-14 rounded-xl object-cover border border-zinc-200 dark:border-white/10 shadow-sm" />
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm max-w-[300px] leading-tight">{market.title}</span>
+                        <span className="text-[10px] text-zinc-500 font-mono mt-1">ID: {market.id} | Vol: ${market.volume_usd} | {market.category}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 shrink-0 w-full lg:w-auto">
+                      {!market.is_resolved && (
+                        <>
+                          <button onClick={() => handleEditClick(market)} className="px-4 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors">Edit</button>
+                          <button onClick={() => handleDeleteMarket(market.id)} className="px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors">Del</button>
+                          
+                          <div className="w-px h-8 bg-zinc-300 dark:bg-white/10 mx-1 hidden lg:block"></div>
+                          
+                          <button onClick={() => handleResolveMarket(market.id, 'VYBE')} className="flex-1 lg:flex-none px-4 py-3 bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white dark:hover:bg-green-500 dark:hover:text-black transition-colors">Set VYBE</button>
+                          <button onClick={() => handleResolveMarket(market.id, 'NO_VYBE')} className="flex-1 lg:flex-none px-4 py-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white dark:hover:bg-red-500 dark:hover:text-black transition-colors">Set NO VYBE</button>
+                        </>
+                      )}
+                      {market.is_resolved && (
+                        <div className="px-5 py-2.5 bg-zinc-200 dark:bg-black rounded-xl text-xs font-black uppercase tracking-widest border border-zinc-300 dark:border-white/10 w-full text-center">
+                          Winner: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  
-                  <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 shrink-0 w-full lg:w-auto">
-                    {!market.is_resolved && (
-                      <>
-                        <button onClick={() => handleEditClick(market)} className="px-4 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors">Edit</button>
-                        <button onClick={() => handleDeleteMarket(market.id)} className="px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors">Del</button>
-                        
-                        <div className="w-px h-8 bg-zinc-300 dark:bg-white/10 mx-1 hidden lg:block"></div>
-                        
-                        <button onClick={() => handleResolveMarket(market.id, 'VYBE')} className="flex-1 lg:flex-none px-4 py-3 bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white dark:hover:bg-green-500 dark:hover:text-black transition-colors">Set VYBE</button>
-                        <button onClick={() => handleResolveMarket(market.id, 'NO_VYBE')} className="flex-1 lg:flex-none px-4 py-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white dark:hover:bg-red-500 dark:hover:text-black transition-colors">Set NO VYBE</button>
-                      </>
-                    )}
-                    {market.is_resolved && (
-                      <div className="px-5 py-2.5 bg-zinc-200 dark:bg-black rounded-xl text-xs font-black uppercase tracking-widest border border-zinc-300 dark:border-white/10 w-full text-center">
-                        Winner: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
     </main>
