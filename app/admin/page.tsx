@@ -12,13 +12,15 @@ export default function AdminPanel() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Stavy pro formulář
-  const availableCategories = CATEGORIES.filter((c: string) => c !== 'All' && c !== 'Trending'); // Trending je dynamická kategorie, nedává se natvrdo
+  const availableCategories = CATEGORIES.filter((c: string) => c !== 'All' && c !== 'Trending');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [title, setTitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null); // Nový stav pro soubor z PC
+  const [isUploading, setIsUploading] = useState(false); // Stav nahrávání
   const [category, setCategory] = useState(availableCategories[0]);
   const [resolutionSource, setResolutionSource] = useState('');
-  const [volumeUsd, setVolumeUsd] = useState('0'); // Nové: Pro manipulaci s Trending sekcí
+  const [volumeUsd, setVolumeUsd] = useState('0');
 
   // 1. Načtení trhů
   const fetchMarkets = async () => {
@@ -36,23 +38,52 @@ export default function AdminPanel() {
     setEditingId(null);
     setTitle('');
     setImageUrl('');
+    setImageFile(null);
     setCategory(availableCategories[0]);
     setResolutionSource('');
     setVolumeUsd('0');
   };
 
-  // 3. Uložení (Vytvoření NOVÉ nebo Úprava EXISTUJÍCÍ)
+  // 3. Uložení (Nahrání obrázku -> Uložení do DB)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !imageUrl || !resolutionSource) {
-      showToast("Please fill all required fields!", "error");
+    if (!title || (!imageUrl && !imageFile) || !resolutionSource) {
+      showToast("Please fill all required fields or select an image!", "error");
       return;
+    }
+
+    setIsUploading(true);
+    let finalImageUrl = imageUrl;
+
+    // Pokud uživatel vybral soubor z PC, nahrajeme ho na Supabase Storage
+    if (imageFile) {
+      showToast("Uploading image...", "success");
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `images/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('vybecards')
+        .upload(filePath, imageFile);
+
+      if (uploadError) {
+        showToast("Image upload failed: " + uploadError.message, "error");
+        setIsUploading(false);
+        return;
+      }
+
+      // Získání veřejné URL adresy nahraného obrázku
+      const { data: publicUrlData } = supabase.storage
+        .from('vybecards')
+        .getPublicUrl(filePath);
+
+      finalImageUrl = publicUrlData.publicUrl;
     }
 
     if (editingId) {
       // ÚPRAVA (EDIT)
       const { error } = await supabase.from('markets').update({
-        title, image_url: imageUrl, category, resolution_source: resolutionSource, volume_usd: Number(volumeUsd) || 0
+        title, image_url: finalImageUrl, category, resolution_source: resolutionSource, volume_usd: Number(volumeUsd) || 0
       }).eq('id', editingId);
 
       if (error) showToast("Error updating: " + error.message, "error");
@@ -60,26 +91,29 @@ export default function AdminPanel() {
     } else {
       // VYTVOŘENÍ (CREATE)
       const { error } = await supabase.from('markets').insert({
-        title, image_url: imageUrl, category, resolution_source: resolutionSource, volume_usd: Number(volumeUsd) || 0, is_resolved: false
+        title, image_url: finalImageUrl, category, resolution_source: resolutionSource, volume_usd: Number(volumeUsd) || 0, is_resolved: false
       });
 
       if (error) showToast("Error: " + error.message, "error");
       else { showToast("Vybecard created successfully!", "success"); resetForm(); fetchMarkets(); }
     }
+    
+    setIsUploading(false);
   };
 
-  // 4. Kliknutí na tlačítko Edit (načte data do formuláře)
+  // 4. Kliknutí na Edit
   const handleEditClick = (market: any) => {
     setEditingId(market.id);
     setTitle(market.title);
     setImageUrl(market.image_url);
+    setImageFile(null); // Resetujeme případný vybraný soubor
     setCategory(market.category);
     setResolutionSource(market.resolution_source);
     setVolumeUsd(market.volume_usd?.toString() || '0');
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Vyroluje nahoru k formuláři
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 5. Vymazání trhu (Delete)
+  // 5. Vymazání
   const handleDeleteMarket = async (id: number) => {
     const confirmed = window.confirm("Are you sure you want to delete this market? This cannot be undone.");
     if (!confirmed) return;
@@ -89,7 +123,7 @@ export default function AdminPanel() {
     else { showToast("Market deleted!", "success"); fetchMarkets(); }
   };
 
-  // 6. Vyhodnocení a Výplaty (Payouts)
+  // 6. Vyhodnocení a Výplaty
   const handleResolveMarket = async (id: number, outcome: 'VYBE' | 'NO_VYBE') => {
     const confirmed = window.confirm(`Are you sure you want to resolve this market as ${outcome}? This will process payouts!`);
     if (!confirmed) return;
@@ -146,23 +180,55 @@ export default function AdminPanel() {
               <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Will GTA VI be delayed to 2026?" className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Image URL</label>
-                <input type="text" value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://.../image.jpg" className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors" />
+            {/* SEKCE OBRÁZKŮ */}
+            <div className="p-4 bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl flex flex-col gap-4">
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Card Image (Choose ONE method)</label>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-zinc-400">Option A: Upload from Computer</span>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={e => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        setImageFile(e.target.files[0]);
+                        setImageUrl(''); // Vymaže URL, pokud uživatel nahrává soubor
+                      }
+                    }}
+                    className="w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-fuchsia-500 file:text-white hover:file:bg-fuchsia-600 transition-all cursor-pointer" 
+                  />
+                  {imageFile && <span className="text-[10px] text-green-500 font-bold mt-1">File selected: {imageFile.name}</span>}
+                </div>
+                
+                <div className="hidden md:flex flex-col items-center">
+                  <div className="w-px h-8 bg-zinc-200 dark:bg-white/10"></div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 my-2">OR</span>
+                  <div className="w-px h-8 bg-zinc-200 dark:bg-white/10"></div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-zinc-400">Option B: Paste Image URL</span>
+                  <input 
+                    type="text" 
+                    value={imageUrl} 
+                    onChange={e => {
+                      setImageUrl(e.target.value);
+                      setImageFile(null); // Vymaže soubor, pokud uživatel píše URL
+                    }} 
+                    placeholder="https://.../image.jpg" 
+                    className="w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors" 
+                  />
+                </div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Category</label>
                 <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors appearance-none">
                   {availableCategories.map((c: string) => <option key={c} value={c}>{c}</option>)}
                 </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Resolution Source (Rules)</label>
-                <input type="text" value={resolutionSource} onChange={e => setResolutionSource(e.target.value)} placeholder="e.g. Official announcement..." className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-500">Fake Volume (For Trending)</label>
@@ -170,8 +236,13 @@ export default function AdminPanel() {
               </div>
             </div>
 
-            <button type="submit" className="mt-2 w-full py-4 rounded-xl bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white font-black uppercase tracking-widest text-sm hover:scale-[1.01] transition-all shadow-lg active:scale-95">
-              {editingId ? 'Update Vybecard' : 'Deploy to Web'}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Resolution Source (Rules)</label>
+              <input type="text" value={resolutionSource} onChange={e => setResolutionSource(e.target.value)} placeholder="e.g. Official announcement..." className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors" />
+            </div>
+
+            <button disabled={isUploading} type="submit" className={`mt-2 w-full py-4 rounded-xl bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white font-black uppercase tracking-widest text-sm shadow-lg transition-all ${isUploading ? 'opacity-70 cursor-wait' : 'hover:scale-[1.01] active:scale-95'}`}>
+              {isUploading ? 'Deploying & Uploading...' : (editingId ? 'Update Vybecard' : 'Deploy to Web')}
             </button>
           </form>
         </div>
