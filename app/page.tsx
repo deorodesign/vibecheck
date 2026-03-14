@@ -96,7 +96,6 @@ function HomeContent() {
     }
   };
 
-  // CHYBĚJÍCÍ FUNKCE PŘIDÁNA ZDE
   const handleFlex = (e: React.MouseEvent, market: any) => {
     e.stopPropagation();
     setFlexMarket(market);
@@ -225,7 +224,7 @@ function HomeContent() {
         <div className="flex flex-col gap-5">
           {markets.slice(0, 3).map((m: any) => (
             <div key={m.id} onClick={() => openMarket(m)} className="flex gap-4 items-center cursor-pointer group">
-              <img src={m.imageUrl} alt={m.title} className="w-12 h-12 rounded-xl object-cover shadow-sm group-hover:scale-105 transition-transform" />
+              <img src={m.imageUrl} alt={m.title} className="w-12 h-12 rounded-xl object-cover object-top shadow-sm group-hover:scale-105 transition-transform" />
               <div className="flex-1">
                 <p className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-2 leading-tight group-hover:text-fuchsia-500 transition-colors">{m.title}</p>
                 <p className="text-[10px] text-zinc-500 font-mono mt-1">{m.volume}</p>
@@ -347,8 +346,11 @@ function HomeContent() {
       ) : selectedMarket ? (
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-8 py-6 px-4 animate-in slide-in-from-bottom-8 duration-500">
           <div className="w-full lg:flex-1 flex flex-col gap-6">
-            <div className="w-full h-[200px] md:h-[280px] rounded-[2rem] overflow-hidden relative shadow-xl border border-zinc-200 dark:border-white/5">
-              <img src={selectedMarket.imageUrl} alt={selectedMarket.title} className={`absolute inset-0 w-full h-full object-cover ${isResolved ? 'grayscale' : ''}`} />
+            
+            {/* DETAIL KARTY */}
+            <div className="w-full aspect-video rounded-[2rem] overflow-hidden relative shadow-xl border border-zinc-200 dark:border-white/5">
+              {/* OBJECT-TOP added here */}
+              <img src={selectedMarket.imageUrl} alt={selectedMarket.title} className={`absolute inset-0 w-full h-full object-cover object-top ${isResolved ? 'grayscale' : ''}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-50/40 dark:from-[#0e0e12] dark:via-[#0e0e12]/40 to-transparent transition-colors duration-500"></div>
               <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-widest border border-white/10 z-20 shadow-lg">Vol: {selectedMarket.volume}</div>
             </div>
@@ -466,8 +468,11 @@ function HomeContent() {
 
               return (
                 <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
-                  <div className="h-44 w-full shrink-0 relative overflow-hidden">
-                    <img src={market.imageUrl} alt={market.title} className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
+                  
+                  {/* SEZNAM KARET */}
+                  <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
+                    {/* OBJECT-TOP added here too */}
+                    <img src={market.imageUrl} alt={market.title} className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" />
                     <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: {market.volume}</div>
                   </div>
