@@ -202,11 +202,12 @@ export default function Profile() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {activeBets.map((bet: any) => {
+              {/* Added index parameter and used it in the key to fix the warning */}
+              {activeBets.map((bet: any, index: number) => {
                 const market = markets.find((m: any) => m.id === bet.marketId);
                 if (!market) return null;
                 return (
-                  <Link href={`/?vybecard=${market.id}`} key={bet.id} className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/20 transition-colors group">
+                  <Link href={`/?vybecard=${market.id}`} key={bet.id || `fallback-bet-${index}`} className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/20 transition-colors group">
                     <div className="flex items-center gap-4 min-w-0 pr-4">
                       <img src={market.imageUrl} alt={market.title} className="w-10 h-10 md:w-12 md:h-12 rounded-xl object-cover shrink-0" />
                       <div className="flex flex-col min-w-0">
