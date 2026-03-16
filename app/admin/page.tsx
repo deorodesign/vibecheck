@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import Cropper from 'react-easy-crop';
 
-// Pomocná funkce pro vytvoření oříznutého obrázku
+// Helper function to create image
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
@@ -50,7 +50,7 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  // Státy formuláře
+  // Form states
   const [editingId, setEditingId] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState('Pop Culture');
@@ -58,11 +58,11 @@ export default function AdminPanel() {
   const [newRules, setNewRules] = useState('');
   const [fakeVolume, setFakeVolume] = useState('0');
 
-  // Státy pro Crop Tool (Ořezávačku)
+  // Crop Tool states
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null); // Opraveno pro Vercel (any)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null);
 
   useEffect(() => {
@@ -99,17 +99,14 @@ export default function AdminPanel() {
     setImageSrc(null);
   };
 
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      let imageDataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
+      const imageDataUrl = URL.createObjectURL(file);
       setImageSrc(imageDataUrl);
-      // Reset předchozího ořezu
       setCroppedImageBlob(null);
+      // Reset input value so the same file can be selected again if needed
+      e.target.value = '';
     }
   };
 
@@ -122,7 +119,7 @@ export default function AdminPanel() {
       if (!imageSrc || !croppedAreaPixels) return;
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
       setCroppedImageBlob(croppedImage);
-      setImageSrc(null); // Zavřít okno ořezávačky
+      setImageSrc(null); // Close crop modal
     } catch (e) {
       console.error(e);
     }
@@ -135,12 +132,12 @@ export default function AdminPanel() {
     setUploading(true);
     let finalImageUrl = newImageUrl;
 
-    // Nahrání oříznutého obrázku do Supabase Storage
+    // Upload cropped image to Supabase Storage
     if (croppedImageBlob) {
       try {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
         const { error: uploadError, data } = await supabase.storage
-          .from('markets') // Název bucketu
+          .from('markets')
           .upload(`public/${fileName}`, croppedImageBlob, {
             contentType: 'image/jpeg'
           });
@@ -153,7 +150,7 @@ export default function AdminPanel() {
         }
       } catch (err: any) {
         console.error("Image upload failed:", err);
-        alert("Nahrávání obrázku selhalo: " + err.message);
+        alert("Image upload failed: " + err.message);
         setUploading(false);
         return;
       }
@@ -217,7 +214,7 @@ export default function AdminPanel() {
     <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-10 font-mono relative">
       {/* POP-UP MODAL PRO OŘEZ FOTKY */}
       {imageSrc && (
-        <div className="fixed inset-0 z-[999] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-md">
           <div className="relative w-full max-w-2xl h-[60vh] bg-zinc-900 rounded-3xl overflow-hidden mb-6 shadow-2xl border border-zinc-800">
             <Cropper
               image={imageSrc}
