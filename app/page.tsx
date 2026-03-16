@@ -9,6 +9,21 @@ const createSlug = (title: string) => {
   return title.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');     
 };
 
+function formatTimeAgo(dateString: string) {
+  if (!dateString) return 'Just now';
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -440,8 +455,9 @@ function HomeContent() {
                      <div key={msg.id} className="flex items-start gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                        {msg.avatar ? <img src={msg.avatar} alt={msg.user} className="w-5 h-5 rounded-full object-cover mt-1 flex-shrink-0 shadow-sm" /> : <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 mt-1 flex-shrink-0 opacity-80 shadow-sm" />}
                        <div className="flex flex-col gap-1 w-full">
-                         <div className="flex items-center gap-2">
+                         <div className="flex items-center gap-2 flex-wrap">
                            <span className={`font-black uppercase tracking-widest text-[9px] ${msg.color || 'text-fuchsia-500'}`}>{msg.user}</span>
+                           <span className="text-[8px] text-zinc-400 dark:text-zinc-500 font-mono uppercase">{msg.timestamp ? formatTimeAgo(msg.timestamp) : 'Just now'}</span>
                            
                            {msg.betType === 'VYBE' && (
                              <span className="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-[8px] font-black text-green-500 uppercase tracking-widest italic">Vybe</span>
