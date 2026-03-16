@@ -347,7 +347,6 @@ function HomeContent() {
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-8 py-6 px-4 animate-in slide-in-from-bottom-8 duration-500">
           <div className="w-full lg:flex-1 flex flex-col gap-6">
             
-            {/* DETAIL KARTY */}
             <div className="w-full aspect-video rounded-[2rem] overflow-hidden relative shadow-xl border border-zinc-200 dark:border-white/5">
               <img src={selectedMarket.imageUrl || selectedMarket.image_url} alt={selectedMarket.title} className={`absolute inset-0 w-full h-full object-cover object-top ${isResolved ? 'grayscale' : ''}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-50/40 dark:from-[#0e0e12] dark:via-[#0e0e12]/40 to-transparent transition-colors duration-500"></div>
@@ -431,7 +430,6 @@ function HomeContent() {
                 </div>
               </div>
               
-              {/* CHAT SECTION WITH BADGES AND BUBBLES */}
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] shadow-md mx-4 md:mx-0 overflow-hidden flex flex-col h-[400px]">
                 <div className="p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between">
                    <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight">Live Chat</h3>
@@ -445,12 +443,14 @@ function HomeContent() {
                          <div className="flex items-center gap-2">
                            <span className={`font-black uppercase tracking-widest text-[9px] ${msg.color || 'text-fuchsia-500'}`}>{msg.user}</span>
                            
-                           {/* SKIN IN THE GAME BADGE */}
                            {msg.betType === 'VYBE' && (
                              <span className="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-[8px] font-black text-green-500 uppercase tracking-widest italic">Vybe</span>
                            )}
                            {msg.betType === 'NO_VYBE' && (
                              <span className="px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[8px] font-black text-red-500 uppercase tracking-widest italic">No Vybe</span>
+                           )}
+                           {msg.betType === 'HEDGED' && (
+                             <span className="px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-[8px] font-black text-purple-500 uppercase tracking-widest italic">Hedged</span>
                            )}
                          </div>
                          <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed bg-zinc-100 dark:bg-white/5 p-2.5 rounded-r-xl rounded-bl-xl border border-zinc-200 dark:border-white/5 inline-block w-fit max-w-[95%]">{msg.text}</span>
@@ -483,7 +483,6 @@ function HomeContent() {
               return (
                 <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
                   
-                  {/* SEZNAM KARET */}
                   <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
                     <img src={market.imageUrl || market.image_url} alt={market.title} className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" />
