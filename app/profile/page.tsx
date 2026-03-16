@@ -38,13 +38,13 @@ export default function ProfilePage() {
 
   const totalVolume = enrichedBets.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
 
-  // FIX: Calculate total value currently locked in active bets
+  // Hodnota peněz uzamčená v aktivních sázkách (v tvém případě 100 USDC)
   const activeBetsValue = activeBetsList.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
 
-  // FIX: Portfolio Value = Cash Balance + Money locked in active bets
+  // Celková hodnota portfolia (Balance 400 + Aktivní sázky 100 = 500)
   const currentPortfolioValue = balance + activeBetsValue;
 
-  // FIX: Net Return compares current Portfolio Value to the starting balance
+  // Výpočet zisku/ztráty na základě celkového portfolia (500 vs 500 = 0%)
   const netReturn = baseStartingBalance > 0 
     ? ((currentPortfolioValue - baseStartingBalance) / baseStartingBalance) * 100 
     : 0;
@@ -95,7 +95,8 @@ export default function ProfilePage() {
               <p className="text-xl font-black">{activeBetsList.length}</p>
             </div>
             <div>
-              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Net Return</p>
+              {/* ZMĚNA NÁZVU NA NET P/L PRO OVĚŘENÍ NASAZENÍ KÓDU */}
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Net P/L</p>
               <p className={`text-xl font-black ${netReturn > 0 ? 'text-green-500' : netReturn < 0 ? 'text-red-500' : 'text-zinc-300'}`}>
                 {netReturn > 0 ? '+' : ''}{netReturn.toFixed(2)}%
               </p>
