@@ -94,12 +94,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         
         let prices: any = {};
         let statuses: any = {};
+        
         formattedMarkets.forEach((m: any) => {
           prices[m.id] = { vibe: 0.5, noVibe: 0.5 };
           if (m.is_resolved) {
             statuses[m.id] = m.winning_outcome;
           }
         });
+
+        // Initialize AMM prices based on local bet history for MVP simulation
+        const localSession = localStorage.getItem('vybe_session');
+        if (localSession) {
+           try {
+             const sessionData = JSON.parse(localSession);
+             const localBets = sessionData.myBets || [];
+             if (localBets.length > 0) {
+                formattedMarkets.forEach((m: any) => {
+                   const marketBets = localBets.filter((b: any) => b.marketId === m.id);
+                   let vybePool = 100;
+                   let noVybePool = 100;
+                   marketBets.forEach((bet: any) => {
+                     if (bet.type === 'VYBE') vybePool += bet.amount;
+                     if (bet.type === 'NO_VYBE') noVybePool += bet.amount;
+                   });
+                   const totalPool = vybePool + noVybePool;
+                   prices[m.id] = { vibe: vybePool / totalPool, noVibe: noVybePool / totalPool };
+                });
+             }
+           } catch (e) {}
+        }
+
         setMarketPrices(prices);
         setMarketStatus(statuses);
       }
@@ -175,31 +199,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     setBalance(prev => prev - amount);
     
+    const entryPrice = (marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5) * 100;
+    
     const newBet = {
       id: Date.now(),
       marketId,
       type,
       amount,
-      entryPrice: (marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5) * 100
+      entryPrice
     };
     
-    setMyBets(prev => [...prev, newBet]);
-    
-    setMarketPrices((prev: any) => {
-      const current = prev[marketId] || { vibe: 0.5, noVibe: 0.5 };
-      const shift = (amount / 1000); 
-      let newVibe = current.vibe;
+    setMyBets(prev => {
+      const updatedBets = [...prev, newBet];
+      
+      setMarketPrices((prevPrices: any) => {
+        const marketBets = updatedBets.filter(b => b.marketId === marketId);
+        
+        let vybePool = 100;
+        let noVybePool = 100;
 
-      if (type === 'VYBE') {
-        newVibe = Math.min(0.95, newVibe + shift);
-      } else {
-        newVibe = Math.max(0.05, newVibe - shift);
-      }
+        marketBets.forEach(bet => {
+          if (bet.type === 'VYBE') vybePool += bet.amount;
+          if (bet.type === 'NO_VYBE') noVybePool += bet.amount;
+        });
 
-      return {
-        ...prev,
-        [marketId]: { vibe: newVibe, noVibe: 1 - newVibe }
-      };
+        const totalPool = vybePool + noVybePool;
+        const newVibe = vybePool / totalPool;
+
+        return {
+          ...prevPrices,
+          [marketId]: { vibe: newVibe, noVibe: 1 - newVibe }
+        };
+      });
+
+      return updatedBets;
     });
 
     showToast(`Successfully bet ${amount} USDC on ${type}!`, "success");
