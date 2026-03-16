@@ -22,6 +22,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [nickname, setNickname] = useState('');
   const [marketStatus, setMarketStatus] = useState<any>({});
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [toasts, setToasts] = useState<any[]>([]);
+  
   const [dynamicLeaderboard, setDynamicLeaderboard] = useState<any[]>([
     { id: 'user1', rank: 1, name: 'CryptoBro', address: '0x7f...92a1', points: 24500, avatar: '', color: 'from-yellow-400 to-yellow-600' },
     { id: 'user2', rank: 2, name: 'Satoshi99', address: '0x1a...4b2c', points: 18200, avatar: '', color: 'from-zinc-300 to-zinc-500' },
@@ -30,14 +32,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     { id: 'user5', rank: 5, name: 'CultureGod', address: '0x5e...22aa', points: 9500, avatar: '', color: 'from-green-400 to-green-600' },
   ]);
 
-  const [toasts, setToasts] = useState<any[]>([]);
-  
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3000);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
   };
 
   const toggleDarkMode = () => {
@@ -51,6 +49,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
+  // NAČTENÍ PŘIHLÁŠENÍ A SÁZEK
   useEffect(() => {
     const savedSession = localStorage.getItem('vybe_session');
     if (savedSession) {
@@ -59,8 +58,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setWalletAddress(session.walletAddress);
         setNickname(session.nickname);
         setBalance(session.balance);
-        setMyBets(session.myBets || []);
         setIsLoggedIn(true);
+        fetchUserBets(session.walletAddress);
       } catch (e) {
         localStorage.removeItem('vybe_session');
       }
@@ -68,70 +67,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsAuthLoading(false);
   }, []);
 
+  const fetchUserBets = async (address: string) => {
+    const { data } = await supabase.from('bets').select('*').eq('user_address', address);
+    if (data) {
+      setMyBets(data.map(b => ({ ...b, marketId: b.market_id, entryPrice: b.entry_price })));
+    }
+  };
+
   useEffect(() => {
     if (isLoggedIn && walletAddress) {
-      localStorage.setItem('vybe_session', JSON.stringify({
-        walletAddress,
-        nickname,
-        balance,
-        myBets
-      }));
+      localStorage.setItem('vybe_session', JSON.stringify({ walletAddress, nickname, balance }));
     }
-  }, [isLoggedIn, walletAddress, nickname, balance, myBets]);
+  }, [balance, isLoggedIn, walletAddress, nickname]);
 
+  // NAČTENÍ TRHŮ A CHATU Z DATABÁZE
   useEffect(() => {
-    const fetchMarkets = async () => {
-      const { data, error } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
-      if (data) {
-        const formattedMarkets = data.map(m => ({
-          ...m,
-          imageUrl: m.image_url,
-          volumeUsd: m.volume_usd,
-          volume: `$${m.volume_usd || 0}`,
-          resolutionSource: m.resolution_source
-        }));
-        setMarkets(formattedMarkets);
-        
+    const fetchData = async () => {
+      // Trhy
+      const { data: marketsData } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
+      if (marketsData) {
+        setMarkets(marketsData.map(m => ({
+          ...m, imageUrl: m.image_url, volumeUsd: m.volume_usd, volume: `$${m.volume_usd || 0}`, resolutionSource: m.resolution_source
+        })));
         let prices: any = {};
         let statuses: any = {};
-        
-        formattedMarkets.forEach((m: any) => {
+        marketsData.forEach((m: any) => {
           prices[m.id] = { vibe: 0.5, noVibe: 0.5 };
-          if (m.is_resolved) {
-            statuses[m.id] = m.winning_outcome;
-          }
+          if (m.is_resolved) statuses[m.id] = m.winning_outcome;
         });
-
-        // Initialize AMM prices based on local bet history for MVP simulation
-        const localSession = localStorage.getItem('vybe_session');
-        if (localSession) {
-           try {
-             const sessionData = JSON.parse(localSession);
-             const localBets = sessionData.myBets || [];
-             if (localBets.length > 0) {
-                formattedMarkets.forEach((m: any) => {
-                   const marketBets = localBets.filter((b: any) => b.marketId === m.id);
-                   let vybePool = 100;
-                   let noVybePool = 100;
-                   marketBets.forEach((bet: any) => {
-                     if (bet.type === 'VYBE') vybePool += bet.amount;
-                     if (bet.type === 'NO_VYBE') noVybePool += bet.amount;
-                   });
-                   const totalPool = vybePool + noVybePool;
-                   prices[m.id] = { vibe: vybePool / totalPool, noVibe: noVybePool / totalPool };
-                });
-             }
-           } catch (e) {}
-        }
-
         setMarketPrices(prices);
         setMarketStatus(statuses);
       }
+
+      // Chat
+      const { data: chatData } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+      if (chatData) {
+        setChatMessages(chatData.map(c => ({
+          id: c.id,
+          marketId: c.market_id,
+          text: c.text,
+          user: c.user_name,
+          avatar: c.avatar_url || '',
+          betType: c.bet_type,
+          timestamp: c.created_at,
+          color: c.color || 'text-fuchsia-500'
+        })));
+      }
     };
-    fetchMarkets();
+    fetchData();
   }, []);
 
-  const connectWallet = () => { setIsLoginModalOpen(true); };
+  const connectWallet = () => setIsLoginModalOpen(true);
   
   const loginWithEmail = async (email: string) => {
     if(!email) return showToast("Please enter an email", "error");
@@ -145,120 +131,95 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showToast("Logged in successfully!", "success");
   };
 
-  const loginWithTwitter = () => { loginWithEmail("twitter_user@vybecheck.xyz"); };
-  const loginWithDiscord = () => { loginWithEmail("discord_user@vybecheck.xyz"); };
+  const loginWithTwitter = () => loginWithEmail("twitter_user@vybecheck.xyz");
+  const loginWithDiscord = () => loginWithEmail("discord_user@vybecheck.xyz");
 
   const handleLogout = () => {
+    localStorage.removeItem('vybe_session');
     setIsLoggedIn(false);
     setWalletAddress('');
     setNickname('');
     setAvatarUrl('');
     setBalance(0);
     setMyBets([]);
-    localStorage.removeItem('vybe_session');
     showToast("Logged out.", "info");
+    window.location.reload();
   };
 
-  const sendChatMessage = (marketId: number, text: string, user: string, avatar: string) => {
+  // ODESLÁNÍ ZPRÁVY (Nyní se ukládá do Supabase)
+  const sendChatMessage = async (marketId: number, text: string, user: string, avatar: string) => {
     const userBetsForMarket = myBets.filter((bet: any) => bet.marketId === marketId);
-    
     let finalBetType = null;
     
     if (userBetsForMarket.length > 0) {
       const hasVybe = userBetsForMarket.some(b => b.type === 'VYBE');
       const hasNoVybe = userBetsForMarket.some(b => b.type === 'NO_VYBE');
-      
-      if (hasVybe && hasNoVybe) {
-        finalBetType = 'HEDGED';
-      } else if (hasVybe) {
-        finalBetType = 'VYBE';
-      } else if (hasNoVybe) {
-        finalBetType = 'NO_VYBE';
-      }
+      if (hasVybe && hasNoVybe) finalBetType = 'HEDGED';
+      else if (hasVybe) finalBetType = 'VYBE';
+      else if (hasNoVybe) finalBetType = 'NO_VYBE';
     }
     
-    const newMessage = {
-      id: Date.now(),
-      marketId,
-      text,
-      user,
-      avatar,
-      betType: finalBetType, 
-      timestamp: new Date().toISOString(),
-      color: 'text-fuchsia-500'
+    // Okamžité zobrazení v UI
+    const tempMessage = {
+      id: Date.now(), marketId, text, user, avatar, betType: finalBetType, 
+      timestamp: new Date().toISOString(), color: 'text-fuchsia-500'
     };
+    setChatMessages((prev: any) => [...prev, tempMessage]);
 
-    setChatMessages((prev: any) => [...prev, newMessage]);
+    // Odeslání do databáze
+    await supabase.from('chat_messages').insert([{
+      market_id: marketId,
+      user_name: user,
+      avatar_url: avatar,
+      text: text,
+      bet_type: finalBetType,
+      color: 'text-fuchsia-500'
+    }]);
   };
 
-  const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
+  const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     if (balance < amount) {
       showToast("Insufficient balance!", "error");
       return;
     }
-    
+
+    const currentPrice = marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5;
+    const entryPrice = currentPrice * 100;
+
     setBalance(prev => prev - amount);
     
-    const entryPrice = (marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5) * 100;
-    
-    const newBet = {
-      id: Date.now(),
-      marketId,
-      type,
-      amount,
-      entryPrice
-    };
-    
-    setMyBets(prev => {
-      const updatedBets = [...prev, newBet];
-      
-      setMarketPrices((prevPrices: any) => {
-        const marketBets = updatedBets.filter(b => b.marketId === marketId);
-        
-        let vybePool = 100;
-        let noVybePool = 100;
+    const tempBet = { id: Date.now(), marketId, type, amount, entryPrice };
+    setMyBets(prev => [...prev, tempBet]);
 
-        marketBets.forEach(bet => {
-          if (bet.type === 'VYBE') vybePool += bet.amount;
-          if (bet.type === 'NO_VYBE') noVybePool += bet.amount;
-        });
-
-        const totalPool = vybePool + noVybePool;
-        const newVibe = vybePool / totalPool;
-
-        return {
-          ...prevPrices,
-          [marketId]: { vibe: newVibe, noVibe: 1 - newVibe }
-        };
-      });
-
-      return updatedBets;
+    setMarketPrices((prev: any) => {
+      const current = prev[marketId] || { vibe: 0.5, noVibe: 0.5 };
+      const shift = amount / 1000; 
+      let newVibe = type === 'VYBE' ? Math.min(0.95, current.vibe + shift) : Math.max(0.05, current.vibe - shift);
+      return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
     });
+
+    const { data, error } = await supabase.from('bets').insert([{
+      market_id: marketId, user_address: walletAddress, type: type, amount: amount, entry_price: entryPrice
+    }]).select();
+
+    if (error) {
+      showToast("Database error!", "error");
+    } else if (data) {
+      setMyBets(prev => prev.map(b => b.id === tempBet.id ? { ...data[0], marketId: data[0].market_id, entryPrice: data[0].entry_price } : b));
+    }
 
     showToast(`Successfully bet ${amount} USDC on ${type}!`, "success");
   };
 
   return (
     <AppContext.Provider value={{
-      markets, setMarkets,
-      isLoggedIn, setIsLoggedIn,
-      isAuthLoading, setIsAuthLoading,
-      walletAddress, setWalletAddress,
-      balance, setBalance,
-      marketPrices, setMarketPrices,
-      myBets, setMyBets,
-      chatMessages, setChatMessages, sendChatMessage,
-      selectedMarket, setSelectedMarket,
-      avatarUrl, setAvatarUrl,
-      nickname, setNickname,
-      isDarkMode, toggleDarkMode,
-      marketStatus, setMarketStatus,
-      dynamicLeaderboard,
-      showToast,
-      isLoginModalOpen, setIsLoginModalOpen,
-      connectWallet, handleLogout,
-      loginWithTwitter, loginWithDiscord, loginWithEmail,
-      placeBet
+      markets, setMarkets, isLoggedIn, setIsLoggedIn, isAuthLoading, setIsAuthLoading,
+      walletAddress, setWalletAddress, balance, setBalance, marketPrices, setMarketPrices,
+      myBets, setMyBets, chatMessages, setChatMessages, sendChatMessage,
+      selectedMarket, setSelectedMarket, avatarUrl, setAvatarUrl, nickname, setNickname,
+      isDarkMode, toggleDarkMode, marketStatus, setMarketStatus, dynamicLeaderboard,
+      showToast, isLoginModalOpen, setIsLoginModalOpen, connectWallet, handleLogout,
+      loginWithTwitter, loginWithDiscord, loginWithEmail, placeBet
     }}>
       {children}
       <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
