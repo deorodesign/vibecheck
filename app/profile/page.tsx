@@ -1,224 +1,208 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useAppContext } from '../context';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import Link from 'next/link';
 
 export default function ProfilePage() {
-  const { 
-    walletAddress, nickname, balance, setBalance, 
-    markets, showToast 
-  } = useAppContext();
-  
-  const [allBets, setAllBets] = useState<any[]>([]);
-  const [payoutWallet, setPayoutWallet] = useState('');
-  
-  const [stats, setStats] = useState({
-    volume: 0,
-    activeBetsCount: 0,
-    netReturn: 0,
-    wins: 0,
-    losses: 0
-  });
+  const [bets, setBets] = useState<any[]>([]);
+  const [payoutAddress, setPayoutAddress] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Zde definujeme ten tvůj čistý startovní kapitál (500 USDC)
+  const baseStartingBalance = 500;
 
   useEffect(() => {
-    if (walletAddress) {
-      fetchHistory();
-    }
-  }, [walletAddress]);
+    fetchProfileData();
+  }, []);
 
-  const fetchHistory = async () => {
-    const { data: userBets } = await supabase
+  const fetchProfileData = async () => {
+    // Načte všechny sázky a připojí k nim i název a obrázek trhu z tabulky markets
+    const { data: betsData } = await supabase
       .from('bets')
-      .select('*')
-      .eq('user_address', walletAddress)
+      .select('*, markets(title, image_url, imageUrl)')
       .order('created_at', { ascending: false });
 
-    if (userBets) {
-      setAllBets(userBets);
-      
-      let totalVolume = 0;
-      let activeCount = 0;
-      let wins = 0;
-      let losses = 0;
-      let totalPayouts = 0;
-
-      userBets.forEach(bet => {
-        totalVolume += Number(bet.amount || 0);
-        
-        if (bet.status === 'pending') {
-          activeCount++;
-        } else if (bet.status === 'won') {
-          wins++;
-          totalPayouts += Number(bet.payout || 0);
-        } else if (bet.status === 'lost') {
-          losses++;
-        }
-      });
-
-      let netReturnCalc = 0;
-      if (totalVolume > 0) {
-        netReturnCalc = ((totalPayouts - totalVolume) / totalVolume) * 100;
-      }
-
-      setStats({
-        volume: totalVolume,
-        activeBetsCount: activeCount,
-        netReturn: netReturnCalc,
-        wins,
-        losses
-      });
-
-      const baseStartingBalance = 500;
-      const calculatedCurrentBalance = baseStartingBalance - totalVolume + totalPayouts;
-      
-      if (Number(balance).toFixed(2) !== calculatedCurrentBalance.toFixed(2) && calculatedCurrentBalance > 0) {
-        setBalance(calculatedCurrentBalance);
-        if (totalPayouts > 0 && balance < calculatedCurrentBalance) {
-          showToast(`Claimed payouts! Balance updated.`, "success");
-        }
-      }
+    if (betsData) {
+      setBets(betsData);
     }
+
+    // Načte uloženou peněženku (pro MVP používáme local storage)
+    const savedWallet = localStorage.getItem('payoutWallet') || '';
+    setPayoutAddress(savedWallet);
+    
+    setLoading(false);
   };
 
-  const activeBetsList = allBets.filter(b => b.status === 'pending');
-  const pastBetsList = allBets.filter(b => b.status !== 'pending');
+  const saveWallet = () => {
+    setSaving(true);
+    localStorage.setItem('payoutWallet', payoutAddress);
+    setTimeout(() => {
+      alert('Payout wallet saved successfully!');
+      setSaving(false);
+    }, 500);
+  };
 
-  if (!walletAddress) {
-    return <div className="min-h-screen pt-32 pb-20 text-center text-zinc-500 font-mono">PLEASE CONNECT WALLET TO VIEW PROFILE</div>;
-  }
+  // Rozdělení sázek na aktivní a uzavřené (historie)
+  const activeBetsList = bets.filter(b => b.status === 'pending');
+  const resolvedBetsList = bets.filter(b => b.status === 'won' || b.status === 'lost');
+
+  // Výpočty pro statistiky nahoře
+  const totalVolume = bets.reduce((sum, b) => sum + Number(b.amount), 0);
+  const totalPayouts = resolvedBetsList.reduce((sum, b) => sum + Number(b.payout || 0), 0);
+  
+  // Zůstatek = Počáteční 500 - všechny sázky (ty ti seberou peníze) + výplaty (ty ti je vrátí)
+  const currentBalance = baseStartingBalance - totalVolume + totalPayouts;
+  
+  const netReturn = baseStartingBalance > 0 
+    ? ((currentBalance - baseStartingBalance) / baseStartingBalance) * 100 
+    : 0;
+
+  const wins = resolvedBetsList.filter(b => b.status === 'won').length;
+  const losses = resolvedBetsList.filter(b => b.status === 'lost').length;
+
+  if (loading) return <div className="min-h-screen bg-zinc-950 text-white p-10 font-mono text-center uppercase tracking-widest py-32">Loading Profile...</div>;
 
   return (
-    <div className="min-h-screen pt-32 pb-20 px-4 md:px-8 bg-zinc-950 font-mono">
+    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-10 font-mono">
       <div className="max-w-3xl mx-auto space-y-6">
         
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 md:p-10">
+        {/* NAVIGACE ZPĚT */}
+        <header className="w-full flex items-center justify-between mb-8">
+          <Link href="/" className="flex items-center gap-3 text-zinc-500 hover:text-white transition-colors group">
+            <div className="p-2 rounded-full bg-zinc-900 border border-zinc-800 group-hover:border-zinc-600 transition-colors shadow-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </div>
+            <span className="font-black text-xs uppercase tracking-widest">Back to Markets</span>
+          </Link>
+          <h1 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 uppercase tracking-tighter cursor-default">
+            Vybecheck
+          </h1>
+        </header>
+
+        {/* HLAVNÍ STATISTIKY (PROFILOVÁ KARTA) */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-lg">
           <div className="flex items-center gap-6 mb-10">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex items-center justify-center text-3xl font-black text-white shadow-[0_0_30px_rgba(217,70,239,0.3)]">
-              {nickname?.charAt(0).toUpperCase()}
+            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex items-center justify-center text-3xl font-black shadow-lg">
+              T
             </div>
             <div>
-              <h1 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
-                {nickname}
-              </h1>
-              <div className="text-zinc-400 font-medium tracking-widest text-sm mt-1">
-                BALANCE: <span className="text-green-400">{Number(balance || 0).toFixed(2)} USDC</span>
-              </div>
+              <h2 className="text-2xl font-black uppercase tracking-widest mb-1">TWITTER_USER</h2>
+              <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">
+                Balance: <span className="text-green-500">{currentBalance.toFixed(2)} USDC</span>
+              </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-zinc-800">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 border-t border-zinc-800 pt-8">
             <div>
-              <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Volume Traded</div>
-              <div className="text-xl font-bold text-white">${stats.volume.toFixed(2)}</div>
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Volume Traded</p>
+              <p className="text-xl font-black">${totalVolume.toFixed(2)}</p>
             </div>
             <div>
-              <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Active Bets</div>
-              <div className="text-xl font-bold text-white">{stats.activeBetsCount}</div>
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Active Bets</p>
+              <p className="text-xl font-black">{activeBetsList.length}</p>
             </div>
             <div>
-              <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Net Return</div>
-              <div className={`text-xl font-bold ${stats.netReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {stats.netReturn >= 0 ? '+' : ''}{stats.netReturn.toFixed(2)}%
-              </div>
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Net Return</p>
+              <p className={`text-xl font-black ${netReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {netReturn > 0 ? '+' : ''}{netReturn.toFixed(2)}%
+              </p>
             </div>
             <div>
-              <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Win / Loss</div>
-              <div className="text-xl font-bold text-white">
-                <span className="text-green-400">{stats.wins}</span><span className="text-zinc-600"> / </span><span className="text-red-400">{stats.losses}</span>
-              </div>
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Win / Loss</p>
+              <p className="text-xl font-black">
+                <span className="text-green-500">{wins}</span> <span className="text-zinc-600">/</span> <span className="text-red-500">{losses}</span>
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 md:p-10">
-          <h2 className="text-xl font-black text-white italic uppercase tracking-widest mb-2">Payout Wallet</h2>
-          <p className="text-xs text-zinc-500 font-medium uppercase tracking-widest mb-6 leading-relaxed">
+        {/* PAYOUT WALLET KARTA */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-md">
+          <h3 className="text-lg font-black uppercase italic tracking-widest mb-4">Payout Wallet</h3>
+          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-6 leading-relaxed">
             Add your Solana or EVM address to receive monthly USDC airdrops if you make it to the top 5 on the leaderboard.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-4">
             <input 
               type="text" 
-              value={payoutWallet}
-              onChange={(e) => setPayoutWallet(e.target.value)}
-              placeholder="Paste your 0x... or Solana address here"
-              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-sm text-white placeholder-zinc-700 outline-none focus:border-fuchsia-500 transition-colors"
+              value={payoutAddress}
+              onChange={(e) => setPayoutAddress(e.target.value)}
+              placeholder="Paste your 0x... or Solana address here" 
+              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-sm text-white outline-none focus:border-fuchsia-500 transition-colors"
             />
-            <button className="bg-white hover:bg-zinc-200 text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-colors">
-              Save
+            <button 
+              onClick={saveWallet}
+              disabled={saving}
+              className="bg-white text-black hover:bg-zinc-200 active:scale-95 font-black px-8 py-4 rounded-xl uppercase tracking-widest transition-all disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 md:p-10">
-          <h2 className="text-xl font-black text-white italic uppercase tracking-widest mb-8">My Active Bets</h2>
-          
+        {/* AKTIVNÍ SÁZKY */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-md">
+          <h3 className="text-lg font-black uppercase italic tracking-widest mb-6">My Active Bets</h3>
           <div className="space-y-4">
             {activeBetsList.length === 0 ? (
-              <div className="border border-zinc-800 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center text-center">
-                <div className="text-zinc-600 text-xs font-black uppercase tracking-widest mb-4">No active bets.</div>
-                <Link href="/" className="bg-fuchsia-500/10 text-fuchsia-400 hover:bg-fuchsia-500/20 px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs transition-colors">
-                  Start Trading
-                </Link>
+              <div className="text-center py-10 flex flex-col items-center justify-center border border-zinc-800 border-dashed rounded-[1.5rem] bg-zinc-950/50">
+                <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-4">No active bets.</p>
+                <Link href="/" className="px-6 py-3 rounded-xl bg-zinc-800 text-white hover:bg-zinc-700 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">Start Trading</Link>
               </div>
             ) : (
-              activeBetsList.map((bet) => {
-                const market = markets?.find((m: any) => m.id === bet.market_id);
-                return (
-                  <div key={bet.id} className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {market?.imageUrl && <img src={market.imageUrl} alt="Market" className="w-10 h-10 rounded-lg object-cover" />}
-                      <div>
-                        <div className="font-bold text-white text-sm">{market?.title || 'Unknown Market'}</div>
-                        <div className="text-xs font-bold uppercase tracking-widest mt-1">
-                          <span className="text-zinc-500">BET: </span>
-                          <span className={bet.type === 'VYBE' ? 'text-green-400' : 'text-red-400'}>{bet.type}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-black text-white">{Number(bet.amount || 0)} USDC</div>
-                      <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">Entry: {Number(bet.entry_price || 0).toFixed(0)}&cent;</div>
+              activeBetsList.map((bet) => (
+                <div key={bet.id} className="flex justify-between items-center p-5 rounded-2xl bg-zinc-950 border border-zinc-800 hover:border-zinc-700 transition-colors">
+                  <div className="flex items-center gap-4">
+                    {(bet.markets?.image_url || bet.markets?.imageUrl) && (
+                      <img src={bet.markets?.image_url || bet.markets?.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover border border-zinc-800" />
+                    )}
+                    <div>
+                      <p className="font-bold text-sm line-clamp-1">{bet.markets?.title || 'Unknown Market'}</p>
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">
+                        Bet: <span className={bet.type === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{bet.type}</span>
+                      </p>
                     </div>
                   </div>
-                );
-              })
+                  <div className="text-right">
+                    <p className="font-black text-sm">{bet.amount} USDC</p>
+                    <p className="text-[10px] font-mono text-zinc-500 mt-1">Entry: {(bet.entry_price || 50).toFixed(0)}¢</p>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 md:p-10">
-          <h2 className="text-xl font-black text-white italic uppercase tracking-widest mb-8">History</h2>
-          
+        {/* HISTORIE (UZAVŘENÉ SÁZKY) */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-md">
+          <h3 className="text-lg font-black uppercase italic tracking-widest mb-6">History</h3>
           <div className="space-y-4">
-            {pastBetsList.length === 0 ? (
-              <div className="text-center text-zinc-600 text-xs font-black uppercase tracking-widest py-4">No history yet.</div>
+            {resolvedBetsList.length === 0 ? (
+              <div className="text-center py-10 border border-zinc-800 border-dashed rounded-[1.5rem] bg-zinc-950/50">
+                <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">No history yet.</p>
+              </div>
             ) : (
-              pastBetsList.map((bet) => {
-                const market = markets?.find((m: any) => m.id === bet.market_id);
-                return (
-                  <div key={bet.id} className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between opacity-70 hover:opacity-100 transition-opacity">
-                    <div>
-                      <div className="font-bold text-white text-sm">{market?.title || 'Market Resolved'}</div>
-                      <div className="flex gap-3 text-xs font-bold uppercase tracking-widest mt-1">
-                        <span className={bet.type === 'VYBE' ? 'text-green-400' : 'text-red-400'}>{bet.type}</span>
-                        <span className="text-zinc-600">|</span>
-                        <span className={bet.status === 'won' ? 'text-green-500' : 'text-red-500'}>
-                          {bet.status === 'won' ? 'WON' : 'LOST'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-black text-zinc-400">{Number(bet.amount || 0)} USDC</div>
-                      {bet.status === 'won' && (
-                        <div className="text-[10px] text-green-400 uppercase tracking-widest mt-1">+{(bet.payout || 0).toFixed(2)} USDC</div>
-                      )}
-                    </div>
+              resolvedBetsList.map((bet) => (
+                <div key={bet.id} className="flex justify-between items-center p-5 rounded-2xl bg-zinc-950 border border-zinc-800 opacity-80 hover:opacity-100 transition-opacity">
+                  <div>
+                    <p className="font-bold text-sm text-zinc-300 line-clamp-1">{bet.markets?.title || 'Unknown Market'}</p>
+                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">
+                      {bet.type} | <span className={bet.status === 'won' ? 'text-green-500' : 'text-red-500'}>{bet.status}</span>
+                    </p>
                   </div>
-                );
-              })
+                  <div className="text-right">
+                    <p className="font-black text-sm text-zinc-500">{bet.amount} USDC</p>
+                    <p className={`text-[10px] font-black tracking-widest mt-1 ${bet.status === 'won' ? 'text-green-500' : 'text-red-500'}`}>
+                      {bet.status === 'won' ? '+' : ''}{(bet.payout || 0).toFixed(2)} USDC
+                    </p>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
