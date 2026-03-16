@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useAppContext } from '../context';
 
 export default function ProfilePage() {
-  // Teď profil tahá data ze stejného místa jako hlavní stránka!
   const { balance, myBets, markets, isAuthLoading, nickname } = useAppContext();
   const [payoutAddress, setPayoutAddress] = useState('');
   const [saving, setSaving] = useState(false);
@@ -26,7 +25,6 @@ export default function ProfilePage() {
     }, 500);
   };
 
-  // Spojíme sázky z paměti s informacemi o trzích (obrázky, názvy)
   const enrichedBets = myBets.map((bet: any) => {
     const marketDetails = markets.find((m: any) => m.id === bet.marketId);
     return {
@@ -35,14 +33,20 @@ export default function ProfilePage() {
     };
   });
 
-  // Rozdělení na aktivní a uzavřené (pokud status chybí, je to automaticky nová/aktivní sázka)
   const activeBetsList = enrichedBets.filter((b: any) => b.status === 'pending' || !b.status);
   const resolvedBetsList = enrichedBets.filter((b: any) => b.status === 'won' || b.status === 'lost');
 
   const totalVolume = enrichedBets.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
 
+  // FIX: Calculate total value currently locked in active bets
+  const activeBetsValue = activeBetsList.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
+
+  // FIX: Portfolio Value = Cash Balance + Money locked in active bets
+  const currentPortfolioValue = balance + activeBetsValue;
+
+  // FIX: Net Return compares current Portfolio Value to the starting balance
   const netReturn = baseStartingBalance > 0 
-    ? ((balance - baseStartingBalance) / baseStartingBalance) * 100 
+    ? ((currentPortfolioValue - baseStartingBalance) / baseStartingBalance) * 100 
     : 0;
 
   const wins = resolvedBetsList.filter((b: any) => b.status === 'won').length;
@@ -92,7 +96,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Net Return</p>
-              <p className={`text-xl font-black ${netReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              <p className={`text-xl font-black ${netReturn > 0 ? 'text-green-500' : netReturn < 0 ? 'text-red-500' : 'text-zinc-300'}`}>
                 {netReturn > 0 ? '+' : ''}{netReturn.toFixed(2)}%
               </p>
             </div>
