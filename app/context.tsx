@@ -11,7 +11,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [markets, setMarkets] = useState<any[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState('');
   const [balance, setBalance] = useState(0);
   const [marketPrices, setMarketPrices] = useState<any>({});
@@ -50,6 +50,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isDarkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
+
+  useEffect(() => {
+    const savedSession = localStorage.getItem('vybe_session');
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession);
+        setWalletAddress(session.walletAddress);
+        setNickname(session.nickname);
+        setBalance(session.balance);
+        setMyBets(session.myBets || []);
+        setIsLoggedIn(true);
+      } catch (e) {
+        localStorage.removeItem('vybe_session');
+      }
+    }
+    setIsAuthLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (isLoggedIn && walletAddress) {
+      localStorage.setItem('vybe_session', JSON.stringify({
+        walletAddress,
+        nickname,
+        balance,
+        myBets
+      }));
+    }
+  }, [isLoggedIn, walletAddress, nickname, balance, myBets]);
 
   useEffect(() => {
     const fetchMarkets = async () => {
@@ -103,6 +131,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAvatarUrl('');
     setBalance(0);
     setMyBets([]);
+    localStorage.removeItem('vybe_session');
     showToast("Logged out.", "info");
   };
 
