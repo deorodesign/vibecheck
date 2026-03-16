@@ -11,7 +11,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [markets, setMarkets] = useState<any[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [balance, setBalance] = useState(0);
   const [marketPrices, setMarketPrices] = useState<any>({});
@@ -30,8 +30,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     { id: 'user5', rank: 5, name: 'CultureGod', address: '0x5e...22aa', points: 9500, avatar: '', color: 'from-green-400 to-green-600' },
   ]);
 
-  // Toast Notification System
   const [toasts, setToasts] = useState<any[]>([]);
+  
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -51,12 +51,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
-  // Load Markets from Supabase
   useEffect(() => {
     const fetchMarkets = async () => {
       const { data, error } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
       if (data) {
-        // Map db fields to frontend expected fields
         const formattedMarkets = data.map(m => ({
           ...m,
           imageUrl: m.image_url,
@@ -66,7 +64,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }));
         setMarkets(formattedMarkets);
         
-        // Setup initial prices and statuses
         let prices: any = {};
         let statuses: any = {};
         formattedMarkets.forEach((m: any) => {
@@ -82,7 +79,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     fetchMarkets();
   }, []);
 
-  // Simple Auth Handlers
   const connectWallet = () => { setIsLoginModalOpen(true); };
   
   const loginWithEmail = async (email: string) => {
@@ -110,12 +106,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showToast("Logged out.", "info");
   };
 
-  // Chat logic - WITH BADGES (Skin in the game)
   const sendChatMessage = (marketId: number, text: string, user: string, avatar: string) => {
-    // 1. Zjistíme, jestli má uživatel vsazeno na TENTO trh
     const userBet = myBets.find((bet: any) => bet.marketId === marketId);
     
-    // 2. Přidáme betType (VYBE / NO_VYBE / null) do zprávy
     const newMessage = {
       id: Date.now(),
       marketId,
@@ -130,7 +123,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setChatMessages((prev: any) => [...prev, newMessage]);
   };
 
-  // Betting logic
   const placeBet = (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     if (balance < amount) {
       showToast("Insufficient balance!", "error");
@@ -174,7 +166,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       placeBet
     }}>
       {children}
-      {/* GLOBAL TOAST RENDERER */}
       <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
         {toasts.map(toast => (
           <div key={toast.id} className={`animate-in slide-in-from-bottom-5 fade-in duration-300 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border ${
@@ -192,7 +183,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// TOTO JE TEN CHYBĚJÍCÍ ŘÁDEK Z MINULA:
 export function useAppContext() {
   return useContext(AppContext);
 }
