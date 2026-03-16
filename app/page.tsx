@@ -224,10 +224,10 @@ function HomeContent() {
         <div className="flex flex-col gap-5">
           {markets.slice(0, 3).map((m: any) => (
             <div key={m.id} onClick={() => openMarket(m)} className="flex gap-4 items-center cursor-pointer group">
-              <img src={m.imageUrl} alt={m.title} className="w-12 h-12 rounded-xl object-cover object-top shadow-sm group-hover:scale-105 transition-transform" />
+              <img src={m.imageUrl || m.image_url} alt={m.title} className="w-12 h-12 rounded-xl object-cover object-top shadow-sm group-hover:scale-105 transition-transform" />
               <div className="flex-1">
                 <p className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-2 leading-tight group-hover:text-fuchsia-500 transition-colors">{m.title}</p>
-                <p className="text-[10px] text-zinc-500 font-mono mt-1">{m.volume}</p>
+                <p className="text-[10px] text-zinc-500 font-mono mt-1">${m.volumeUsd || m.volume_usd || 0}</p>
               </div>
             </div>
           ))}
@@ -349,10 +349,9 @@ function HomeContent() {
             
             {/* DETAIL KARTY */}
             <div className="w-full aspect-video rounded-[2rem] overflow-hidden relative shadow-xl border border-zinc-200 dark:border-white/5">
-              {/* OBJECT-TOP added here */}
-              <img src={selectedMarket.imageUrl} alt={selectedMarket.title} className={`absolute inset-0 w-full h-full object-cover object-top ${isResolved ? 'grayscale' : ''}`} />
+              <img src={selectedMarket.imageUrl || selectedMarket.image_url} alt={selectedMarket.title} className={`absolute inset-0 w-full h-full object-cover object-top ${isResolved ? 'grayscale' : ''}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-50/40 dark:from-[#0e0e12] dark:via-[#0e0e12]/40 to-transparent transition-colors duration-500"></div>
-              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-widest border border-white/10 z-20 shadow-lg">Vol: {selectedMarket.volume}</div>
+              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-widest border border-white/10 z-20 shadow-lg">Vol: ${selectedMarket.volumeUsd || selectedMarket.volume_usd || 0}</div>
             </div>
 
             <div className="flex flex-col gap-5 -mt-16 md:-mt-20 relative z-10 px-0 md:px-8">
@@ -427,26 +426,40 @@ function HomeContent() {
                   <p className="mb-3">This market will resolve to <strong className="text-green-500">VYBE</strong> if the specified event officially occurs before the resolution date.</p>
                   <div className="p-3 bg-zinc-50 dark:bg-black/30 rounded-xl border border-zinc-200 dark:border-white/5 mb-3">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Resolution Source:</p>
-                    <p className="text-zinc-900 dark:text-zinc-200">{selectedMarket.resolutionSource}</p>
+                    <p className="text-zinc-900 dark:text-zinc-200">{selectedMarket.resolutionSource || selectedMarket.resolution_source}</p>
                   </div>
                 </div>
               </div>
+              
+              {/* CHAT SECTION WITH BADGES AND BUBBLES */}
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] shadow-md mx-4 md:mx-0 overflow-hidden flex flex-col h-[400px]">
                 <div className="p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between">
                    <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight">Live Chat</h3>
                 </div>
+                
                 <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 text-xs hide-scrollbar">
                    {marketChat.map((msg: any) => (
                      <div key={msg.id} className="flex items-start gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                       {msg.avatar ? <img src={msg.avatar} alt={msg.user} className="w-5 h-5 rounded-full object-cover mt-1 flex-shrink-0" /> : <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 mt-1 flex-shrink-0 opacity-80" />}
-                       <div className="flex flex-col gap-1">
-                         <span className={`font-black uppercase tracking-widest text-[9px] ${msg.color || 'text-fuchsia-500'}`}>{msg.user}</span>
-                         <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed">{msg.text}</span>
+                       {msg.avatar ? <img src={msg.avatar} alt={msg.user} className="w-5 h-5 rounded-full object-cover mt-1 flex-shrink-0 shadow-sm" /> : <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 mt-1 flex-shrink-0 opacity-80 shadow-sm" />}
+                       <div className="flex flex-col gap-1 w-full">
+                         <div className="flex items-center gap-2">
+                           <span className={`font-black uppercase tracking-widest text-[9px] ${msg.color || 'text-fuchsia-500'}`}>{msg.user}</span>
+                           
+                           {/* SKIN IN THE GAME BADGE */}
+                           {msg.betType === 'VYBE' && (
+                             <span className="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-[8px] font-black text-green-500 uppercase tracking-widest italic">Vybe</span>
+                           )}
+                           {msg.betType === 'NO_VYBE' && (
+                             <span className="px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[8px] font-black text-red-500 uppercase tracking-widest italic">No Vybe</span>
+                           )}
+                         </div>
+                         <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed bg-zinc-100 dark:bg-white/5 p-2.5 rounded-r-xl rounded-bl-xl border border-zinc-200 dark:border-white/5 inline-block w-fit max-w-[95%]">{msg.text}</span>
                        </div>
                      </div>
                    ))}
                    <div ref={chatEndRef} />
                 </div>
+
                 <div className="p-4 border-t border-zinc-200 dark:border-white/5 bg-white dark:bg-[#18181b]">
                   <div className="relative flex items-center">
                     <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendChat()} placeholder={isLoggedIn ? "Type a message..." : "Log in to chat..."} className="w-full bg-zinc-100 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-fuchsia-500 transition-colors text-zinc-900 dark:text-white" />
@@ -454,6 +467,7 @@ function HomeContent() {
                   </div>
                 </div>
               </div>
+
             </div>
           </div>
           {rightSidebar}
@@ -471,10 +485,9 @@ function HomeContent() {
                   
                   {/* SEZNAM KARET */}
                   <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
-                    {/* OBJECT-TOP added here too */}
-                    <img src={market.imageUrl} alt={market.title} className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
+                    <img src={market.imageUrl || market.image_url} alt={market.title} className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" />
-                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: {market.volume}</div>
+                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${market.volumeUsd || market.volume_usd || 0}</div>
                   </div>
                   
                   <div className="p-6 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
