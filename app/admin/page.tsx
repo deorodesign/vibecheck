@@ -55,6 +55,13 @@ function readFile(file: File): Promise<string> {
 export default function AdminPanel() {
   const { isDarkMode, showToast } = useAppContext();
   
+  // Auth states
+  const [adminUser, setAdminUser] = useState<any>(null);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  // Market states
   const [markets, setMarkets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -77,18 +84,59 @@ export default function AdminPanel() {
   const [finalImageBlob, setFinalImageBlob] = useState<Blob | null>(null); 
   const [isUploading, setIsUploading] = useState(false);
 
-  // 1. Fetch markets
-  const fetchMarkets = async () => {
+  // --- AUTH LOGIC ---
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setAdminUser(session?.user || null);
+      setIsAuthLoading(false);
+    };
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAdminUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsAuthLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: authEmail,
+      password: authPassword,
+    });
+    
+    if (error) {
+      showToast(error.message, "error");
+      setIsAuthLoading(false);
+    } else {
+      showToast("Ultra God Mode Unlocked", "success");
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setMarkets([]);
+    showToast("Logged out of Admin Panel", "success");
+  };
+
+  // --- MARKET LOGIC ---
+  const fetchMarkets = useCallback(async () => {
+    if (!adminUser) return;
     setIsLoading(true);
     const { data, error } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
     if (data) setMarkets(data);
-    if (error) showToast("Error loading markets", "error");
+    if (error) showToast("Error loading markets: " + error.message, "error");
     setIsLoading(false);
-  };
+  }, [adminUser, showToast]);
 
-  useEffect(() => { fetchMarkets(); }, []);
+  useEffect(() => {
+    if (adminUser) fetchMarkets();
+  }, [adminUser, fetchMarkets]);
 
-  // 2. Reset form
+  // Reset form
   const resetForm = () => {
     setEditingId(null);
     setTitle('');
@@ -101,7 +149,7 @@ export default function AdminPanel() {
     setVolumeUsd('0');
   };
 
-  // 3. Cropper logic
+  // Cropper logic
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -124,14 +172,14 @@ export default function AdminPanel() {
         setFinalImageBlob(croppedImage);
         setCroppedImagePreview(URL.createObjectURL(croppedImage));
         setIsCropping(false);
-        setImageSrc(null); // Reset src to allow re-cropping of the same file later if needed
+        setImageSrc(null); 
       }
     } catch (e) {
       showToast("Error cropping image", "error");
     }
   };
 
-  // 4. Submit (Upload Image -> Save to DB)
+  // Submit (Upload Image -> Save to DB)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || (!imageUrl && !finalImageBlob) || !resolutionSource) {
@@ -180,7 +228,7 @@ export default function AdminPanel() {
     setIsUploading(false);
   };
 
-  // 5. Edit click
+  // Edit click
   const handleEditClick = (market: any) => {
     setEditingId(market.id);
     setTitle(market.title);
@@ -193,22 +241,25 @@ export default function AdminPanel() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 6. Delete
+  // Delete
   const handleDeleteMarket = async (id: number) => {
     const confirmed = window.confirm("Are you sure you want to delete this market?");
     if (!confirmed) return;
     const { error } = await supabase.from('markets').delete().eq('id', id);
-    if (error) showToast("Cannot delete.", "error");
+    if (error) showToast("Cannot delete: " + error.message, "error");
     else { showToast("Market deleted!", "success"); fetchMarkets(); }
   };
 
-  // 7. Resolve and Payouts
+  // Resolve and Payouts
   const handleResolveMarket = async (id: number, outcome: 'VYBE' | 'NO_VYBE') => {
     const confirmed = window.confirm(`Resolve as ${outcome}? This processes payouts!`);
     if (!confirmed) return;
 
     const { error: updateError } = await supabase.from('markets').update({ is_resolved: true, winning_outcome: outcome }).eq('id', id);
-    if (updateError) return;
+    if (updateError) {
+       showToast("Failed to resolve market: " + updateError.message, "error");
+       return;
+    }
 
     showToast(`Processing payouts for ${outcome}...`, "success");
     const { data: allBets } = await supabase.from('bets').select('*').eq('market_id', id);
@@ -230,6 +281,54 @@ export default function AdminPanel() {
     fetchMarkets();
   };
 
+  // --- RENDER LOGIN SCREEN ---
+  if (isAuthLoading) {
+    return (
+      <main className={`flex min-h-screen items-center justify-center font-sans ${isDarkMode ? 'bg-[#0e0e12] text-white' : 'bg-zinc-50 text-zinc-900'}`}>
+        <div className="w-10 h-10 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    );
+  }
+
+  // POKUD UŽIVATEL NENÍ PŘIHLÁŠEN, UKÁŽE SE JEN TOTO:
+  if (!adminUser) {
+    return (
+      <main className={`flex min-h-screen items-center justify-center p-4 font-sans ${isDarkMode ? 'bg-[#0e0e12] text-white' : 'bg-zinc-50 text-zinc-900'} transition-colors duration-500`}>
+        <div className="w-full max-w-sm bg-white dark:bg-[#18181b] p-8 rounded-[2rem] border border-zinc-200 dark:border-white/10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-fuchsia-500 to-orange-500"></div>
+          <h1 className="text-2xl font-black italic uppercase text-center mb-2">Restricted Area</h1>
+          <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-6">Admin authentication required</p>
+          
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            <input 
+              type="email" 
+              placeholder="Admin Email" 
+              value={authEmail}
+              onChange={(e) => setAuthEmail(e.target.value)}
+              className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors"
+              required
+            />
+            <input 
+              type="password" 
+              placeholder="Password" 
+              value={authPassword}
+              onChange={(e) => setAuthPassword(e.target.value)}
+              className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors"
+              required
+            />
+            <button type="submit" className="mt-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white font-black uppercase tracking-widest text-sm shadow-lg hover:scale-105 active:scale-95 transition-transform">
+              Unlock God Mode
+            </button>
+          </form>
+          <div className="mt-6 text-center">
+            <Link href="/" className="text-[10px] font-bold text-zinc-400 hover:text-fuchsia-500 uppercase tracking-widest transition-colors">Return to App</Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // --- RENDER MAIN ADMIN PANEL (POKUD JE PŘIHLÁŠEN) ---
   return (
     <main className={`flex min-h-screen flex-col items-center p-8 font-sans ${isDarkMode ? 'bg-[#0e0e12] text-white' : 'bg-zinc-50 text-zinc-900'} transition-colors duration-500`}>
       <div className="w-full max-w-4xl space-y-8 relative">
@@ -247,7 +346,7 @@ export default function AdminPanel() {
                   image={imageSrc}
                   crop={crop}
                   zoom={zoom}
-                  aspect={16 / 9} // Perfect landscape ratio for your cards
+                  aspect={16 / 9}
                   onCropChange={setCrop}
                   onCropComplete={onCropComplete}
                   onZoomChange={setZoom}
@@ -266,12 +365,16 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* HEADER */}
-        <div className="flex justify-between items-center mb-6">
+        {/* HEADER S ODHLÁŠENÍM */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <h1 className="text-3xl font-black uppercase italic text-fuchsia-500 flex items-center gap-3">
             <span>🔒</span> Ultra God Mode
           </h1>
-          <Link href="/" className="px-5 py-2.5 bg-zinc-800 text-white rounded-xl font-bold text-xs hover:bg-zinc-700 transition-colors shadow-lg">Back to App</Link>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest hidden md:inline">{adminUser.email}</span>
+            <button onClick={handleLogout} className="px-4 py-2 border border-zinc-200 dark:border-white/10 rounded-xl text-xs font-bold hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors">Log Out</button>
+            <Link href="/" className="px-5 py-2.5 bg-zinc-800 text-white rounded-xl font-bold text-xs hover:bg-zinc-700 transition-colors shadow-lg">Back to App</Link>
+          </div>
         </div>
 
         {/* FORM */}
@@ -300,7 +403,7 @@ export default function AdminPanel() {
                       type="file" 
                       accept="image/*"
                       onChange={onFileChange}
-                      onClick={(e) => (e.currentTarget.value = '')} // This fixes the bug where picking the same image twice does nothing
+                      onClick={(e) => (e.currentTarget.value = '')}
                       className="w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 transition-all cursor-pointer" 
                     />
                   </div>
