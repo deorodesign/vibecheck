@@ -84,7 +84,7 @@ export default function AdminPanel() {
     setNewTitle(market.title);
     setNewCategory(market.category || 'Pop Culture');
     setNewImageUrl(market.image_url || market.imageUrl || '');
-    setNewRules(market.rules || '');
+    setNewRules(market.rules || market.resolution_source || '');
     setFakeVolume(market.volume_usd?.toString() || '0');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -161,6 +161,7 @@ export default function AdminPanel() {
       category: newCategory, 
       image_url: finalImageUrl, 
       rules: newRules,
+      resolution_source: newRules, // FIXED: Satisfies the not-null constraint in Supabase
       volume_usd: Number(fakeVolume) || 0
     };
 
