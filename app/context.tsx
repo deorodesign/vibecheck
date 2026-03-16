@@ -107,7 +107,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendChatMessage = (marketId: number, text: string, user: string, avatar: string) => {
-    const userBet = myBets.find((bet: any) => bet.marketId === marketId);
+    const userBetsForMarket = myBets.filter((bet: any) => bet.marketId === marketId);
+    
+    let finalBetType = null;
+    
+    if (userBetsForMarket.length > 0) {
+      const hasVybe = userBetsForMarket.some(b => b.type === 'VYBE');
+      const hasNoVybe = userBetsForMarket.some(b => b.type === 'NO_VYBE');
+      
+      if (hasVybe && hasNoVybe) {
+        finalBetType = 'HEDGED';
+      } else if (hasVybe) {
+        finalBetType = 'VYBE';
+      } else if (hasNoVybe) {
+        finalBetType = 'NO_VYBE';
+      }
+    }
     
     const newMessage = {
       id: Date.now(),
@@ -115,7 +130,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       text,
       user,
       avatar,
-      betType: userBet ? userBet.type : null, 
+      betType: finalBetType, 
       timestamp: new Date().toISOString(),
       color: 'text-fuchsia-500'
     };
