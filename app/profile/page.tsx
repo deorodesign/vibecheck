@@ -1,39 +1,21 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import Link from 'next/link';
+import { useAppContext } from '../context';
 
 export default function ProfilePage() {
-  const [bets, setBets] = useState<any[]>([]);
+  // Teď profil tahá data ze stejného místa jako hlavní stránka!
+  const { balance, myBets, markets, isAuthLoading, nickname } = useAppContext();
   const [payoutAddress, setPayoutAddress] = useState('');
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  // Zde definujeme ten tvůj čistý startovní kapitál (500 USDC)
   const baseStartingBalance = 500;
 
   useEffect(() => {
-    fetchProfileData();
-  }, []);
-
-  const fetchProfileData = async () => {
-    // Načte všechny sázky a připojí k nim i název a obrázek trhu z tabulky markets
-    const { data: betsData } = await supabase
-      .from('bets')
-      .select('*, markets(title, image_url, imageUrl)')
-      .order('created_at', { ascending: false });
-
-    if (betsData) {
-      setBets(betsData);
-    }
-
-    // Načte uloženou peněženku (pro MVP používáme local storage)
     const savedWallet = localStorage.getItem('payoutWallet') || '';
     setPayoutAddress(savedWallet);
-    
-    setLoading(false);
-  };
+  }, []);
 
   const saveWallet = () => {
     setSaving(true);
@@ -44,31 +26,34 @@ export default function ProfilePage() {
     }, 500);
   };
 
-  // Rozdělení sázek na aktivní a uzavřené (historie)
-  const activeBetsList = bets.filter(b => b.status === 'pending');
-  const resolvedBetsList = bets.filter(b => b.status === 'won' || b.status === 'lost');
+  // Spojíme sázky z paměti s informacemi o trzích (obrázky, názvy)
+  const enrichedBets = myBets.map((bet: any) => {
+    const marketDetails = markets.find((m: any) => m.id === bet.marketId);
+    return {
+      ...bet,
+      markets: marketDetails || { title: 'Unknown Market', image_url: '' }
+    };
+  });
 
-  // Výpočty pro statistiky nahoře
-  const totalVolume = bets.reduce((sum, b) => sum + Number(b.amount), 0);
-  const totalPayouts = resolvedBetsList.reduce((sum, b) => sum + Number(b.payout || 0), 0);
-  
-  // Zůstatek = Počáteční 500 - všechny sázky (ty ti seberou peníze) + výplaty (ty ti je vrátí)
-  const currentBalance = baseStartingBalance - totalVolume + totalPayouts;
-  
+  // Rozdělení na aktivní a uzavřené (pokud status chybí, je to automaticky nová/aktivní sázka)
+  const activeBetsList = enrichedBets.filter((b: any) => b.status === 'pending' || !b.status);
+  const resolvedBetsList = enrichedBets.filter((b: any) => b.status === 'won' || b.status === 'lost');
+
+  const totalVolume = enrichedBets.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
+
   const netReturn = baseStartingBalance > 0 
-    ? ((currentBalance - baseStartingBalance) / baseStartingBalance) * 100 
+    ? ((balance - baseStartingBalance) / baseStartingBalance) * 100 
     : 0;
 
-  const wins = resolvedBetsList.filter(b => b.status === 'won').length;
-  const losses = resolvedBetsList.filter(b => b.status === 'lost').length;
+  const wins = resolvedBetsList.filter((b: any) => b.status === 'won').length;
+  const losses = resolvedBetsList.filter((b: any) => b.status === 'lost').length;
 
-  if (loading) return <div className="min-h-screen bg-zinc-950 text-white p-10 font-mono text-center uppercase tracking-widest py-32">Loading Profile...</div>;
+  if (isAuthLoading) return <div className="min-h-screen bg-zinc-950 text-white p-10 font-mono text-center uppercase tracking-widest py-32">Loading Profile...</div>;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-10 font-mono">
       <div className="max-w-3xl mx-auto space-y-6">
         
-        {/* NAVIGACE ZPĚT */}
         <header className="w-full flex items-center justify-between mb-8">
           <Link href="/" className="flex items-center gap-3 text-zinc-500 hover:text-white transition-colors group">
             <div className="p-2 rounded-full bg-zinc-900 border border-zinc-800 group-hover:border-zinc-600 transition-colors shadow-sm">
@@ -83,16 +68,15 @@ export default function ProfilePage() {
           </h1>
         </header>
 
-        {/* HLAVNÍ STATISTIKY (PROFILOVÁ KARTA) */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-lg">
           <div className="flex items-center gap-6 mb-10">
             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex items-center justify-center text-3xl font-black shadow-lg">
-              T
+              {nickname ? nickname.charAt(0).toUpperCase() : 'T'}
             </div>
             <div>
-              <h2 className="text-2xl font-black uppercase tracking-widest mb-1">TWITTER_USER</h2>
+              <h2 className="text-2xl font-black uppercase tracking-widest mb-1">{nickname || 'TWITTER_USER'}</h2>
               <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">
-                Balance: <span className="text-green-500">{currentBalance.toFixed(2)} USDC</span>
+                Balance: <span className="text-green-500">{balance.toFixed(2)} USDC</span>
               </p>
             </div>
           </div>
@@ -121,7 +105,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* PAYOUT WALLET KARTA */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-md">
           <h3 className="text-lg font-black uppercase italic tracking-widest mb-4">Payout Wallet</h3>
           <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-6 leading-relaxed">
@@ -145,7 +128,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* AKTIVNÍ SÁZKY */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-md">
           <h3 className="text-lg font-black uppercase italic tracking-widest mb-6">My Active Bets</h3>
           <div className="space-y-4">
@@ -155,7 +137,7 @@ export default function ProfilePage() {
                 <Link href="/" className="px-6 py-3 rounded-xl bg-zinc-800 text-white hover:bg-zinc-700 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">Start Trading</Link>
               </div>
             ) : (
-              activeBetsList.map((bet) => (
+              activeBetsList.map((bet: any) => (
                 <div key={bet.id} className="flex justify-between items-center p-5 rounded-2xl bg-zinc-950 border border-zinc-800 hover:border-zinc-700 transition-colors">
                   <div className="flex items-center gap-4">
                     {(bet.markets?.image_url || bet.markets?.imageUrl) && (
@@ -170,7 +152,7 @@ export default function ProfilePage() {
                   </div>
                   <div className="text-right">
                     <p className="font-black text-sm">{bet.amount} USDC</p>
-                    <p className="text-[10px] font-mono text-zinc-500 mt-1">Entry: {(bet.entry_price || 50).toFixed(0)}¢</p>
+                    <p className="text-[10px] font-mono text-zinc-500 mt-1">Entry: {(bet.entryPrice || 50).toFixed(0)}¢</p>
                   </div>
                 </div>
               ))
@@ -178,7 +160,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* HISTORIE (UZAVŘENÉ SÁZKY) */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-md">
           <h3 className="text-lg font-black uppercase italic tracking-widest mb-6">History</h3>
           <div className="space-y-4">
@@ -187,7 +168,7 @@ export default function ProfilePage() {
                 <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">No history yet.</p>
               </div>
             ) : (
-              resolvedBetsList.map((bet) => (
+              resolvedBetsList.map((bet: any) => (
                 <div key={bet.id} className="flex justify-between items-center p-5 rounded-2xl bg-zinc-950 border border-zinc-800 opacity-80 hover:opacity-100 transition-opacity">
                   <div>
                     <p className="font-bold text-sm text-zinc-300 line-clamp-1">{bet.markets?.title || 'Unknown Market'}</p>
