@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import Cropper from 'react-easy-crop';
 
-// Helper function to create image
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
@@ -50,7 +49,6 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  // Form states
   const [editingId, setEditingId] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState('Pop Culture');
@@ -58,7 +56,6 @@ export default function AdminPanel() {
   const [newRules, setNewRules] = useState('');
   const [fakeVolume, setFakeVolume] = useState('0');
 
-  // Crop Tool states
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -105,7 +102,6 @@ export default function AdminPanel() {
       const imageDataUrl = URL.createObjectURL(file);
       setImageSrc(imageDataUrl);
       setCroppedImageBlob(null);
-      // Reset input value so the same file can be selected again if needed
       e.target.value = '';
     }
   };
@@ -119,7 +115,7 @@ export default function AdminPanel() {
       if (!imageSrc || !croppedAreaPixels) return;
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
       setCroppedImageBlob(croppedImage);
-      setImageSrc(null); // Close crop modal
+      setImageSrc(null);
     } catch (e) {
       console.error(e);
     }
@@ -132,15 +128,12 @@ export default function AdminPanel() {
     setUploading(true);
     let finalImageUrl = newImageUrl;
 
-    // Upload cropped image to Supabase Storage
     if (croppedImageBlob) {
       try {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
         const { error: uploadError, data } = await supabase.storage
           .from('markets')
-          .upload(`public/${fileName}`, croppedImageBlob, {
-            contentType: 'image/jpeg'
-          });
+          .upload(`public/${fileName}`, croppedImageBlob, { contentType: 'image/jpeg' });
           
         if (uploadError) throw uploadError;
 
@@ -161,7 +154,7 @@ export default function AdminPanel() {
       category: newCategory, 
       image_url: finalImageUrl, 
       rules: newRules,
-      resolution_source: newRules, // FIXED: Satisfies the not-null constraint in Supabase
+      resolution_source: newRules,
       volume_usd: Number(fakeVolume) || 0
     };
 
@@ -190,7 +183,6 @@ export default function AdminPanel() {
 
     try {
       await supabase.from('markets').update({ is_resolved: true, winning_outcome: winningOutcome }).eq('id', marketId);
-
       const { data: marketBets } = await supabase.from('bets').select('*').eq('market_id', marketId);
 
       if (marketBets) {
@@ -198,7 +190,6 @@ export default function AdminPanel() {
           const isWinner = bet.type === winningOutcome;
           const entryPrice = Number(bet.entry_price) || 50;
           const payoutAmount = isWinner ? (Number(bet.amount) / entryPrice) * 100 : 0;
-          
           await supabase.from('bets').update({ status: isWinner ? 'won' : 'lost', payout: payoutAmount }).eq('id', bet.id);
         }
       }
@@ -209,7 +200,33 @@ export default function AdminPanel() {
     }
   };
 
+  // NOVÁ FUNKCE PRO SMAZÁNÍ TRHU
+  const deleteMarket = async (marketId: number) => {
+    const confirmDelete = window.confirm(
+      "DANGER: Are you absolutely sure you want to delete this market? This will also delete all bets associated with it and cannot be undone!"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      // Nejprve smažeme všechny sázky navázané na tento trh (aby nedošlo k chybě propojení)
+      await supabase.from('bets').delete().eq('market_id', marketId);
+      // Následně smažeme samotný trh
+      const { error } = await supabase.from('markets').delete().eq('id', marketId);
+      
+      if (error) throw error;
+      
+      alert("Market and its bets deleted successfully.");
+      fetchMarkets();
+    } catch (error: any) {
+      alert("Error deleting market: " + error.message);
+    }
+  };
+
   if (loading) return <div className="min-h-screen bg-zinc-950 text-white p-10 font-mono uppercase text-center py-32">Loading...</div>;
+
+  // Rozdělení trhů na aktivní a vyhodnocené
+  const activeMarkets = markets.filter(m => !m.is_resolved);
+  const resolvedMarkets = markets.filter(m => m.is_resolved);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-10 font-mono relative">
@@ -217,29 +234,16 @@ export default function AdminPanel() {
       {imageSrc && (
         <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-md">
           <div className="relative w-full max-w-2xl h-[60vh] bg-zinc-900 rounded-3xl overflow-hidden mb-6 shadow-2xl border border-zinc-800">
-            <Cropper
-              image={imageSrc}
-              crop={crop}
-              zoom={zoom}
-              aspect={16 / 9}
-              onCropChange={setCrop}
-              onCropComplete={onCropComplete}
-              onZoomChange={setZoom}
-            />
+            <Cropper image={imageSrc} crop={crop} zoom={zoom} aspect={16 / 9} onCropChange={setCrop} onCropComplete={onCropComplete} onZoomChange={setZoom} />
           </div>
           <div className="flex gap-4 w-full max-w-2xl">
-            <button onClick={showCroppedImage} className="flex-1 bg-gradient-to-r from-fuchsia-600 to-orange-600 hover:from-fuchsia-500 hover:to-orange-500 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all shadow-lg">
-              Confirm Crop
-            </button>
-            <button type="button" onClick={() => setImageSrc(null)} className="px-8 bg-zinc-800 hover:bg-zinc-700 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all">
-              Cancel
-            </button>
+            <button onClick={showCroppedImage} className="flex-1 bg-gradient-to-r from-fuchsia-600 to-orange-600 hover:from-fuchsia-500 hover:to-orange-500 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all shadow-lg">Confirm Crop</button>
+            <button type="button" onClick={() => setImageSrc(null)} className="px-8 bg-zinc-800 hover:bg-zinc-700 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all">Cancel</button>
           </div>
         </div>
       )}
 
       <div className="max-w-4xl mx-auto space-y-10">
-        
         <header>
           <h1 className="text-4xl font-black text-fuchsia-500 mb-2 uppercase tracking-tighter">Vybecheck Admin</h1>
           <p className="text-zinc-400 uppercase text-sm tracking-widest">Platform Owner Control Panel</p>
@@ -247,126 +251,104 @@ export default function AdminPanel() {
 
         {/* FORMULÁŘ */}
         <section className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8">
-          <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest">
-            {editingId ? 'Edit Market' : 'Deploy New Market'}
-          </h2>
+          <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest">{editingId ? 'Edit Market' : 'Deploy New Market'}</h2>
           <form onSubmit={saveMarket} className="space-y-6">
-            
             <div>
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Market Title</label>
-              <input 
-                type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="Johny vs. Tobby"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 transition-colors"
-              />
+              <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Johny vs. Tobby" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 transition-colors" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-4 border border-zinc-800 rounded-xl bg-zinc-950/50">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Option A: Upload & Crop</label>
-                <input 
-                  type="file" accept="image/*"
-                  onChange={onFileChange}
-                  className="w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 cursor-pointer"
-                />
-                {croppedImageBlob && <p className="text-xs text-green-500 font-bold mt-3 uppercase tracking-widest">✓ Image cropped and ready</p>}
+                <input type="file" accept="image/*" onChange={onFileChange} className="w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 cursor-pointer" />
+                {croppedImageBlob && <p className="text-xs text-green-500 font-bold mt-3 uppercase tracking-widest">✓ Image cropped</p>}
               </div>
               <div className="p-4 border border-zinc-800 rounded-xl bg-zinc-950/50">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Option B: Paste Image URL</label>
-                <input 
-                  type="text" value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-sm text-white outline-none focus:border-fuchsia-500"
-                />
+                <input type="text" value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="https://..." className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-sm text-white outline-none focus:border-fuchsia-500" />
               </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Category</label>
-                <select 
-                  value={newCategory} onChange={(e) => setNewCategory(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 appearance-none"
-                >
-                  <option>Pop Culture</option>
-                  <option>Gaming</option>
-                  <option>Crypto</option>
-                  <option>Sports</option>
-                  <option>Trending</option>
+                <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 appearance-none">
+                  <option>Pop Culture</option><option>Gaming</option><option>Crypto</option><option>Sports</option><option>Trending</option>
                 </select>
               </div>
               <div>
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Fake Volume (For Trending)</label>
-                <input 
-                  type="number" value={fakeVolume} onChange={(e) => setFakeVolume(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500"
-                />
+                <input type="number" value={fakeVolume} onChange={(e) => setFakeVolume(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500" />
               </div>
             </div>
 
             <div>
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Resolution Rules</label>
-              <textarea 
-                value={newRules} onChange={(e) => setNewRules(e.target.value)}
-                placeholder="Describe how the market will be settled..."
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 h-24 resize-none"
-              />
+              <textarea value={newRules} onChange={(e) => setNewRules(e.target.value)} placeholder="Describe how the market will be settled..." className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 h-24 resize-none" />
             </div>
 
             <div className="flex gap-4">
               <button disabled={uploading} type="submit" className={`flex-1 bg-gradient-to-r from-fuchsia-600 to-orange-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] shadow-lg transition-transform ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.01]'}`}>
                 {uploading ? 'Processing...' : (editingId ? 'Save Changes' : 'Deploy to Web')}
               </button>
-              {editingId && (
-                <button type="button" onClick={cancelEdit} className="px-8 bg-zinc-800 text-white font-black rounded-2xl uppercase tracking-widest hover:bg-zinc-700">
-                  Cancel
-                </button>
-              )}
+              {editingId && <button type="button" onClick={cancelEdit} className="px-8 bg-zinc-800 text-white font-black rounded-2xl uppercase tracking-widest hover:bg-zinc-700">Cancel</button>}
             </div>
           </form>
         </section>
 
-        {/* SEZNAM TRHŮ */}
+        {/* AKTIVNÍ TRHY */}
         <section className="space-y-4">
-          <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest">Manage Active Markets</h2>
-          {markets.map((market) => (
-            <div key={market.id} className={`p-6 rounded-[2rem] border ${market.is_resolved ? 'border-zinc-800 bg-zinc-900/40 opacity-70' : 'border-zinc-800 bg-zinc-900'}`}>
+          <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-white">Active Markets</h2>
+          {activeMarkets.map((market) => (
+            <div key={market.id} className="p-6 rounded-[2rem] border border-zinc-800 bg-zinc-900 relative group">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-4">
-                  {(market.image_url || market.imageUrl) && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={market.image_url || market.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover object-top border border-zinc-800" />
-                  )}
+                  {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover object-top border border-zinc-800" />}
                   <div>
                     <h2 className="text-lg font-bold text-white leading-tight">{market.title}</h2>
                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">ID: {market.id} | {market.category}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => handleEdit(market)} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] uppercase tracking-widest rounded-full font-black transition-colors">
-                    Edit
-                  </button>
-                  {market.is_resolved && (
-                    <div className="px-4 py-2 bg-zinc-800 text-zinc-400 text-[10px] uppercase tracking-[0.2em] rounded-full font-black border border-zinc-700">
-                      RESOLVED: {market.winning_outcome}
-                    </div>
-                  )}
+                  <button onClick={() => handleEdit(market)} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] uppercase tracking-widest rounded-full font-black transition-colors">Edit</button>
+                  <button onClick={() => deleteMarket(market.id)} className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-[10px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
                 </div>
               </div>
-
-              {!market.is_resolved && (
-                <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => resolveMarket(market.id, 'VYBE')} className="bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">
-                    WINNER: VYBE
-                  </button>
-                  <button onClick={() => resolveMarket(market.id, 'NO_VYBE')} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">
-                    WINNER: NO VYBE
-                  </button>
-                </div>
-              )}
+              <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => resolveMarket(market.id, 'VYBE')} className="bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">WINNER: VYBE</button>
+                <button onClick={() => resolveMarket(market.id, 'NO_VYBE')} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">WINNER: NO VYBE</button>
+              </div>
             </div>
           ))}
+          {activeMarkets.length === 0 && <p className="text-zinc-600 font-bold uppercase tracking-widest text-[10px] text-center">No active markets</p>}
         </section>
+
+        {/* VYHODNOCENÉ TRHY (ARCHIV) */}
+        <section className="space-y-4 pt-10 border-t border-zinc-800">
+          <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-zinc-600">Resolved Markets Archive</h2>
+          {resolvedMarkets.map((market) => (
+            <div key={market.id} className="p-4 rounded-[1.5rem] border border-zinc-800/50 bg-zinc-900/30 opacity-70 hover:opacity-100 transition-opacity">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover object-top grayscale" />}
+                  <div>
+                    <h2 className="text-sm font-bold text-white line-clamp-1">{market.title}</h2>
+                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">
+                      Won: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => handleEdit(market)} className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Edit</button>
+                  <button onClick={() => deleteMarket(market.id)} className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500/70 hover:text-red-500 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {resolvedMarkets.length === 0 && <p className="text-zinc-600 font-bold uppercase tracking-widest text-[10px] text-center">No resolved markets</p>}
+        </section>
+
       </div>
     </div>
   );
