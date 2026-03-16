@@ -146,7 +146,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     window.location.reload();
   };
 
-  // ODESLÁNÍ ZPRÁVY (Nyní se ukládá do Supabase)
+  // ODESLÁNÍ ZPRÁVY
   const sendChatMessage = async (marketId: number, text: string, user: string, avatar: string) => {
     const userBetsForMarket = myBets.filter((bet: any) => bet.marketId === marketId);
     let finalBetType = null;
@@ -159,14 +159,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (hasNoVybe) finalBetType = 'NO_VYBE';
     }
     
-    // Okamžité zobrazení v UI
     const tempMessage = {
       id: Date.now(), marketId, text, user, avatar, betType: finalBetType, 
       timestamp: new Date().toISOString(), color: 'text-fuchsia-500'
     };
     setChatMessages((prev: any) => [...prev, tempMessage]);
 
-    // Odeslání do databáze
     await supabase.from('chat_messages').insert([{
       market_id: marketId,
       user_name: user,
@@ -198,17 +196,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
     });
 
+    console.log("SENDING BET TO DB:", { market_id: marketId, user_address: walletAddress, type: type, amount: amount, entry_price: entryPrice });
+
     const { data, error } = await supabase.from('bets').insert([{
       market_id: marketId, user_address: walletAddress, type: type, amount: amount, entry_price: entryPrice
     }]).select();
 
     if (error) {
-      showToast("Database error!", "error");
+      console.error("SUPABASE ERROR:", error);
+      showToast(`DB Error: ${error.message}`, "error");
     } else if (data) {
+      console.log("BET SAVED OK:", data);
       setMyBets(prev => prev.map(b => b.id === tempBet.id ? { ...data[0], marketId: data[0].market_id, entryPrice: data[0].entry_price } : b));
+      showToast(`Successfully bet ${amount} USDC on ${type}!`, "success");
     }
-
-    showToast(`Successfully bet ${amount} USDC on ${type}!`, "success");
   };
 
   return (
