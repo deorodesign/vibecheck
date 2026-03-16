@@ -155,6 +155,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     
     setMyBets(prev => [...prev, newBet]);
+    
+    setMarketPrices((prev: any) => {
+      const current = prev[marketId] || { vibe: 0.5, noVibe: 0.5 };
+      const shift = (amount / 1000); 
+      let newVibe = current.vibe;
+
+      if (type === 'VYBE') {
+        newVibe = Math.min(0.95, newVibe + shift);
+      } else {
+        newVibe = Math.max(0.05, newVibe - shift);
+      }
+
+      return {
+        ...prev,
+        [marketId]: { vibe: newVibe, noVibe: 1 - newVibe }
+      };
+    });
+
     showToast(`Successfully bet ${amount} USDC on ${type}!`, "success");
   };
 
