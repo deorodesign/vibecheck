@@ -1,12 +1,55 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import Cropper from 'react-easy-crop';
+
+// Pomocná funkce pro vytvoření oříznutého obrázku
+const createImage = (url: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.src = url;
+  });
+
+async function getCroppedImg(
+  imageSrc: string,
+  pixelCrop: { x: number; y: number; width: number; height: number }
+): Promise<Blob | null> {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) return null;
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve) => {
+    canvas.toBlob((file) => {
+      resolve(file);
+    }, 'image/jpeg');
+  });
+}
 
 export default function AdminPanel() {
   const [markets, setMarkets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [uploading, setUploading] = useState(false);
+
   // Státy formuláře
   const [editingId, setEditingId] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState('');
@@ -14,7 +57,13 @@ export default function AdminPanel() {
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newRules, setNewRules] = useState('');
   const [fakeVolume, setFakeVolume] = useState('0');
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+
+  // Státy pro Crop Tool (Ořezávačku)
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null); // Opraveno pro Vercel (any)
+  const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null);
 
   useEffect(() => {
     fetchMarkets();
@@ -46,43 +95,79 @@ export default function AdminPanel() {
     setNewImageUrl('');
     setNewRules('');
     setFakeVolume('0');
-    setUploadFile(null);
+    setCroppedImageBlob(null);
+    setImageSrc(null);
+  };
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      let imageDataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      setImageSrc(imageDataUrl);
+      // Reset předchozího ořezu
+      setCroppedImageBlob(null);
+    }
+  };
+
+  const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const showCroppedImage = async () => {
+    try {
+      if (!imageSrc || !croppedAreaPixels) return;
+      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
+      setCroppedImageBlob(croppedImage);
+      setImageSrc(null); // Zavřít okno ořezávačky
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const saveMarket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle) return alert("Market title is required!");
 
+    setUploading(true);
     let finalImageUrl = newImageUrl;
 
-    // Logika pro nahrání obrázku z počítače do Supabase Storage (pokud je vybrán)
-    if (uploadFile) {
+    // Nahrání oříznutého obrázku do Supabase Storage
+    if (croppedImageBlob) {
       try {
-        const fileExt = uploadFile.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
         const { error: uploadError, data } = await supabase.storage
-          .from('markets') // Název bucketu v Supabase
-          .upload(`public/${fileName}`, uploadFile);
+          .from('markets') // Název bucketu
+          .upload(`public/${fileName}`, croppedImageBlob, {
+            contentType: 'image/jpeg'
+          });
           
-        if (!uploadError && data) {
+        if (uploadError) throw uploadError;
+
+        if (data) {
           const { data: publicUrlData } = supabase.storage.from('markets').getPublicUrl(`public/${fileName}`);
           finalImageUrl = publicUrlData.publicUrl;
         }
-      } catch (err) {
-        console.error("Image upload failed, falling back to URL if provided.");
+      } catch (err: any) {
+        console.error("Image upload failed:", err);
+        alert("Nahrávání obrázku selhalo: " + err.message);
+        setUploading(false);
+        return;
       }
     }
 
     const marketData = { 
       title: newTitle, 
       category: newCategory, 
-      image_url: finalImageUrl, // OPRAVENO: image_url s podtržítkem
+      image_url: finalImageUrl, 
       rules: newRules,
       volume_usd: Number(fakeVolume) || 0
     };
 
     if (editingId) {
-      // EDITACE
       const { error } = await supabase.from('markets').update(marketData).eq('id', editingId);
       if (error) alert("Error updating market: " + error.message);
       else {
@@ -91,7 +176,6 @@ export default function AdminPanel() {
         fetchMarkets();
       }
     } else {
-      // VYTVOŘENÍ NOVÉHO
       const { error } = await supabase.from('markets').insert([{ ...marketData, is_resolved: false }]);
       if (error) alert("Error creating market: " + error.message);
       else {
@@ -100,6 +184,7 @@ export default function AdminPanel() {
         fetchMarkets();
       }
     }
+    setUploading(false);
   };
 
   const resolveMarket = async (marketId: number, winningOutcome: 'VYBE' | 'NO_VYBE') => {
@@ -126,10 +211,35 @@ export default function AdminPanel() {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-zinc-950 text-white p-10 font-mono uppercase">Loading...</div>;
+  if (loading) return <div className="min-h-screen bg-zinc-950 text-white p-10 font-mono uppercase text-center py-32">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-10 font-mono">
+    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-10 font-mono relative">
+      {/* POP-UP MODAL PRO OŘEZ FOTKY */}
+      {imageSrc && (
+        <div className="fixed inset-0 z-[999] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-2xl h-[60vh] bg-zinc-900 rounded-3xl overflow-hidden mb-6 shadow-2xl border border-zinc-800">
+            <Cropper
+              image={imageSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={16 / 9}
+              onCropChange={setCrop}
+              onCropComplete={onCropComplete}
+              onZoomChange={setZoom}
+            />
+          </div>
+          <div className="flex gap-4 w-full max-w-2xl">
+            <button onClick={showCroppedImage} className="flex-1 bg-gradient-to-r from-fuchsia-600 to-orange-600 hover:from-fuchsia-500 hover:to-orange-500 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all shadow-lg">
+              Confirm Crop
+            </button>
+            <button type="button" onClick={() => setImageSrc(null)} className="px-8 bg-zinc-800 hover:bg-zinc-700 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto space-y-10">
         
         <header>
@@ -155,12 +265,13 @@ export default function AdminPanel() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-4 border border-zinc-800 rounded-xl bg-zinc-950/50">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Option A: Upload Image</label>
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Option A: Upload & Crop</label>
                 <input 
                   type="file" accept="image/*"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700"
+                  onChange={onFileChange}
+                  className="w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 cursor-pointer"
                 />
+                {croppedImageBlob && <p className="text-xs text-green-500 font-bold mt-3 uppercase tracking-widest">✓ Image cropped and ready</p>}
               </div>
               <div className="p-4 border border-zinc-800 rounded-xl bg-zinc-950/50">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Option B: Paste Image URL</label>
@@ -199,14 +310,14 @@ export default function AdminPanel() {
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Resolution Rules</label>
               <textarea 
                 value={newRules} onChange={(e) => setNewRules(e.target.value)}
-                placeholder="referee..."
+                placeholder="Describe how the market will be settled..."
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 h-24 resize-none"
               />
             </div>
 
             <div className="flex gap-4">
-              <button type="submit" className="flex-1 bg-gradient-to-r from-fuchsia-600 to-orange-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] shadow-lg transition-transform hover:scale-[1.01]">
-                {editingId ? 'Save Changes' : 'Deploy to Web'}
+              <button disabled={uploading} type="submit" className={`flex-1 bg-gradient-to-r from-fuchsia-600 to-orange-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] shadow-lg transition-transform ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.01]'}`}>
+                {uploading ? 'Processing...' : (editingId ? 'Save Changes' : 'Deploy to Web')}
               </button>
               {editingId && (
                 <button type="button" onClick={cancelEdit} className="px-8 bg-zinc-800 text-white font-black rounded-2xl uppercase tracking-widest hover:bg-zinc-700">
@@ -226,7 +337,7 @@ export default function AdminPanel() {
                 <div className="flex items-center gap-4">
                   {(market.image_url || market.imageUrl) && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={market.image_url || market.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover border border-zinc-800" />
+                    <img src={market.image_url || market.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover object-top border border-zinc-800" />
                   )}
                   <div>
                     <h2 className="text-lg font-bold text-white leading-tight">{market.title}</h2>
