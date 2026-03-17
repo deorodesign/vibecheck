@@ -5,8 +5,12 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabase'; // Cesta k tvé Supabase
 import { useAppContext } from '../../context';
 
-export default function UserProfile({ params }: { params: { id: string } }) {
-  const userName = decodeURIComponent(params.id);
+// OPRAVA: params je nyní Promise (novinka v Next.js)
+export default function UserProfile({ params }: { params: Promise<{ id: string }> }) {
+  // Rozbalíme params pomocí React.use()
+  const resolvedParams = React.use(params);
+  const userName = decodeURIComponent(resolvedParams.id);
+  
   const { markets } = useAppContext();
   
   const [userBets, setUserBets] = useState<any[]>([]);
@@ -18,7 +22,7 @@ export default function UserProfile({ params }: { params: { id: string } }) {
       // V reálu bychom stahovali sázky podle user_address, ale pro prototyp hledáme podle jména
       const { data } = await supabase.from('bets').select('*');
       if (data) {
-        // Vyfiltrujeme sázky tohoto konkrétního uživatele (zjednodušeno pro prototyp)
+        // Vyfiltrujeme sázky tohoto konkrétního uživatele
         const filteredBets = data.filter(b => b.user_address === userName || b.user_name === userName);
         setUserBets(filteredBets);
       }
@@ -90,7 +94,7 @@ export default function UserProfile({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {/* Pravý panel: Profit / Loss (Podle Polymarket designu) */}
+          {/* Pravý panel: Profit / Loss */}
           <div className="bg-[#161618] rounded-[2rem] p-8 border border-white/5 shadow-lg flex flex-col justify-between relative overflow-hidden">
             <div className="flex items-center justify-between z-10">
               <p className="text-[11px] uppercase tracking-widest text-zinc-400 font-bold flex items-center gap-1">
@@ -106,7 +110,7 @@ export default function UserProfile({ params }: { params: { id: string } }) {
             
             <div className="z-10 mt-4">
               <h2 className="text-4xl font-black">
-                {/* Pro prototyp náhodné číslo do mínusu nebo plusu, nebo výpočet z dat */}
+                {/* Pro prototyp náhodné číslo, nebo výpočet z dat */}
                 -$5.73
               </h2>
               <p className="text-xs font-medium text-zinc-500 mt-2">Past Month</p>
@@ -157,16 +161,18 @@ export default function UserProfile({ params }: { params: { id: string } }) {
                 <div className="p-10 text-center text-zinc-500 text-xs font-bold uppercase tracking-widest">No {activeTab.toLowerCase()} positions</div>
               ) : (
                 displayBets.map((bet: any, i: number) => {
-                  const market = markets.find((m: any) => m.id === bet.marketId || m.id === bet.market_id);
+                  // Ošetření pokud by pole markets nebylo načtené
+                  const safeMarkets = markets || [];
+                  const market = safeMarkets.find((m: any) => m.id === bet.marketId || m.id === bet.market_id);
                   const entryPrice = bet.entryPrice || bet.entry_price || 50;
-                  const currentPrice = market ? 50 : entryPrice; // Zde by se tahala aktuální cena z marketPrices
+                  const currentPrice = market ? 50 : entryPrice; 
                   const shares = (Number(bet.amount) / (entryPrice / 100)).toFixed(1);
                   
                   return (
                     <div key={bet.id || i} className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 hover:bg-white/5 transition-colors items-center">
                       <div className="col-span-6 flex items-center gap-3">
                         <div className="w-8 h-8 rounded bg-zinc-800 flex-shrink-0 overflow-hidden">
-                           {market?.imageUrl && <img src={market.imageUrl} className="w-full h-full object-cover" />}
+                           {market?.imageUrl && <img src={market.imageUrl} alt="" className="w-full h-full object-cover" />}
                         </div>
                         <div>
                           <p className="text-xs font-bold line-clamp-1">{market?.title || 'Unknown Market'}</p>
@@ -182,7 +188,6 @@ export default function UserProfile({ params }: { params: { id: string } }) {
                       <div className="col-span-2 text-right text-xs font-mono font-bold text-zinc-300">{currentPrice.toFixed(0)}¢</div>
                       <div className="col-span-2 text-right">
                         <p className="text-xs font-black">${bet.amount}</p>
-                        {/* Placeholder pro zisk/ztrátu procenta */}
                         <p className={`text-[10px] font-bold ${i % 2 === 0 ? 'text-green-500' : 'text-red-500'}`}>
                           {i % 2 === 0 ? '+$0.20 (4.2%)' : '-$1.30 (-54.1%)'}
                         </p>
