@@ -44,7 +44,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
-  // REÁLNÉ SUPABASE PŘIHLAŠOVÁNÍ (Posloucháme server, ne lokální paměť)
+  // REÁLNÉ SUPABASE PŘIHLAŠOVÁNÍ
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSupabaseSession(session);
@@ -59,10 +59,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const handleSupabaseSession = async (session: any) => {
     if (session && session.user) {
-      const userEmail = session.user.email;
-      const generatedNickname = userEmail.split('@')[0];
+      // Robustní získání identifikátoru z X/Discordu
+      const userIdentifier = session.user.email || session.user.user_metadata?.preferred_username || session.user.id;
+      const generatedNickname = session.user.user_metadata?.preferred_username || session.user.user_metadata?.full_name || userIdentifier.split('@')[0];
+      const userAvatar = session.user.user_metadata?.avatar_url || '';
 
-      const { data: user } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', userEmail).single();
+      const { data: user } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', userIdentifier).single();
       
       let finalBalance = 500;
       let finalXp = 0;
@@ -72,23 +74,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         finalXp = user.xp_points || 0;
       } else {
         await supabase.from('users').insert([{
-          wallet_address: userEmail,
+          wallet_address: userIdentifier,
           nickname: generatedNickname,
           balance: 500,
           xp_points: 0
         }]);
       }
       
-      setWalletAddress(userEmail);
+      setWalletAddress(userIdentifier);
       setNickname(generatedNickname);
+      setAvatarUrl(userAvatar);
       setBalance(finalBalance);
       setUserXp(finalXp);
       setIsLoggedIn(true);
-      fetchUserBets(userEmail);
+      fetchUserBets(userIdentifier);
     } else {
       setIsLoggedIn(false);
       setWalletAddress('');
       setNickname('');
+      setAvatarUrl('');
       setBalance(0);
       setUserXp(0);
       setMyBets([]);
@@ -159,7 +163,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // --- REÁLNÉ PŘIHLAŠOVACÍ FUNKCE PŘES SUPABASE ---
 
   const loginWithEmail = async (email: string) => {
-    if(!email) return showToast("Please enter an email", "error");
+    if(!email || !email.includes('@')) return showToast("Please enter a valid email", "error");
     setIsAuthLoading(true);
     
     const { error } = await supabase.auth.signInWithOtp({
@@ -171,26 +175,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       showToast(`Error: ${error.message}`, "error");
       setIsAuthLoading(false);
     } else {
-      showToast("Magic Link sent! Check your inbox.", "success");
+      showToast("Magic Link sent! Check your inbox (and SPAM folder).", "success");
       setIsLoginModalOpen(false); 
     }
   };
 
   const loginWithTwitter = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'twitter' });
-    if (error) showToast(error.message, "error");
+    setIsAuthLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({ 
+      provider: 'x', // <--- OPRAVA! TADY BYLO 'twitter' MÍSTO 'x'
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) {
+      showToast(error.message, "error");
+      setIsAuthLoading(false);
+    }
   };
 
   const loginWithDiscord = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'discord' });
-    if (error) showToast(error.message, "error");
+    setIsAuthLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({ 
+      provider: 'discord',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) {
+      showToast(error.message, "error");
+      setIsAuthLoading(false);
+    }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('vybe_session'); 
+    localStorage.removeItem('vybe_secure_session');
     showToast("Logged out.", "info");
-    window.location.reload();
+    setTimeout(() => window.location.reload(), 500);
   };
 
   // -----------------------------------------------------------
