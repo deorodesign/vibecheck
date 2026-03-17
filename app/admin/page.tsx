@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import Cropper from 'react-easy-crop';
+import { useAppContext } from '../context';
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
@@ -19,12 +21,12 @@ async function getCroppedImg(
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
-
+  
   if (!ctx) return null;
-
+  
   canvas.width = pixelCrop.width;
   canvas.height = pixelCrop.height;
-
+  
   ctx.drawImage(
     image,
     pixelCrop.x,
@@ -36,7 +38,7 @@ async function getCroppedImg(
     pixelCrop.width,
     pixelCrop.height
   );
-
+  
   return new Promise((resolve) => {
     canvas.toBlob((file) => {
       resolve(file);
@@ -45,17 +47,28 @@ async function getCroppedImg(
 }
 
 export default function AdminPanel() {
+  const { isLoggedIn, isAuthLoading, walletAddress } = useAppContext();
+  const [isAdminVerified, setIsAdminVerified] = useState(false);
+
+  // --- ZDE SI NASTAV SVŮJ ADMIN E-MAIL NEBO PENĚŽENKU ---
+  const ADMIN_WALLETS = [
+    'twitter_user@vybecheck.xyz', 
+    'discord_user@vybecheck.xyz',
+    'tvuj.skutecny.email@gmail.com',
+    '0xTvojeSkutecnaPenezenka'
+  ];
+
   const [markets, setMarkets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-
   const [editingId, setEditingId] = useState<number | null>(null);
+  
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState('Pop Culture');
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newRules, setNewRules] = useState('');
   const [fakeVolume, setFakeVolume] = useState('0');
-
+  
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -63,15 +76,22 @@ export default function AdminPanel() {
   const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null);
 
   useEffect(() => {
-    fetchMarkets();
-  }, []);
+    if (!isAuthLoading) {
+      if (isLoggedIn && ADMIN_WALLETS.includes(walletAddress)) {
+        setIsAdminVerified(true);
+        fetchMarkets();
+      } else {
+        setLoading(false); 
+      }
+    }
+  }, [isAuthLoading, isLoggedIn, walletAddress]);
 
   const fetchMarkets = async () => {
     const { data } = await supabase
       .from('markets')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (data) setMarkets(data);
     setLoading(false);
   };
@@ -124,19 +144,17 @@ export default function AdminPanel() {
   const saveMarket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle) return alert("Market title is required!");
-
     setUploading(true);
     let finalImageUrl = newImageUrl;
-
+    
     if (croppedImageBlob) {
       try {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
         const { error: uploadError, data } = await supabase.storage
           .from('markets')
           .upload(`public/${fileName}`, croppedImageBlob, { contentType: 'image/jpeg' });
-          
-        if (uploadError) throw uploadError;
 
+        if (uploadError) throw uploadError;
         if (data) {
           const { data: publicUrlData } = supabase.storage.from('markets').getPublicUrl(`public/${fileName}`);
           finalImageUrl = publicUrlData.publicUrl;
@@ -148,16 +166,16 @@ export default function AdminPanel() {
         return;
       }
     }
-
-    const marketData = { 
-      title: newTitle, 
-      category: newCategory, 
-      image_url: finalImageUrl, 
+    
+    const marketData = {
+      title: newTitle,
+      category: newCategory,
+      image_url: finalImageUrl,
       rules: newRules,
       resolution_source: newRules,
       volume_usd: Number(fakeVolume) || 0
     };
-
+    
     if (editingId) {
       const { error } = await supabase.from('markets').update(marketData).eq('id', editingId);
       if (error) alert("Error updating market: " + error.message);
@@ -178,43 +196,49 @@ export default function AdminPanel() {
     setUploading(false);
   };
 
+  // OPRAVA: Při vyhodnocení výherce mu teď přičteme nejen USDC, ale i +500 XP
   const resolveMarket = async (marketId: number, winningOutcome: 'VYBE' | 'NO_VYBE') => {
     if (!window.confirm(`Are you sure you want to resolve this market as ${winningOutcome}?`)) return;
-
     try {
       await supabase.from('markets').update({ is_resolved: true, winning_outcome: winningOutcome }).eq('id', marketId);
       const { data: marketBets } = await supabase.from('bets').select('*').eq('market_id', marketId);
-
+      
       if (marketBets) {
         for (const bet of marketBets) {
           const isWinner = bet.type === winningOutcome;
           const entryPrice = Number(bet.entry_price) || 50;
           const payoutAmount = isWinner ? (Number(bet.amount) / entryPrice) * 100 : 0;
+          
           await supabase.from('bets').update({ status: isWinner ? 'won' : 'lost', payout: payoutAmount }).eq('id', bet.id);
+
+          if (isWinner) {
+            // Najdeme uživatele a přidáme mu USDC výhru a +500 XP za úspěch
+            const { data: userData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', bet.user_address).single();
+            if (userData) {
+              await supabase.from('users').update({
+                balance: Number(userData.balance) + payoutAmount,
+                xp_points: Number(userData.xp_points || 0) + 500
+              }).eq('wallet_address', bet.user_address);
+            }
+          }
         }
       }
-      alert(`Market resolved! Payouts calculated.`);
-      fetchMarkets(); 
+      alert(`Market resolved! Payouts & XP calculated and distributed.`);
+      fetchMarkets();
     } catch (error) {
       alert("Error resolving the market.");
     }
   };
 
-  // NOVÁ FUNKCE PRO SMAZÁNÍ TRHU
   const deleteMarket = async (marketId: number) => {
     const confirmDelete = window.confirm(
       "DANGER: Are you absolutely sure you want to delete this market? This will also delete all bets associated with it and cannot be undone!"
     );
     if (!confirmDelete) return;
-
     try {
-      // Nejprve smažeme všechny sázky navázané na tento trh (aby nedošlo k chybě propojení)
       await supabase.from('bets').delete().eq('market_id', marketId);
-      // Následně smažeme samotný trh
       const { error } = await supabase.from('markets').delete().eq('id', marketId);
-      
       if (error) throw error;
-      
       alert("Market and its bets deleted successfully.");
       fetchMarkets();
     } catch (error: any) {
@@ -222,15 +246,35 @@ export default function AdminPanel() {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-zinc-950 text-white p-10 font-mono uppercase text-center py-32">Loading...</div>;
+  if (isAuthLoading || (loading && isAdminVerified)) {
+    return <div className="min-h-screen bg-zinc-950 text-zinc-500 p-10 font-mono uppercase text-center py-32 flex flex-col items-center justify-center gap-4">
+      <div className="w-8 h-8 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
+      Verifying Admin Access...
+    </div>;
+  }
 
-  // Rozdělení trhů na aktivní a vyhodnocené
+  if (!isAdminVerified) {
+    return (
+      <div className="min-h-screen bg-[#0e0e12] flex flex-col items-center justify-center text-white p-4 font-sans">
+        <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2rem] text-center max-w-md shadow-2xl animate-in zoom-in-95 fade-in duration-300">
+          <span className="text-4xl mb-4 block">🛑</span>
+          <h1 className="text-2xl font-black uppercase tracking-widest text-red-500 mb-2">Access Denied</h1>
+          <p className="text-zinc-400 text-sm font-medium mb-8 leading-relaxed">
+            You do not have administrator privileges to view this page. Please log in with an authorized admin account.
+          </p>
+          <Link href="/" className="bg-white text-black px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-zinc-200 transition-all active:scale-95 shadow-md">
+            Return to Vybecheck
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const activeMarkets = markets.filter(m => !m.is_resolved);
   const resolvedMarkets = markets.filter(m => m.is_resolved);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-10 font-mono relative">
-      {/* POP-UP MODAL PRO OŘEZ FOTKY */}
       {imageSrc && (
         <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-md">
           <div className="relative w-full max-w-2xl h-[60vh] bg-zinc-900 rounded-3xl overflow-hidden mb-6 shadow-2xl border border-zinc-800">
@@ -242,14 +286,19 @@ export default function AdminPanel() {
           </div>
         </div>
       )}
-
+      
       <div className="max-w-4xl mx-auto space-y-10">
-        <header>
-          <h1 className="text-4xl font-black text-fuchsia-500 mb-2 uppercase tracking-tighter">Vybecheck Admin</h1>
-          <p className="text-zinc-400 uppercase text-sm tracking-widest">Platform Owner Control Panel</p>
+        <header className="flex justify-between items-end">
+          <div>
+            <h1 className="text-4xl font-black text-fuchsia-500 mb-2 uppercase tracking-tighter">Vybecheck Admin</h1>
+            <p className="text-zinc-400 uppercase text-sm tracking-widest">Platform Owner Control Panel</p>
+          </div>
+          <div className="text-right">
+             <p className="text-[10px] text-green-500 uppercase tracking-widest font-bold">Admin Verified ✓</p>
+             <p className="text-xs text-zinc-500">{walletAddress}</p>
+          </div>
         </header>
 
-        {/* FORMULÁŘ */}
         <section className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8">
           <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest">{editingId ? 'Edit Market' : 'Deploy New Market'}</h2>
           <form onSubmit={saveMarket} className="space-y-6">
@@ -257,7 +306,7 @@ export default function AdminPanel() {
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Market Title</label>
               <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Johny vs. Tobby" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 transition-colors" />
             </div>
-
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-4 border border-zinc-800 rounded-xl bg-zinc-950/50">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Option A: Upload & Crop</label>
@@ -269,7 +318,7 @@ export default function AdminPanel() {
                 <input type="text" value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="https://..." className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-sm text-white outline-none focus:border-fuchsia-500" />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Category</label>
@@ -282,12 +331,12 @@ export default function AdminPanel() {
                 <input type="number" value={fakeVolume} onChange={(e) => setFakeVolume(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500" />
               </div>
             </div>
-
+            
             <div>
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Resolution Rules</label>
               <textarea value={newRules} onChange={(e) => setNewRules(e.target.value)} placeholder="Describe how the market will be settled..." className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 h-24 resize-none" />
             </div>
-
+            
             <div className="flex gap-4">
               <button disabled={uploading} type="submit" className={`flex-1 bg-gradient-to-r from-fuchsia-600 to-orange-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] shadow-lg transition-transform ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.01]'}`}>
                 {uploading ? 'Processing...' : (editingId ? 'Save Changes' : 'Deploy to Web')}
@@ -297,7 +346,6 @@ export default function AdminPanel() {
           </form>
         </section>
 
-        {/* AKTIVNÍ TRHY */}
         <section className="space-y-4">
           <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-white">Active Markets</h2>
           {activeMarkets.map((market) => (
@@ -324,7 +372,6 @@ export default function AdminPanel() {
           {activeMarkets.length === 0 && <p className="text-zinc-600 font-bold uppercase tracking-widest text-[10px] text-center">No active markets</p>}
         </section>
 
-        {/* VYHODNOCENÉ TRHY (ARCHIV) */}
         <section className="space-y-4 pt-10 border-t border-zinc-800">
           <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-zinc-600">Resolved Markets Archive</h2>
           {resolvedMarkets.map((market) => (
