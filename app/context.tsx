@@ -105,7 +105,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })));
       }
 
-      // OPRAVA: Leaderboard se nyní stahuje a řadí podle XP_POINTS místo peněz
       const { data: usersData } = await supabase.from('users').select('*').order('xp_points', { ascending: false }).limit(5);
       if (usersData) {
         const colors = [
@@ -116,12 +115,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           'from-green-400 to-green-600'
         ];
         
+        // OPRAVA: Bezpečné oříznutí adresy, pokud by náhodou byla null
         setDynamicLeaderboard(usersData.map((u, i) => ({
-          id: u.wallet_address,
+          id: u.wallet_address || `unknown-${i}`,
           rank: i + 1,
-          name: u.nickname,
-          address: `${u.wallet_address.substring(0, 4)}...${u.wallet_address.slice(-4)}`,
-          points: u.xp_points || 0, // Zobrazujeme XP body
+          name: u.nickname || 'Unknown User',
+          address: u.wallet_address ? `${u.wallet_address.substring(0, 4)}...${u.wallet_address.slice(-4)}` : '0x...',
+          points: u.xp_points || 0, 
           avatar: '',
           color: colors[i] || 'from-fuchsia-400 to-fuchsia-600'
         })));
@@ -145,7 +145,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (existingUser) {
       currentBalance = existingUser.balance;
     } else {
-      // Nový uživatel dostane 500 USDC a začíná s 0 XP
       await supabase.from('users').insert([{ 
         wallet_address: email, 
         nickname: generatedNickname, 
@@ -222,7 +221,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  // SÁZENÍ S PŘIDÁVÁNÍM XP BODŮ
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     if (balance < amount) {
       showToast("Insufficient balance!", "error");
@@ -232,10 +230,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const currentPrice = marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5;
     const entryPrice = currentPrice * 100;
 
-    // +10 XP za každý 1 USDC
     const earnedXp = amount * 10;
     
-    // Nejprve zjistíme aktuální stav v databázi, abychom to nepřepsali špatně
     const { data: currentUserData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', walletAddress).single();
     
     const currentDbBalance = currentUserData?.balance || balance;
@@ -246,7 +242,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setBalance(newBalance);
     
-    // Aktualizujeme zůstatek i XP v databázi
     await supabase.from('users').update({ balance: newBalance, xp_points: newXp }).eq('wallet_address', walletAddress);
 
     const tempBet = { id: Date.now(), marketId, type, amount, entryPrice };
