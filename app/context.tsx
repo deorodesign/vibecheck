@@ -27,8 +27,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   const [dynamicLeaderboard, setDynamicLeaderboard] = useState<any[]>([]);
 
+  // OPRAVA 1: Použití randomUUID() místo Date.now() pro absolutně unikátní ID toastů
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    const id = Date.now();
+    const id = crypto.randomUUID();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
   };
@@ -44,7 +45,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
-  // OPRAVENÁ KONTROLA PŘIHLÁŠENÍ (Záchrana "Duchů")
   useEffect(() => {
     const checkSession = async () => {
       const savedSession = localStorage.getItem('vybe_session');
@@ -52,18 +52,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           const session = JSON.parse(savedSession);
           
-          // Zkusíme najít uživatele v naší nové DB tabulce
           const { data: user } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', session.walletAddress).single();
           
           let finalBalance = 500;
           let finalXp = 0;
 
           if (user) {
-            // Uživatel existuje, vezmeme jeho reálná data
             finalBalance = user.balance;
             finalXp = user.xp_points || 0;
           } else {
-            // Uživatel je "Duch" (přihlášený před vznikem tabulky). Musíme ho vytvořit!
             await supabase.from('users').insert([{
               wallet_address: session.walletAddress,
               nickname: session.nickname,
@@ -257,7 +254,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const earnedXp = amount * 10;
     
-    // OPRAVENÁ POJISTKA - Už to nikdy nebude dávat nekonečné peníze při dosažení nuly
     const { data: currentUserData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', walletAddress).single();
     
     const currentDbBalance = currentUserData ? currentUserData.balance : balance;
@@ -271,7 +267,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     await supabase.from('users').update({ balance: newBalance, xp_points: newXp }).eq('wallet_address', walletAddress);
 
-    const tempBet = { id: Date.now(), marketId, type, amount, entryPrice };
+    // OPRAVA 2: Použití randomUUID() místo Date.now() pro dočasné ID sázky
+    const tempBet = { id: crypto.randomUUID(), marketId, type, amount, entryPrice };
     setMyBets(prev => [...prev, tempBet]);
 
     setMarketPrices((prev: any) => {
