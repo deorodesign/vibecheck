@@ -14,6 +14,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState('');
   const [balance, setBalance] = useState(0);
+  const [userXp, setUserXp] = useState(0);
   const [marketPrices, setMarketPrices] = useState<any>({});
   const [myBets, setMyBets] = useState<any[]>([]);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
@@ -43,17 +44,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
+  // OPRAVENÁ KONTROLA PŘIHLÁŠENÍ (Záchrana "Duchů")
   useEffect(() => {
     const checkSession = async () => {
       const savedSession = localStorage.getItem('vybe_session');
       if (savedSession) {
         try {
           const session = JSON.parse(savedSession);
-          const { data: user } = await supabase.from('users').select('balance').eq('wallet_address', session.walletAddress).single();
+          
+          // Zkusíme najít uživatele v naší nové DB tabulce
+          const { data: user } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', session.walletAddress).single();
+          
+          let finalBalance = 500;
+          let finalXp = 0;
+
+          if (user) {
+            // Uživatel existuje, vezmeme jeho reálná data
+            finalBalance = user.balance;
+            finalXp = user.xp_points || 0;
+          } else {
+            // Uživatel je "Duch" (přihlášený před vznikem tabulky). Musíme ho vytvořit!
+            await supabase.from('users').insert([{
+              wallet_address: session.walletAddress,
+              nickname: session.nickname,
+              balance: 500,
+              xp_points: 0
+            }]);
+          }
           
           setWalletAddress(session.walletAddress);
           setNickname(session.nickname);
-          setBalance(user ? user.balance : session.balance);
+          setBalance(finalBalance);
+          setUserXp(finalXp);
           setIsLoggedIn(true);
           fetchUserBets(session.walletAddress);
         } catch (e) {
@@ -115,7 +137,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           'from-green-400 to-green-600'
         ];
         
-        // OPRAVA: Bezpečné oříznutí adresy, pokud by náhodou byla null
         setDynamicLeaderboard(usersData.map((u, i) => ({
           id: u.wallet_address || `unknown-${i}`,
           rank: i + 1,
@@ -141,9 +162,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data: existingUser } = await supabase.from('users').select('*').eq('wallet_address', email).single();
 
     let currentBalance = 500;
+    let currentXp = 0;
 
     if (existingUser) {
       currentBalance = existingUser.balance;
+      currentXp = existingUser.xp_points || 0;
     } else {
       await supabase.from('users').insert([{ 
         wallet_address: email, 
@@ -156,6 +179,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setWalletAddress(email);
     setNickname(generatedNickname);
     setBalance(currentBalance);
+    setUserXp(currentXp);
     setIsLoggedIn(true);
     setIsLoginModalOpen(false);
     setIsAuthLoading(false);
@@ -174,6 +198,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setNickname('');
     setAvatarUrl('');
     setBalance(0);
+    setUserXp(0);
     setMyBets([]);
     showToast("Logged out.", "info");
     window.location.reload();
@@ -232,15 +257,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const earnedXp = amount * 10;
     
+    // OPRAVENÁ POJISTKA - Už to nikdy nebude dávat nekonečné peníze při dosažení nuly
     const { data: currentUserData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', walletAddress).single();
     
-    const currentDbBalance = currentUserData?.balance || balance;
-    const currentDbXp = currentUserData?.xp_points || 0;
+    const currentDbBalance = currentUserData ? currentUserData.balance : balance;
+    const currentDbXp = currentUserData ? (currentUserData.xp_points || 0) : userXp;
 
     const newBalance = currentDbBalance - amount;
     const newXp = currentDbXp + earnedXp;
 
     setBalance(newBalance);
+    setUserXp(newXp);
     
     await supabase.from('users').update({ balance: newBalance, xp_points: newXp }).eq('wallet_address', walletAddress);
 
@@ -270,7 +297,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={{
       markets, setMarkets, isLoggedIn, setIsLoggedIn, isAuthLoading, setIsAuthLoading,
-      walletAddress, setWalletAddress, balance, setBalance, marketPrices, setMarketPrices,
+      walletAddress, setWalletAddress, balance, setBalance, userXp, setUserXp,
+      marketPrices, setMarketPrices,
       myBets, setMyBets, chatMessages, setChatMessages, sendChatMessage, toggleLikeMessage,
       selectedMarket, setSelectedMarket, avatarUrl, setAvatarUrl, nickname, setNickname,
       isDarkMode, toggleDarkMode, marketStatus, setMarketStatus, dynamicLeaderboard,
