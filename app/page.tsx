@@ -533,30 +533,40 @@ function HomeContent() {
                            </div>
                          </div>
 
-                         {/* Odpovědi ve vlákně (OPRAVENO) */}
+                         {/* Odpovědi ve vlákně (OPRAVENO: Tmavé bubliny + Přidány likes a možnost odpovídat) */}
                          {replies.length > 0 && (
                            <div className="flex flex-col gap-3 ml-8 pl-3 border-l border-zinc-200 dark:border-white/10 mt-1">
-                             {replies.map((reply: any) => (
-                               <div key={reply.id} className="flex items-start gap-2">
-                                 {reply.avatar ? (
-                                   <img src={reply.avatar} alt={reply.user} className="w-5 h-5 rounded-full object-cover mt-0.5 flex-shrink-0 shadow-sm" />
-                                 ) : (
-                                   <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 mt-0.5 flex-shrink-0 opacity-80 shadow-sm" />
-                                 )}
-                                 <div className="flex flex-col gap-0.5 w-full">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400">{reply.user}</span>
-                                      <span className="text-[7px] text-zinc-500 font-medium">{formatTimeAgo(reply.timestamp)}</span>
-                                    </div>
-                                    
-                                    {/* OPRAVENÁ BUBLINA ODPOVĚDI */}
-                                    <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed bg-zinc-100 dark:bg-white/5 p-2.5 rounded-xl rounded-tl-sm border border-zinc-200 dark:border-white/10 inline-block w-fit max-w-[100%] text-[10px]">
-                                      {reply.text}
-                                    </span>
+                             {replies.map((reply: any) => {
+                               const isReplyLikedByMe = reply.likedBy?.includes(nickname);
+                               return (
+                                 <div key={reply.id} className="flex items-start gap-2">
+                                   {reply.avatar ? (
+                                     <img src={reply.avatar} alt={reply.user} className="w-5 h-5 rounded-full object-cover mt-0.5 flex-shrink-0 shadow-sm" />
+                                   ) : (
+                                     <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 mt-0.5 flex-shrink-0 opacity-80 shadow-sm" />
+                                   )}
+                                   <div className="flex flex-col gap-0.5 w-full">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400">{reply.user}</span>
+                                        <span className="text-[7px] text-zinc-500 font-medium">{formatTimeAgo(reply.timestamp)}</span>
+                                      </div>
+                                      
+                                      <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed bg-zinc-100 dark:bg-white/5 p-2.5 rounded-xl rounded-tl-sm border border-zinc-200 dark:border-white/10 inline-block w-fit max-w-[100%] text-[10px]">
+                                        {reply.text}
+                                      </span>
 
+                                      {/* TLAČÍTKA U ODPOVĚDÍ (Like + Reply) */}
+                                      <div className="flex items-center gap-4 mt-0.5 ml-1">
+                                        <button onClick={() => toggleLikeMessage(reply.id, nickname)} className={`text-[9px] font-bold flex items-center gap-1 transition-colors ${isReplyLikedByMe ? 'text-fuchsia-500' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'}`}>
+                                          ♥ {reply.likedBy?.length > 0 && reply.likedBy.length}
+                                        </button>
+                                        <button onClick={() => setReplyingTo({ id: msg.id, user: reply.user })} className="text-[9px] font-bold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">Reply</button>
+                                      </div>
+
+                                   </div>
                                  </div>
-                               </div>
-                             ))}
+                               );
+                             })}
                            </div>
                          )}
                        </div>
