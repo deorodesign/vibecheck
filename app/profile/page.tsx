@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useAppContext } from '../context';
 
 export default function ProfilePage() {
-  const { balance, myBets, markets, isAuthLoading, nickname } = useAppContext();
+  // Přidáno vytažení userXp z contextu
+  const { balance, userXp, myBets, markets, isAuthLoading, nickname } = useAppContext();
   const [payoutAddress, setPayoutAddress] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -37,14 +38,12 @@ export default function ProfilePage() {
   const resolvedBetsList = enrichedBets.filter((b: any) => b.status === 'won' || b.status === 'lost');
 
   const totalVolume = enrichedBets.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
-
-  // Hodnota peněz uzamčená v aktivních sázkách (v tvém případě 100 USDC)
   const activeBetsValue = activeBetsList.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
+  
+  // Bezpečná záloha na nulu, pokud by balance ještě nebyl načtený
+  const safeBalance = balance || 0;
+  const currentPortfolioValue = safeBalance + activeBetsValue;
 
-  // Celková hodnota portfolia (Balance 400 + Aktivní sázky 100 = 500)
-  const currentPortfolioValue = balance + activeBetsValue;
-
-  // Výpočet zisku/ztráty na základě celkového portfolia (500 vs 500 = 0%)
   const netReturn = baseStartingBalance > 0 
     ? ((currentPortfolioValue - baseStartingBalance) / baseStartingBalance) * 100 
     : 0;
@@ -72,20 +71,26 @@ export default function ProfilePage() {
           </h1>
         </header>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-lg">
-          <div className="flex items-center gap-6 mb-10">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex items-center justify-center text-3xl font-black shadow-lg">
               {nickname ? nickname.charAt(0).toUpperCase() : 'T'}
             </div>
             <div>
               <h2 className="text-2xl font-black uppercase tracking-widest mb-1">{nickname || 'TWITTER_USER'}</h2>
-              <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">
-                Balance: <span className="text-green-500">{balance.toFixed(2)} USDC</span>
-              </p>
+              <div className="flex flex-col gap-1 mt-2">
+                <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">
+                  Bankroll: <span className="text-green-500">{safeBalance.toFixed(2)} USDC</span>
+                </p>
+                {/* ZDE ZOBRAZUJEME XP BODY PRO MĚSÍČNÍ SEZÓNU */}
+                <p className="text-[10px] font-black text-fuchsia-500 uppercase tracking-widest">
+                  Season XP: {userXp || 0}
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 border-t border-zinc-800 pt-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:border-l border-zinc-800 md:pl-8 mt-6 md:mt-0 w-full md:w-auto border-t md:border-t-0 pt-6 md:pt-0">
             <div>
               <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Volume Traded</p>
               <p className="text-xl font-black">${totalVolume.toFixed(2)}</p>
@@ -95,7 +100,6 @@ export default function ProfilePage() {
               <p className="text-xl font-black">{activeBetsList.length}</p>
             </div>
             <div>
-              {/* ZMĚNA NÁZVU NA NET P/L PRO OVĚŘENÍ NASAZENÍ KÓDU */}
               <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Net P/L</p>
               <p className={`text-xl font-black ${netReturn > 0 ? 'text-green-500' : netReturn < 0 ? 'text-red-500' : 'text-zinc-300'}`}>
                 {netReturn > 0 ? '+' : ''}{netReturn.toFixed(2)}%
