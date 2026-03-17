@@ -27,7 +27,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   const [dynamicLeaderboard, setDynamicLeaderboard] = useState<any[]>([]);
 
-  // OPRAVA 1: Použití randomUUID() místo Date.now() pro absolutně unikátní ID toastů
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = crypto.randomUUID();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -262,12 +261,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newBalance = currentDbBalance - amount;
     const newXp = currentDbXp + earnedXp;
 
+    // Okamžitá úprava UI
     setBalance(newBalance);
     setUserXp(newXp);
     
+    // Zápis do tabulky users
     await supabase.from('users').update({ balance: newBalance, xp_points: newXp }).eq('wallet_address', walletAddress);
 
-    // OPRAVA 2: Použití randomUUID() místo Date.now() pro dočasné ID sázky
     const tempBet = { id: crypto.randomUUID(), marketId, type, amount, entryPrice };
     setMyBets(prev => [...prev, tempBet]);
 
@@ -278,17 +278,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
     });
 
+    // Zápis do tabulky bets
     const { data, error } = await supabase.from('bets').insert([{
       market_id: marketId, user_address: walletAddress, user_name: nickname, type: type, amount: amount, entry_price: entryPrice
     }]).select();
 
     if (error) {
-      showToast("Database error!", "error");
+      console.error("Supabase Error:", error);
+      // OPRAVA: Ukáže přesný error z databáze a neukáže success
+      showToast(`DB Error: ${error.message}`, "error");
     } else if (data) {
+      // OPRAVA: Success notifikace vyskočí POUZE když se sázka úspěšně uloží do DB
       setMyBets(prev => prev.map(b => b.id === tempBet.id ? { ...data[0], marketId: data[0].market_id, entryPrice: data[0].entry_price } : b));
+      showToast(`Successfully bet ${amount} USDC on ${type}! (+${earnedXp} XP)`, "success");
     }
-
-    showToast(`Successfully bet ${amount} USDC on ${type}! (+${earnedXp} XP)`, "success");
   };
 
   return (
