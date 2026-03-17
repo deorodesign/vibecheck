@@ -32,14 +32,15 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const vybecardParam = searchParams.get('vybecard');
 
+  // OPRAVA: Přidal jsem chybějící funkce pro přihlašování do destrukce
   const { 
     markets, 
     isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout,
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage, toggleLikeMessage,
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
-    showToast, isLoginModalOpen, setIsLoginModalOpen, 
-    loginWithTwitter, loginWithDiscord, loginWithEmail, currentUser
+    showToast, isLoginModalOpen, setIsLoginModalOpen,
+    loginWithTwitter, loginWithDiscord, loginWithEmail // <-- TYTO TŘI TADY CHYBĚLY!
   } = useAppContext();
 
   const [activeCategory, setActiveCategory] = useState('All');
