@@ -470,6 +470,7 @@ function HomeContent() {
               {/* --- START: POLYMARKET CHAT LOGIC --- */}
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] shadow-md mx-4 md:mx-0 overflow-hidden flex flex-col">
                 <div ref={chatTopRef} />
+                
                 <div className="p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between">
                    <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight">Live Chat</h3>
                 </div>
@@ -532,20 +533,27 @@ function HomeContent() {
                            </div>
                          </div>
 
-                         {/* Odpovědi ve vlákně */}
+                         {/* Odpovědi ve vlákně (OPRAVENO) */}
                          {replies.length > 0 && (
-                           <div className="flex flex-col gap-3 ml-8 pl-3 border-l border-zinc-100 dark:border-white/5 mt-1">
+                           <div className="flex flex-col gap-3 ml-8 pl-3 border-l border-zinc-200 dark:border-white/10 mt-1">
                              {replies.map((reply: any) => (
                                <div key={reply.id} className="flex items-start gap-2">
-                                 {reply.avatar ? <img src={reply.avatar} alt={reply.user} className="w-5 h-5 rounded-full object-cover mt-0.5 flex-shrink-0 shadow-sm" /> : <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 mt-0.5 flex-shrink-0 opacity-80 shadow-sm" />}
+                                 {reply.avatar ? (
+                                   <img src={reply.avatar} alt={reply.user} className="w-5 h-5 rounded-full object-cover mt-0.5 flex-shrink-0 shadow-sm" />
+                                 ) : (
+                                   <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 mt-0.5 flex-shrink-0 opacity-80 shadow-sm" />
+                                 )}
                                  <div className="flex flex-col gap-0.5 w-full">
                                     <div className="flex items-center gap-2">
                                       <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400">{reply.user}</span>
                                       <span className="text-[7px] text-zinc-500 font-medium">{formatTimeAgo(reply.timestamp)}</span>
                                     </div>
-                                    <span className="text-zinc-600 dark:text-zinc-300 font-medium bg-zinc-50 dark:bg-white-[0.02] p-2 rounded-xl rounded-tl-sm border border-zinc-100 dark:border-white/5 inline-block w-fit max-w-[100%] text-[10px]">
+                                    
+                                    {/* OPRAVENÁ BUBLINA ODPOVĚDI */}
+                                    <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed bg-zinc-100 dark:bg-white/5 p-2.5 rounded-xl rounded-tl-sm border border-zinc-200 dark:border-white/10 inline-block w-fit max-w-[100%] text-[10px]">
                                       {reply.text}
                                     </span>
+
                                  </div>
                                </div>
                              ))}
