@@ -44,44 +44,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
+  // REÁLNÉ SUPABASE PŘIHLAŠOVÁNÍ (Posloucháme server, ne lokální paměť)
   useEffect(() => {
-    const checkSession = async () => {
-      const savedSession = localStorage.getItem('vybe_session');
-      if (savedSession) {
-        try {
-          const session = JSON.parse(savedSession);
-          
-          const { data: user } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', session.walletAddress).single();
-          
-          let finalBalance = 500;
-          let finalXp = 0;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSupabaseSession(session);
+    });
 
-          if (user) {
-            finalBalance = user.balance;
-            finalXp = user.xp_points || 0;
-          } else {
-            await supabase.from('users').insert([{
-              wallet_address: session.walletAddress,
-              nickname: session.nickname,
-              balance: 500,
-              xp_points: 0
-            }]);
-          }
-          
-          setWalletAddress(session.walletAddress);
-          setNickname(session.nickname);
-          setBalance(finalBalance);
-          setUserXp(finalXp);
-          setIsLoggedIn(true);
-          fetchUserBets(session.walletAddress);
-        } catch (e) {
-          localStorage.removeItem('vybe_session');
-        }
-      }
-      setIsAuthLoading(false);
-    };
-    checkSession();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSupabaseSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const handleSupabaseSession = async (session: any) => {
+    if (session && session.user) {
+      const userEmail = session.user.email;
+      const generatedNickname = userEmail.split('@')[0];
+
+      const { data: user } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', userEmail).single();
+      
+      let finalBalance = 500;
+      let finalXp = 0;
+
+      if (user) {
+        finalBalance = user.balance;
+        finalXp = user.xp_points || 0;
+      } else {
+        await supabase.from('users').insert([{
+          wallet_address: userEmail,
+          nickname: generatedNickname,
+          balance: 500,
+          xp_points: 0
+        }]);
+      }
+      
+      setWalletAddress(userEmail);
+      setNickname(generatedNickname);
+      setBalance(finalBalance);
+      setUserXp(finalXp);
+      setIsLoggedIn(true);
+      fetchUserBets(userEmail);
+    } else {
+      setIsLoggedIn(false);
+      setWalletAddress('');
+      setNickname('');
+      setBalance(0);
+      setUserXp(0);
+      setMyBets([]);
+    }
+    setIsAuthLoading(false);
+  };
 
   const fetchUserBets = async (address: string) => {
     const { data } = await supabase.from('bets').select('*').eq('user_address', address);
@@ -125,14 +138,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const { data: usersData } = await supabase.from('users').select('*').order('xp_points', { ascending: false }).limit(5);
       if (usersData) {
-        const colors = [
-          'from-yellow-400 to-yellow-600', 
-          'from-zinc-300 to-zinc-500', 
-          'from-orange-400 to-orange-600', 
-          'from-blue-400 to-blue-600', 
-          'from-green-400 to-green-600'
-        ];
-        
+        const colors = ['from-yellow-400 to-yellow-600', 'from-zinc-300 to-zinc-500', 'from-orange-400 to-orange-600', 'from-blue-400 to-blue-600', 'from-green-400 to-green-600'];
         setDynamicLeaderboard(usersData.map((u, i) => ({
           id: u.wallet_address || `unknown-${i}`,
           rank: i + 1,
@@ -150,60 +156,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const connectWallet = () => setIsLoginModalOpen(true);
   
+  // --- REÁLNÉ PŘIHLAŠOVACÍ FUNKCE PŘES SUPABASE ---
+
   const loginWithEmail = async (email: string) => {
     if(!email) return showToast("Please enter an email", "error");
     setIsAuthLoading(true);
     
-    const generatedNickname = email.split('@')[0];
-    const { data: existingUser } = await supabase.from('users').select('*').eq('wallet_address', email).single();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email,
+      options: { emailRedirectTo: window.location.origin },
+    });
 
-    let currentBalance = 500;
-    let currentXp = 0;
-
-    if (existingUser) {
-      currentBalance = existingUser.balance;
-      currentXp = existingUser.xp_points || 0;
+    if (error) {
+      showToast(`Error: ${error.message}`, "error");
+      setIsAuthLoading(false);
     } else {
-      await supabase.from('users').insert([{ 
-        wallet_address: email, 
-        nickname: generatedNickname, 
-        balance: 500,
-        xp_points: 0
-      }]);
+      showToast("Magic Link sent! Check your inbox.", "success");
+      setIsLoginModalOpen(false); 
     }
-
-    setWalletAddress(email);
-    setNickname(generatedNickname);
-    setBalance(currentBalance);
-    setUserXp(currentXp);
-    setIsLoggedIn(true);
-    setIsLoginModalOpen(false);
-    setIsAuthLoading(false);
-    
-    localStorage.setItem('vybe_session', JSON.stringify({ walletAddress: email, nickname: generatedNickname }));
-    showToast(`Welcome back, ${generatedNickname}!`, "success");
   };
 
-  const loginWithTwitter = () => loginWithEmail("twitter_user@vybecheck.xyz");
-  const loginWithDiscord = () => loginWithEmail("discord_user@vybecheck.xyz");
+  const loginWithTwitter = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'twitter' });
+    if (error) showToast(error.message, "error");
+  };
 
-  const handleLogout = () => {
-    localStorage.removeItem('vybe_session');
-    setIsLoggedIn(false);
-    setWalletAddress('');
-    setNickname('');
-    setAvatarUrl('');
-    setBalance(0);
-    setUserXp(0);
-    setMyBets([]);
+  const loginWithDiscord = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'discord' });
+    if (error) showToast(error.message, "error");
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem('vybe_session'); 
     showToast("Logged out.", "info");
     window.location.reload();
   };
 
+  // -----------------------------------------------------------
+
   const sendChatMessage = async (marketId: number, text: string, user: string, avatar: string, parentId: string | null = null) => {
     const userBetsForMarket = myBets.filter((bet: any) => bet.marketId === marketId);
     let finalBetType = null;
-    
     if (userBetsForMarket.length > 0) {
       const hasVybe = userBetsForMarket.some(b => b.type === 'VYBE');
       const hasNoVybe = userBetsForMarket.some(b => b.type === 'NO_VYBE');
@@ -211,23 +205,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (hasVybe) finalBetType = 'VYBE';
       else if (hasNoVybe) finalBetType = 'NO_VYBE';
     }
-    
     const localId = crypto.randomUUID();
-    const tempMessage = {
-      id: localId, marketId, parentId, text, user, avatar, betType: finalBetType, 
-      timestamp: new Date().toISOString(), color: 'text-fuchsia-500', likedBy: []
-    };
+    const tempMessage = { id: localId, marketId, parentId, text, user, avatar, betType: finalBetType, timestamp: new Date().toISOString(), color: 'text-fuchsia-500', likedBy: [] };
     setChatMessages((prev: any) => [...prev, tempMessage]);
-
-    await supabase.from('chat_messages').insert([{
-      market_id: marketId,
-      parent_id: parentId,
-      user_name: user,
-      avatar_url: avatar,
-      text: text,
-      bet_type: finalBetType,
-      color: 'text-fuchsia-500'
-    }]);
+    await supabase.from('chat_messages').insert([{ market_id: marketId, parent_id: parentId, user_name: user, avatar_url: avatar, text: text, bet_type: finalBetType, color: 'text-fuchsia-500' }]);
   };
 
   const toggleLikeMessage = (messageId: string, userName: string) => {
@@ -243,29 +224,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
-    if (balance < amount) {
-      showToast("Insufficient balance!", "error");
-      return;
-    }
-
+    if (balance < amount) return showToast("Insufficient balance!", "error");
     const currentPrice = marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5;
     const entryPrice = currentPrice * 100;
-
     const earnedXp = amount * 10;
     
     const { data: currentUserData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', walletAddress).single();
-    
     const currentDbBalance = currentUserData ? currentUserData.balance : balance;
     const currentDbXp = currentUserData ? (currentUserData.xp_points || 0) : userXp;
-
     const newBalance = currentDbBalance - amount;
     const newXp = currentDbXp + earnedXp;
 
-    // Okamžitá úprava UI
     setBalance(newBalance);
     setUserXp(newXp);
     
-    // Zápis do tabulky users
     await supabase.from('users').update({ balance: newBalance, xp_points: newXp }).eq('wallet_address', walletAddress);
 
     const tempBet = { id: crypto.randomUUID(), marketId, type, amount, entryPrice };
@@ -278,17 +250,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
     });
 
-    // Zápis do tabulky bets
-    const { data, error } = await supabase.from('bets').insert([{
-      market_id: marketId, user_address: walletAddress, user_name: nickname, type: type, amount: amount, entry_price: entryPrice
-    }]).select();
+    const { data, error } = await supabase.from('bets').insert([{ market_id: marketId, user_address: walletAddress, user_name: nickname, type: type, amount: amount, entry_price: entryPrice }]).select();
 
     if (error) {
       console.error("Supabase Error:", error);
-      // OPRAVA: Ukáže přesný error z databáze a neukáže success
       showToast(`DB Error: ${error.message}`, "error");
     } else if (data) {
-      // OPRAVA: Success notifikace vyskočí POUZE když se sázka úspěšně uloží do DB
       setMyBets(prev => prev.map(b => b.id === tempBet.id ? { ...data[0], marketId: data[0].market_id, entryPrice: data[0].entry_price } : b));
       showToast(`Successfully bet ${amount} USDC on ${type}! (+${earnedXp} XP)`, "success");
     }
