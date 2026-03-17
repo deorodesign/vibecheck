@@ -280,7 +280,7 @@ function HomeContent() {
           {(dynamicLeaderboard || []).map((user: any) => {
             if (user.id === 'me' && isAuthLoading) return null;
             return (
-              <div key={user.id} className={`flex items-center justify-between p-4 rounded-2xl transition-colors ${user.id === 'me' ? 'bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/20' : 'hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
+              <Link href={`/user/${encodeURIComponent(user.name)}`} key={user.id} className={`flex items-center justify-between p-4 rounded-2xl transition-colors cursor-pointer ${user.id === 'me' ? 'bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/20' : 'hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
                 <div className="flex items-center gap-4">
                   <span className={`font-black italic text-lg w-4 ${user.rank === 1 ? 'text-yellow-500' : user.rank === 2 ? 'text-zinc-400' : user.rank === 3 ? 'text-amber-600' : 'text-zinc-300 dark:text-zinc-600'}`}>{user.rank}</span>
                   <div className="flex items-center gap-3">
@@ -298,7 +298,7 @@ function HomeContent() {
                 <div className="flex flex-col items-end">
                   <span className={`font-black font-mono text-sm ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.points.toLocaleString('en-US')}</span>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -512,10 +512,14 @@ function HomeContent() {
                      return (
                        <div key={msg.id} className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                          <div className="flex items-start gap-2">
-                           {msg.avatar ? <img src={msg.avatar} alt={msg.user} className="w-6 h-6 rounded-full object-cover mt-1 flex-shrink-0 shadow-sm" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 mt-1 flex-shrink-0 shadow-sm" />}
+                           <Link href={`/user/${encodeURIComponent(msg.user)}`} className="mt-1 shrink-0 hover:opacity-80 transition-opacity">
+                             {msg.avatar ? <img src={msg.avatar} alt={msg.user} className="w-6 h-6 rounded-full object-cover shadow-sm" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 shadow-sm" />}
+                           </Link>
                            <div className="flex flex-col gap-1 w-full text-[11px]">
                              <div className="flex items-center gap-2 flex-wrap">
-                               <span className={`font-black uppercase tracking-widest text-[9px] ${msg.color || 'text-fuchsia-500'}`}>{msg.user}</span>
+                               <Link href={`/user/${encodeURIComponent(msg.user)}`} className={`font-black uppercase tracking-widest text-[9px] hover:underline ${msg.color || 'text-fuchsia-500'}`}>
+                                 {msg.user}
+                               </Link>
                                <span className="text-[8px] text-zinc-400 dark:text-zinc-500 font-mono">{formatTimeAgo(msg.timestamp)}</span>
                                {userBadge === 'VYBE' && <span className="px-1.5 py-[1px] rounded bg-green-500/10 border border-green-500/20 text-[7px] font-black text-green-500 uppercase tracking-widest italic">Vybe</span>}
                                {userBadge === 'NO_VYBE' && <span className="px-1.5 py-[1px] rounded bg-red-500/10 border border-red-500/20 text-[7px] font-black text-red-500 uppercase tracking-widest italic">No Vybe</span>}
@@ -533,21 +537,25 @@ function HomeContent() {
                            </div>
                          </div>
 
-                         {/* Odpovědi ve vlákně (OPRAVENO: Tmavé bubliny + Přidány likes a možnost odpovídat) */}
+                         {/* Odpovědi ve vlákně */}
                          {replies.length > 0 && (
                            <div className="flex flex-col gap-3 ml-8 pl-3 border-l border-zinc-200 dark:border-white/10 mt-1">
                              {replies.map((reply: any) => {
                                const isReplyLikedByMe = reply.likedBy?.includes(nickname);
                                return (
                                  <div key={reply.id} className="flex items-start gap-2">
-                                   {reply.avatar ? (
-                                     <img src={reply.avatar} alt={reply.user} className="w-5 h-5 rounded-full object-cover mt-0.5 flex-shrink-0 shadow-sm" />
-                                   ) : (
-                                     <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 mt-0.5 flex-shrink-0 opacity-80 shadow-sm" />
-                                   )}
+                                   <Link href={`/user/${encodeURIComponent(reply.user)}`} className="mt-0.5 shrink-0 hover:opacity-80 transition-opacity">
+                                     {reply.avatar ? (
+                                       <img src={reply.avatar} alt={reply.user} className="w-5 h-5 rounded-full object-cover shadow-sm" />
+                                     ) : (
+                                       <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 opacity-80 shadow-sm" />
+                                     )}
+                                   </Link>
                                    <div className="flex flex-col gap-0.5 w-full">
                                       <div className="flex items-center gap-2">
-                                        <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400">{reply.user}</span>
+                                        <Link href={`/user/${encodeURIComponent(reply.user)}`} className="font-black uppercase tracking-widest text-[8px] text-zinc-400 hover:underline hover:text-zinc-300">
+                                          {reply.user}
+                                        </Link>
                                         <span className="text-[7px] text-zinc-500 font-medium">{formatTimeAgo(reply.timestamp)}</span>
                                       </div>
                                       
