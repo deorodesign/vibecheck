@@ -83,7 +83,7 @@ function HomeContent() {
       setChatInput("");
       setReplyingTo(null);
       scrollToChatTop();
-    } else if (!isLoggedIn) connectWallet();
+    } else if (!isLoggedIn) setIsLoginModalOpen(true);
   };
 
   const getUserBetStatus = (userName: string, marketId: number) => {
@@ -108,7 +108,7 @@ function HomeContent() {
   const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
     e.stopPropagation();
     const amountToBet = parseFloat(betAmount);
-    if (!isLoggedIn) connectWallet();
+    if (!isLoggedIn) setIsLoginModalOpen(true);
     else if (isNaN(amountToBet) || amountToBet <= 0) showToast("Please enter a valid amount.", "error");
     else if (amountToBet > balance) showToast("Insufficient balance!", "error");
     else placeBet(marketId, type, amountToBet);
@@ -123,11 +123,11 @@ function HomeContent() {
 
   let filteredMarkets = markets;
   if (activeCategory === 'Trending') {
-    filteredMarkets = [...markets].sort((a, b) => b.volumeUsd - a.volumeUsd);
+    filteredMarkets = [...markets].sort((a: any, b: any) => b.volumeUsd - a.volumeUsd);
   } else if (activeCategory !== 'All') {
     filteredMarkets = markets.filter((m: any) => m.category === activeCategory);
   }
-  const sortedMarkets = [...filteredMarkets].sort((a, b) => {
+  const sortedMarkets = [...filteredMarkets].sort((a: any, b: any) => {
     const aResolved = !!marketStatus[a.id];
     const bResolved = !!marketStatus[b.id];
     if (aResolved === bResolved) return 0;
@@ -148,7 +148,6 @@ function HomeContent() {
           {isAuthLoading ? (
             <div className="flex items-center gap-2">
               <div className="w-24 h-10 rounded-full bg-zinc-200 dark:bg-white/5 animate-pulse"></div>
-              <div className="w-20 h-10 rounded-full bg-zinc-200 dark:bg-white/5 animate-pulse"></div>
             </div>
           ) : isLoggedIn ? (
             <>
@@ -158,27 +157,22 @@ function HomeContent() {
               </div>
               <div className="relative" ref={dropdownRef}>
                 <button onClick={() => setIsProfileOpen(!isProfileOpen)} className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 h-10 rounded-full border transition-all shadow-sm active:scale-95 ${isProfileOpen ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/30' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
-                  {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full object-cover border border-zinc-200 dark:border-white/20" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 border border-zinc-200 dark:border-white/20"></div>}
-                  <span className="text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300 hidden sm:inline">{shortAddress(walletAddress)}</span>
+                  {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full object-cover" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500"></div>}
+                  <span className="text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300 hidden sm:inline">{nickname || shortAddress(walletAddress)}</span>
                 </button>
                 {isProfileOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
-                      <div className="flex items-center justify-between mb-3"><span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Wallet</span><Link href="/profile" onClick={() => setIsProfileOpen(false)} className="text-[10px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-white">Settings</Link></div>
-                      <div className="flex items-center gap-3">{avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover" /> : <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500"></div>}<p className="text-zinc-900 dark:text-white font-bold text-sm italic uppercase truncate">{walletAddress}</p></div>
-                    </div>
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                    <div className="p-4 bg-zinc-50 dark:bg-white/5 border-b border-zinc-100 dark:border-white/5 text-[10px] font-bold uppercase text-zinc-500">Wallet Connected</div>
                     <div className="p-2 flex flex-col gap-1">
-                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="px-3 py-3 text-[11px] font-black uppercase tracking-widest hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-all">Profile & Philosophy</Link>
-                      <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl">How it Works</Link>
-                      <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl">Rewards</Link>
+                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="px-3 py-2 text-xs font-bold hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Profile Settings</Link>
+                      <button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors">Log Out</button>
                     </div>
-                    <div className="p-2 border-t border-zinc-100 dark:border-white/5"><button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl">Log Out</button></div>
                   </div>
                 )}
               </div>
             </>
           ) : (
-            <button onClick={() => setIsLoginModalOpen(true)} className="px-6 h-10 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-black text-xs font-black uppercase shadow-md active:scale-95 transition-all">Log In</button>
+            <button onClick={() => setIsLoginModalOpen(true)} className="px-6 h-10 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-black text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md active:scale-95">Log In</button>
           )}
         </div>
       </div>
@@ -211,16 +205,22 @@ function HomeContent() {
       <div className="bg-white dark:bg-[#18181b] rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 border-b border-zinc-200 dark:border-white/5 bg-gradient-to-br from-fuchsia-500/10 to-orange-500/10 relative">
           <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight flex items-center gap-2 text-xl relative z-10">Top Vybers</h3>
-          <p className="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10">Top 5 win monthly airdrops!</p>
+          <p className="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10 bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">Top 5 win monthly airdrops!</p>
         </div>
         <div className="flex flex-col p-2">
           {dynamicLeaderboard.map((user: any) => (
-            <div key={user.id} className={`flex items-center justify-between p-4 rounded-2xl transition-colors ${user.id === 'me' ? 'bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200' : 'hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
+            <div key={user.id} className="flex items-center justify-between p-4 rounded-2xl hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
               <div className="flex items-center gap-4">
                 <span className={`font-black italic text-lg w-4 ${user.rank === 1 ? 'text-yellow-500' : user.rank === 2 ? 'text-zinc-400' : user.rank === 3 ? 'text-amber-600' : 'text-zinc-300 dark:text-zinc-600'}`}>{user.rank}</span>
-                <div className="flex items-center gap-3">{user.avatar ? <img src={user.avatar} className="w-8 h-8 rounded-full object-cover shadow-sm border border-zinc-200 dark:border-white/10" alt="Avatar" /> : <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${user.color} shadow-sm`}></div>}<div className="flex flex-col"><span className={`font-bold text-xs ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.name}</span><span className="text-[9px] font-mono text-zinc-500">{user.address}</span></div></div>
+                <div className="flex items-center gap-3">
+                  {user.avatar ? <img src={user.avatar} className="w-8 h-8 rounded-full object-cover shadow-sm" alt="Avatar" /> : <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${user.color}`}></div>}
+                  <div className="flex flex-col">
+                    <span className="font-bold text-xs text-zinc-900 dark:text-white">{user.name}</span>
+                    <span className="text-[9px] font-mono text-zinc-500">{user.address}</span>
+                  </div>
+                </div>
               </div>
-              <span className={`font-black font-mono text-sm ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.points.toLocaleString('en-US')}</span>
+              <span className="font-black font-mono text-sm text-zinc-900 dark:text-white">{user.points.toLocaleString('en-US')}</span>
             </div>
           ))}
         </div>
@@ -231,25 +231,30 @@ function HomeContent() {
   const flexModalContent = flexMarket && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm" onClick={() => setFlexMarket(null)}>
       <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-        <div className="text-center mb-2"><h2 className="text-2xl font-black italic uppercase mb-1">Flex Your Position</h2><p className="text-zinc-500 text-xs font-bold uppercase tracking-widest line-clamp-1">"{flexMarket.title}"</p></div>
+        <div className="text-center mb-2">
+          <h2 className="text-2xl font-black italic uppercase mb-1">Flex Your Position</h2>
+          <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest line-clamp-1">"{flexMarket.title}"</p>
+        </div>
         <button onClick={() => {
           const customUrl = `${window.location.origin}/?vybecard=${createSlug(flexMarket.title)}`;
           const textToShare = `I just bet on\n"${flexMarket.title}"\n\nJoin me on Vybecheck!`;
           window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(customUrl)}`, '_blank');
         }} className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-black text-white hover:bg-zinc-800 transition-colors font-black uppercase tracking-widest text-sm shadow-md">Post to X</button>
-        <button onClick={() => setFlexMarket(null)} className="mt-2 text-zinc-500 text-xs font-bold uppercase tracking-widest w-full py-2">Close</button>
+        <button onClick={() => setFlexMarket(null)} className="mt-2 text-zinc-500 hover:text-zinc-900 text-xs font-bold uppercase tracking-widest transition-colors w-full py-2">Close</button>
       </div>
     </div>
   );
 
   const loginModalContent = isLoginModalOpen && (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsLoginModalOpen(false)}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm" onClick={() => setIsLoginModalOpen(false)}>
       <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-        <div className="text-center mb-2"><h2 className="text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">Log In</h2><p className="text-zinc-500 text-xs font-medium uppercase tracking-widest">Connect to start trading culture.</p></div>
+        <div className="text-center mb-2">
+          <h2 className="text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">Log In</h2>
+          <p className="text-zinc-500 text-xs font-medium uppercase tracking-widest">Connect to start trading culture.</p>
+        </div>
         <div className="flex flex-col gap-3">
           <button onClick={loginWithTwitter} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black hover:scale-105 transition-all font-black uppercase tracking-widest text-sm shadow-md active:scale-95">Continue with X</button>
           
-          {/* PŘIDÁNO GOOGLE TLAČÍTKO */}
           <button onClick={loginWithGoogle} className="flex items-center justify-center gap-4 w-full py-3.5 rounded-xl bg-white text-black border border-zinc-200 font-black uppercase tracking-widest text-xs shadow-md active:scale-95 transition-all">
             <svg className="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
             Continue with Gmail
@@ -257,9 +262,12 @@ function HomeContent() {
 
           <button onClick={loginWithDiscord} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-[#5865F2] text-white hover:bg-[#4752C4] font-black uppercase tracking-widest text-sm shadow-md active:scale-95">Continue with Discord</button>
         </div>
-        <div className="relative flex items-center py-2"><div className="flex-grow border-t border-zinc-200 dark:border-white/10"></div><span className="mx-4 text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Or Email</span><div className="flex-grow border-t border-zinc-200 dark:border-white/10"></div></div>
-        <div className="flex flex-col gap-2"><input type="email" placeholder="name@example.com" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white" /><button onClick={() => loginWithEmail(emailInput)} className="w-full py-3.5 rounded-xl bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white font-black uppercase tracking-widest text-sm active:scale-95">Send Magic Link</button></div>
-        <button onClick={() => setIsLoginModalOpen(false)} className="mt-2 text-zinc-500 text-xs font-bold uppercase tracking-widest w-full">Cancel</button>
+        <div className="relative flex items-center py-2"><div className="flex-grow border-t border-zinc-200 dark:border-white/10"></div><span className="flex-shrink-0 mx-4 text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Or Email</span><div className="flex-grow border-t border-zinc-200 dark:border-white/10"></div></div>
+        <div className="flex flex-col gap-2">
+          <input type="email" placeholder="name@example.com" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white" />
+          <button onClick={() => loginWithEmail(emailInput)} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white hover:bg-zinc-200 font-black uppercase tracking-widest text-sm active:scale-95">Send Magic Link</button>
+        </div>
+        <button onClick={() => setIsLoginModalOpen(false)} className="mt-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors w-full">Cancel</button>
       </div>
     </div>
   );
@@ -274,41 +282,40 @@ function HomeContent() {
           <div className="w-full lg:flex-1 flex flex-col gap-6">
             <div className="w-full aspect-video rounded-[2rem] overflow-hidden relative shadow-xl border border-zinc-200 dark:border-white/5">
               <img src={selectedMarket.imageUrl || selectedMarket.image_url} alt={selectedMarket.title} className={`absolute inset-0 w-full h-full object-cover object-top ${isResolved ? 'grayscale' : ''}`} />
-              <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-50/40 dark:from-[#0e0e12] dark:via-[#0e0e12]/40 to-transparent transition-colors duration-500"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-50/40 dark:from-[#0e0e12] dark:via-[#0e0e12]/40 to-transparent"></div>
               <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-widest border border-white/10 z-20 shadow-lg">Vol: ${selectedMarket.volumeUsd || selectedMarket.volume_usd || 0}</div>
             </div>
             <div className="flex flex-col gap-5 -mt-16 md:-mt-20 relative z-10 px-0 md:px-8">
               <h1 className="text-3xl md:text-4xl font-black leading-tight tracking-tight text-zinc-900 dark:text-white uppercase italic drop-shadow-lg px-4 md:px-0">{selectedMarket.title}</h1>
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-5 md:p-6 shadow-md mx-4 md:mx-0">
                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Current Vybe Check</h3>
-                <div className="relative h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center shadow-inner mb-6 border border-zinc-200 dark:border-white/5 shadow-inner">
+                <div className="relative h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center mb-6 shadow-inner border border-zinc-200 dark:border-white/5">
                   <div className="h-full bg-green-500 flex items-center px-4 justify-start transition-all duration-500 ease-out shadow-[0_0_20px_rgba(34,197,94,0.6)]" style={{ width: `${(currentPrices?.vibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-sm z-10">{((currentPrices?.vibe || 0.5) * 100).toFixed(0)}%</span></div>
                   <div className="h-full bg-red-500 flex items-center px-4 justify-end transition-all duration-500 ease-out shadow-[0_0_20px_rgba(239,68,68,0.6)]" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-sm z-10">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span></div>
                 </div>
                 {!isResolved && (
                   <div className="mb-6 p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5">
                     <div className="flex justify-between items-center mb-3"><label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount to Bet (USDC)</label><span className="text-[10px] font-bold text-zinc-500">Bal: {balance.toFixed(2)}</span></div>
-                    <div className="flex gap-2"><input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-3 font-mono font-bold text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white" /><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 10).toString())} className="shrink-0 px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 transition-colors">+10</button><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 50).toString())} className="shrink-0 px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 transition-colors">+50</button></div>
+                    <div className="flex gap-2"><input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-3 font-mono font-bold text-sm outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white" /><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 10).toString())} className="shrink-0 px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 transition-colors">+10</button><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 50).toString())} className="shrink-0 px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 transition-colors">+50</button></div>
                   </div>
                 )}
                 <div className="flex flex-col gap-4">
                   {marketBetTotal > 0 && (
-                    <div className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/20 shadow-sm animate-in zoom-in-95"><span className="font-black text-xs md:text-sm uppercase tracking-widest text-fuchsia-600 dark:text-fuchsia-400">Vybechecked! ({marketBetTotal} USDC In Play)</span><button onClick={(e) => handleFlex(e, selectedMarket)} className="bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-md active:scale-95">FLEX</button></div>
+                    <div className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95"><span className="font-black text-xs md:text-sm uppercase tracking-widest">Vybechecked! ({marketBetTotal} USDC In Play)</span><button onClick={(e) => handleFlex(e, selectedMarket)} className="bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:opacity-90 shadow-md">FLEX</button></div>
                   )}
                   {isResolved ? (
-                    <div className="w-full text-center p-6 rounded-2xl bg-zinc-100 dark:bg-white/5 border flex flex-col gap-2"><h4 className="font-black italic uppercase text-zinc-900 dark:text-white text-xl">Market Resolved</h4><p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p></div>
+                    <div className="w-full text-center p-6 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex flex-col gap-2"><h4 className="font-black italic uppercase text-zinc-900 dark:text-white text-xl">Market Resolved</h4><p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p></div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-4"><button onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className="p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500 font-black text-xl md:text-2xl uppercase italic text-green-600 dark:text-green-400 active:scale-95 transition-all">VYBE</button><button onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className="p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500 font-black text-xl md:text-2xl uppercase italic text-red-600 dark:text-red-400 active:scale-95 transition-all">NO VYBE</button></div>
+                    <div className="grid grid-cols-2 gap-4"><button onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className="p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500 font-black text-xl md:text-2xl uppercase italic text-green-600 dark:text-green-400 shadow-sm active:scale-95 transition-all">VYBE</button><button onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className="p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500 font-black text-xl md:text-2xl uppercase italic text-red-600 dark:text-red-400 shadow-sm active:scale-95 transition-all">NO VYBE</button></div>
                   )}
                 </div>
               </div>
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-6 md:p-8 shadow-md mx-4 md:mx-0"><h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4">Resolution Rules</h3><div className="text-sm text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed"><p className="mb-3">This market will resolve to <strong className="text-green-500">VYBE</strong> if the specified event officially occurs before the resolution date.</p><div className="p-3 bg-zinc-50 dark:bg-black/30 rounded-xl border border-zinc-200 dark:border-white/5"><p className="text-[10px] font-bold uppercase text-zinc-400 mb-1 tracking-widest">Resolution Source:</p><p className="text-zinc-900 dark:text-zinc-200">{selectedMarket.resolutionSource || selectedMarket.resolution_source}</p></div></div></div>
-              
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] shadow-md mx-4 md:mx-0 overflow-hidden flex flex-col">
                 <div ref={chatTopRef} />
-                <div className="p-5 border-b border-zinc-200 dark:border-white/5 flex items-center justify-between"><h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight">Live Chat</h3></div>
-                <div className="p-4 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-black/20">
-                  {replyingTo && (<div className="flex items-center justify-between bg-fuchsia-500/10 px-3 py-1.5 rounded-t-lg border-x border-t border-fuchsia-500/20 text-[9px] font-medium text-fuchsia-500 mb-[-1px]"><span>Replying to <strong>@{replyingTo.user}</strong></span><button onClick={() => setReplyingTo(null)} className="font-bold hover:text-red-500">✕</button></div>)}
+                <div className="p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between"><h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight">Live Chat</h3></div>
+                <div className="p-4 border-b border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20">
+                  {replyingTo && (<div className="flex items-center justify-between bg-fuchsia-500/10 px-3 py-1.5 rounded-t-lg border-x border-t border-fuchsia-500/20 text-[9px] font-medium text-fuchsia-500 mb-[-1px]"><span>Replying to <strong>@{replyingTo.user}</strong></span><button onClick={() => setReplyingTo(null)} className="font-bold">✕</button></div>)}
                   <div className="relative flex items-center"><input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendChat()} placeholder={isLoggedIn ? (replyingTo ? "Write a reply..." : "Share your vybe...") : "Log in to chat..."} className={`w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 px-4 py-3 text-xs outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white ${replyingTo ? 'rounded-b-xl rounded-tr-xl' : 'rounded-xl'}`} /><button onClick={handleSendChat} className="absolute right-2 p-2 text-zinc-400 hover:text-fuchsia-500 transition-colors"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg></button></div>
                 </div>
                 <div className="p-5 flex flex-col gap-6 max-h-[600px] overflow-y-auto scrollbar-hide">
@@ -319,20 +326,20 @@ function HomeContent() {
                       return (
                         <div key={msg.id} className="flex flex-col gap-2">
                           <div className="flex items-start gap-2">
-                            {msg.avatar ? <img src={msg.avatar} alt="" className="w-6 h-6 rounded-full object-cover mt-1 flex-shrink-0" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 mt-1 flex-shrink-0" />}
+                            {msg.avatar ? <img src={msg.avatar} alt="" className="w-6 h-6 rounded-full object-cover mt-1 flex-shrink-0 shadow-sm" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 mt-1 flex-shrink-0" />}
                             <div className="flex flex-col gap-1 w-full text-[11px]">
                               <div className="flex items-center gap-2 flex-wrap"><Link href={`/user/${encodeURIComponent(msg.user)}`} className="font-black uppercase tracking-widest text-[9px] text-fuchsia-500 hover:underline">{msg.user}</Link><span className="text-[8px] text-zinc-400 font-mono">{formatTimeAgo(msg.timestamp)}</span>{userBadge && <span className={`px-1.5 py-[1px] rounded ${userBadge === 'VYBE' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-red-500/10 border-red-500/20 text-red-500'} border text-[7px] font-black uppercase italic tracking-widest`}>{userBadge}</span>}</div>
-                              <span className="text-zinc-700 dark:text-zinc-300 font-medium bg-zinc-100 dark:bg-white/5 p-3 rounded-2xl rounded-tl-sm border border-zinc-200 dark:border-white/5 inline-block w-fit max-w-[95%] text-xs leading-relaxed">{msg.text}</span>
+                              <span className="text-zinc-700 dark:text-zinc-300 font-medium bg-zinc-100 dark:bg-white/5 p-3 rounded-2xl rounded-tl-sm border border-zinc-200 dark:border-white/10 inline-block w-fit max-w-[95%] text-xs leading-relaxed">{msg.text}</span>
                               <div className="flex items-center gap-4 mt-0.5 ml-1">
-                                <button onClick={() => toggleLikeMessage(msg.id, nickname)} className={`text-[9px] font-bold transition-colors ${(msg.likedBy || []).includes(nickname) ? 'text-fuchsia-500' : 'text-zinc-400 hover:text-zinc-200'}`}>♥ {(msg.likedBy || []).length || ''} Likes</button>
-                                <button onClick={() => setReplyingTo({ id: msg.id, user: msg.user })} className="text-[9px] font-bold text-zinc-400 hover:text-zinc-200 transition-colors">Reply</button>
+                                <button onClick={() => toggleLikeMessage(msg.id, nickname)} className={`text-[9px] font-bold transition-colors ${(msg.likedBy || []).includes(nickname) ? 'text-fuchsia-500' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'}`}>♥ {(msg.likedBy || []).length || ''} Likes</button>
+                                <button onClick={() => setReplyingTo({ id: msg.id, user: msg.user })} className="text-[9px] font-bold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">Reply</button>
                               </div>
                               {replies.length > 0 && (
                                 <div className="flex flex-col gap-3 ml-8 pl-3 border-l border-zinc-100 dark:border-white/5 mt-1">
                                   {replies.map((reply: any) => (
                                     <div key={reply.id} className="flex items-start gap-2">
-                                      {reply.avatar ? <img src={reply.avatar} alt="" className="w-5 h-5 rounded-full object-cover mt-0.5 flex-shrink-0" /> : <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 mt-0.5 flex-shrink-0 opacity-80 shadow-sm" />}
-                                      <div className="flex flex-col gap-0.5 w-full"><div className="flex items-center gap-2"><span className="font-black uppercase text-[8px] text-zinc-400">{reply.user}</span><span className="text-[7px] text-zinc-500">{formatTimeAgo(reply.timestamp)}</span></div><span className="text-zinc-600 dark:text-zinc-300 font-medium bg-zinc-50 dark:bg-white-[0.02] p-2 rounded-xl rounded-tl-sm border border-zinc-100 dark:border-white/5 text-[10px]">{reply.text}</span></div>
+                                      {reply.avatar ? <img src={reply.avatar} alt="" className="w-5 h-5 rounded-full object-cover mt-0.5 flex-shrink-0 shadow-sm" /> : <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 mt-0.5 flex-shrink-0 opacity-80 shadow-sm" />}
+                                      <div className="flex flex-col gap-0.5 w-full"><div className="flex items-center gap-2"><span className="font-black uppercase tracking-widest text-[8px] text-zinc-400">{reply.user}</span><span className="text-[7px] text-zinc-500 font-medium">{formatTimeAgo(reply.timestamp)}</span></div><span className="text-zinc-600 dark:text-zinc-300 font-medium bg-zinc-900/50 p-2 rounded-xl rounded-tl-sm border border-zinc-800 dark:border-white/5 inline-block w-fit max-w-[100%] text-[10px]">{reply.text}</span></div>
                                     </div>
                                   ))}
                                 </div>
@@ -345,7 +352,7 @@ function HomeContent() {
                   }
                 </div>
                 <div className="p-4 border-t border-zinc-200 dark:border-white/5 flex items-center justify-between bg-zinc-50 dark:bg-black/20">
-                  {sortedMainMessages.length > visibleCount ? <button onClick={() => setVisibleCount(prev => prev + 10)} className="px-4 py-2 bg-white dark:bg-white/5 hover:bg-zinc-100 text-zinc-900 dark:text-white rounded-lg text-[10px] font-bold uppercase tracking-widest border border-zinc-200 dark:border-white/10 shadow-sm transition-all active:scale-95">Show more</button> : <span className="text-[10px] text-zinc-400 font-medium italic">End of conversation</span>}
+                  {sortedMainMessages.length > visibleCount ? <button onClick={() => setVisibleCount(prev => prev + 10)} className="px-4 py-2 bg-white dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-900 dark:text-white rounded-lg text-[10px] font-bold uppercase tracking-widest border border-zinc-200 dark:border-white/10 shadow-sm transition-all active:scale-95">Show more</button> : <span className="text-[10px] text-zinc-400 font-medium italic">End of conversation</span>}
                   <button onClick={scrollToChatTop} className="text-[9px] font-black uppercase text-zinc-400 hover:text-fuchsia-500 flex items-center gap-1 transition-colors">Back to top</button>
                 </div>
               </div>
