@@ -15,7 +15,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [walletAddress, setWalletAddress] = useState('');
   const [balance, setBalance] = useState(0);
   const [userXp, setUserXp] = useState(0);
+  
   const [marketPrices, setMarketPrices] = useState<any>({});
+  
   const [myBets, setMyBets] = useState<any[]>([]);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [selectedMarket, setSelectedMarket] = useState<any>(null);
@@ -92,7 +94,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .single();
       
       if (error) {
-        console.warn("User profile not found in DB yet, trigger might be delayed.");
+        console.warn("User profile not found in DB yet.");
         setNickname(userEmail?.split('@')[0] || 'User');
         setBalance(0); 
         setUserXp(0);
@@ -113,18 +115,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [resetAppStaleState, fetchUserBets]);
 
   useEffect(() => {
+    let betSubscription: any = null;
+
     const fetchData = async () => {
       const { data: marketsData } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
+      const { data: allBets } = await supabase.from('bets').select('market_id, type, amount');
+
       if (marketsData) {
         setMarkets(marketsData.map(m => ({
           ...m, imageUrl: m.image_url, volumeUsd: m.volume_usd, volume: `$${m.volume_usd || 0}`, resolutionSource: m.resolution_source
         })));
+        
+        let pools: any = {};
+        marketsData.forEach((m: any) => {
+          pools[m.id] = { vybe: 0, noVybe: 0 };
+        });
+
+        if (allBets) {
+          allBets.forEach((b: any) => {
+            if (!pools[b.market_id]) pools[b.market_id] = { vybe: 0, noVybe: 0 };
+            if (b.type === 'VYBE') pools[b.market_id].vybe += Number(b.amount);
+            if (b.type === 'NO_VYBE') pools[b.market_id].noVybe += Number(b.amount);
+          });
+        }
+
         let prices: any = {};
         let statuses: any = {};
+        
         marketsData.forEach((m: any) => {
-          prices[m.id] = { vibe: 0.5, noVibe: 0.5 };
+          const vp = pools[m.id].vybe;
+          const np = pools[m.id].noVybe;
+          
+          // AMM MATEMATIKA S VIRTUÁLNÍ LIKVIDITOU
+          const LIQUIDITY = 100;
+          let v = (vp + LIQUIDITY) / (vp + np + (LIQUIDITY * 2));
+          v = Math.max(0.01, Math.min(0.99, v)); // Oříznutí 1% - 99%
+
+          prices[m.id] = { vibe: v, noVibe: 1 - v, vybePool: vp, noVybePool: np };
           if (m.is_resolved) statuses[m.id] = m.winning_outcome;
         });
+        
         setMarketPrices(prices);
         setMarketStatus(statuses);
       }
@@ -132,47 +162,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data: chatData } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
       if (chatData) {
         setChatMessages(chatData.map(c => ({
-          id: c.id,
-          marketId: c.market_id,
-          parentId: c.parent_id || null, 
-          text: c.text,
-          user: c.user_name,
-          avatar: c.avatar_url || '',
-          betType: c.bet_type,
-          timestamp: c.created_at,
-          color: c.color || 'text-fuchsia-500',
-          likedBy: c.liked_by || []
+          id: c.id, marketId: c.market_id, parentId: c.parent_id || null, text: c.text, user: c.user_name,
+          avatar: c.avatar_url || '', betType: c.bet_type, timestamp: c.created_at, color: c.color || 'text-fuchsia-500', likedBy: c.liked_by || []
         })));
       }
 
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('*')
-        .order('xp_points', { ascending: false })
-        .limit(10);
-        
+      const { data: usersData } = await supabase.from('users').select('*').order('xp_points', { ascending: false }).limit(10);
       if (usersData) {
-        const colors = [
-          'from-yellow-400 to-yellow-600', 
-          'from-zinc-300 to-zinc-500',     
-          'from-orange-400 to-orange-600', 
-          'from-blue-400 to-blue-600',     
-          'from-green-400 to-green-600'    
-        ];
-        
+        const colors = ['from-yellow-400 to-yellow-600', 'from-zinc-300 to-zinc-500', 'from-orange-400 to-orange-600', 'from-blue-400 to-blue-600', 'from-green-400 to-green-600'];
         setDynamicLeaderboard(usersData.map((u, i) => ({
-          id: u.wallet_address || `unknown-${i}`,
-          rank: i + 1,
-          name: u.nickname || 'Anonymous Vyber',
+          id: u.wallet_address || `unknown-${i}`, rank: i + 1, name: u.nickname || 'Anonymous Vyber',
           address: u.wallet_address ? `${u.wallet_address.substring(0, 4)}...${u.wallet_address.slice(-4)}` : '0x...',
-          points: u.xp_points || 0, 
-          avatar: u.avatar_url || '',
-          color: colors[i] || 'from-fuchsia-400 to-fuchsia-600' 
+          points: u.xp_points || 0, avatar: u.avatar_url || '', color: colors[i] || 'from-fuchsia-400 to-fuchsia-600' 
         })));
       }
+
+      // REALTIME POSLUCHAČ SÁZEK (Aby se hýbal graf všem)
+      betSubscription = supabase.channel('realtime-bets')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bets' }, (payload) => {
+          const newBet = payload.new;
+          
+          setMarketPrices((prev: any) => {
+            const current = prev[newBet.market_id] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
+            
+            const updatedVybePool = current.vybePool + (newBet.type === 'VYBE' ? Number(newBet.amount) : 0);
+            const updatedNoVybePool = current.noVybePool + (newBet.type === 'NO_VYBE' ? Number(newBet.amount) : 0);
+            
+            const LIQUIDITY = 100;
+            let v = (updatedVybePool + LIQUIDITY) / (updatedVybePool + updatedNoVybePool + (LIQUIDITY * 2));
+            v = Math.max(0.01, Math.min(0.99, v));
+
+            return {
+              ...prev,
+              [newBet.market_id]: {
+                vibe: v,
+                noVibe: 1 - v,
+                vybePool: updatedVybePool,
+                noVybePool: updatedNoVybePool
+              }
+            };
+          });
+        })
+        .subscribe();
     };
     
     fetchData();
+
+    return () => {
+      if (betSubscription) supabase.removeChannel(betSubscription);
+    };
   }, []);
 
   const connectWallet = () => setIsLoginModalOpen(true);
@@ -180,19 +218,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loginWithEmail = async (email: string) => {
     if(!email) return showToast("Please enter an email", "error");
     setIsAuthLoading(true);
-    
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email,
-      options: { emailRedirectTo: window.location.origin },
-    });
-
-    if (error) {
-      showToast(`Error: ${error.message}`, "error");
-      setIsAuthLoading(false);
-    } else {
-      showToast("Magic Link sent! Check your inbox.", "success");
-      setIsLoginModalOpen(false); 
-    }
+    const { error } = await supabase.auth.signInWithOtp({ email: email, options: { emailRedirectTo: window.location.origin }});
+    if (error) { showToast(`Error: ${error.message}`, "error"); setIsAuthLoading(false); } 
+    else { showToast("Magic Link sent! Check your inbox.", "success"); setIsLoginModalOpen(false); }
   };
 
   const loginWithTwitter = async () => {
@@ -205,20 +233,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) showToast(error.message, "error");
   };
 
-  // --- NOVÁ FUNKCE PRO GOOGLE PŘIHLÁŠENÍ ---
   const loginWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({ 
-      provider: 'google',
-      options: {
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
+      provider: 'google', options: { queryParams: { access_type: 'offline', prompt: 'consent' } }
     });
     if (error) showToast(error.message, "error");
   };
-  // ----------------------------------------
 
   const handleLogout = async () => {
     resetAppStaleState();
@@ -259,6 +279,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     if (balance < amount) return showToast("Insufficient balance!", "error");
     
+    // Získání aktuální ceny z našich nově spočítaných dat (0.01 až 0.99)
     const currentPrice = marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5;
     const entryPrice = currentPrice * 100;
 
@@ -287,13 +308,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
       setMyBets(prev => [...prev, tempBet]);
 
-      setMarketPrices((prev: any) => {
-        const current = prev[marketId] || { vibe: 0.5, noVibe: 0.5 };
-        const shift = amount / 1000; 
-        let newVibe = type === 'VYBE' ? Math.min(0.95, current.vibe + shift) : Math.max(0.05, current.vibe - shift);
-        return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
-      });
-
       showToast(`Successfully bet ${amount} USDC on ${type}!`, "success");
     }
   };
@@ -307,7 +321,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       selectedMarket, setSelectedMarket, avatarUrl, setAvatarUrl, nickname, setNickname,
       isDarkMode, toggleDarkMode, marketStatus, setMarketStatus, dynamicLeaderboard,
       showToast, isLoginModalOpen, setIsLoginModalOpen, connectWallet, handleLogout,
-      loginWithTwitter, loginWithDiscord, loginWithEmail, loginWithGoogle, placeBet // <-- PŘIDÁNO SEM
+      loginWithTwitter, loginWithDiscord, loginWithEmail, loginWithGoogle, placeBet
     }}>
       {children}
       <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
