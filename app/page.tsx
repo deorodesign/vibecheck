@@ -1,676 +1,399 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useAppContext } from './context';
+import { useAppContext, CATEGORIES } from './context';
+// OPRAVENÁ CESTA: Jedna tečka, protože složka components je hned vedle page.tsx
+import Chat from './components/chat'; 
 
-// Kategorie jsme přesunuli sem, abychom se vyhnuli chybám z contextu
-const CATEGORIES = ['All', 'Trending', 'Sports', 'Crypto', 'Pop Culture', 'Gaming'];
-
-const createSlug = (title: string) => {
-  return title.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');     
-};
-
-function formatTimeAgo(dateString: string) {
-  if (!dateString) return 'Just now';
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  if (seconds < 60) return 'Just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-function HomeContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const vybecardParam = searchParams.get('vybecard');
-
-  // OPRAVA: Přidal jsem chybějící funkce pro přihlašování do destrukce
-  const { 
-    markets, 
-    isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout,
-    marketPrices, myBets, placeBet, chatMessages, sendChatMessage, toggleLikeMessage,
-    selectedMarket, setSelectedMarket, avatarUrl, nickname,
-    isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
-    showToast, isLoginModalOpen, setIsLoginModalOpen,
-    loginWithTwitter, loginWithDiscord, loginWithEmail // <-- TYTO TŘI TADY CHYBĚLY!
+export default function Page() {
+  const {
+    markets,
+    isLoggedIn,
+    isAuthLoading,
+    walletAddress,
+    balance,
+    marketPrices,
+    myBets,
+    nickname,
+    marketStatus,
+    dynamicLeaderboard,
+    showToast,
+    isLoginModalOpen,
+    setIsLoginModalOpen,
+    handleLogout,
+    loginWithTwitter,
+    loginWithDiscord,
+    loginWithEmail,
+    loginWithGoogle,
+    placeBet,
   } = useAppContext();
 
   const [activeCategory, setActiveCategory] = useState('All');
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [flexMarket, setFlexMarket] = useState<any>(null);
+  const [emailInput, setEmailInput] = useState('');
+  const [betAmounts, setBetAmounts] = useState<any>({});
   
-  const [betAmount, setBetAmount] = useState<string>("10");
-  const [chatInput, setChatInput] = useState("");
-  const [emailInput, setEmailInput] = useState("");
-  
-  // POLYMARKET CHAT STAVY
-  const [replyingTo, setReplyingTo] = useState<{ id: string, user: string } | null>(null);
-  const [visibleCount, setVisibleCount] = useState(10);
-  
-  const chatTopRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const filteredMarkets = activeCategory === 'All' 
+    ? markets 
+    : markets.filter((m: any) => m.category === activeCategory);
 
-  // Zpracování zpráv pro vybraný trh
-  const marketMessages = selectedMarket ? (chatMessages || []).filter((msg: any) => msg.marketId === selectedMarket.id) : [];
-  const mainMessages = marketMessages.filter((msg: any) => !msg.parentId);
-  const sortedMainMessages = [...mainMessages].sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  const visibleMessages = sortedMainMessages.slice(0, visibleCount);
-
-  useEffect(() => {
-    if (!markets || markets.length === 0) return; 
-
-    if (vybecardParam) {
-      let targetMarket = markets.find((m: any) => m.id.toString() === vybecardParam) || markets.find((m: any) => createSlug(m.title) === vybecardParam);
-      if (targetMarket && targetMarket.id !== selectedMarket?.id) {
-        setSelectedMarket(targetMarket);
-      }
-    } else {
-      if (selectedMarket) setSelectedMarket(null);
-    }
-  }, [vybecardParam, markets]); 
-
-  const openMarket = (market: any) => {
-    setSelectedMarket(market);
-    setVisibleCount(10); // Reset zpráv při otevření nové karty
-    router.push(`/?vybecard=${createSlug(market.title)}`, { scroll: false });
-    window.scrollTo({ top: 0, behavior: 'instant' });
-    setIsProfileOpen(false);
+  const handleBetAmountChange = (marketId: number, amount: number) => {
+    setBetAmounts((prev: any) => ({ ...prev, [marketId]: amount }));
   };
 
-  const closeMarket = () => {
-    setSelectedMarket(null);
-    router.push('/', { scroll: false });
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  };
+  // OPRAVA TYPU: přidáno (b: any)
+  const getMarketUserBets = (marketId: number) => myBets.filter((b: any) => b.marketId === marketId);
 
-  const scrollToChatTop = () => {
-    chatTopRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  return (
+    <div className="min-h-screen bg-zinc-950 font-mono text-zinc-300 selection:bg-fuchsia-500/30 selection:text-fuchsia-200">
+      
+      {/* HEADER */}
+      <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-8 h-20 flex items-center justify-between gap-4">
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 uppercase tracking-tighter cursor-default hover:scale-105 transition-transform origin-left">
+              Vybecheck
+            </h1>
+            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 mt-0.5 ml-0.5 hidden sm:block">
+              Predict the culture
+            </span>
+          </div>
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsProfileOpen(false);
-    }
-    if (isProfileOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isProfileOpen]);
+          <div className="flex items-center gap-2 sm:gap-4">
+            {isAuthLoading ? (
+              <div className="h-10 w-24 bg-white/5 rounded-2xl animate-pulse"></div>
+            ) : isLoggedIn ? (
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="hidden sm:flex flex-col items-end mr-2">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Bankroll</span>
+                  <span className="text-sm font-black text-green-400">
+                    {balance ? balance.toFixed(2) : '0.00'} <span className="text-[10px] text-zinc-500">USDC</span>
+                  </span>
+                </div>
+                
+                <Link href="/profile">
+                  <div className="h-10 px-4 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3 hover:bg-white/10 hover:border-fuchsia-500/30 transition-all cursor-pointer group">
+                    <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex items-center justify-center text-[10px] font-black text-white group-hover:scale-110 transition-transform">
+                      {nickname ? nickname.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <span className="text-xs font-bold text-zinc-300 group-hover:text-white uppercase tracking-widest hidden sm:block truncate max-w-[100px]">
+                      {nickname || 'User'}
+                    </span>
+                  </div>
+                </Link>
 
-  const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
-    e.stopPropagation();
-    const amountToBet = parseFloat(betAmount);
-    if (!isLoggedIn) connectWallet();
-    else if (isNaN(amountToBet) || amountToBet <= 0) showToast("Please enter a valid amount.", "error");
-    else if (amountToBet > balance) showToast("Insufficient balance!", "error");
-    else placeBet(marketId, type, amountToBet);
-  };
-
-  const handleSendChat = () => {
-    if (chatInput.trim() && selectedMarket && isLoggedIn) {
-      sendChatMessage(selectedMarket.id, chatInput, nickname, avatarUrl, replyingTo ? replyingTo.id : null);
-      setChatInput("");
-      setReplyingTo(null);
-      scrollToChatTop();
-    } else if (!isLoggedIn) {
-      connectWallet(); // Pokud není přihlášený, otevřeme mu peněženku
-    }
-  };
-
-  const getUserBetStatus = (userName: string, marketId: number) => {
-    if (userName !== nickname) return null; 
-    const userBetsOnThisMarket = (myBets || []).filter((bet: any) => bet.marketId === marketId);
-    const hasVybe = userBetsOnThisMarket.some((b: any) => b.type === 'VYBE');
-    const hasNoVybe = userBetsOnThisMarket.some((b: any) => b.type === 'NO_VYBE');
-    if (hasVybe && hasNoVybe) return 'HEDGED';
-    if (hasVybe) return 'VYBE';
-    if (hasNoVybe) return 'NO_VYBE';
-    return null;
-  };
-
-  const handleFlex = (e: React.MouseEvent, market: any) => {
-    e.stopPropagation();
-    setFlexMarket(market);
-  };
-
-  const shortAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "Not Connected";
-  
-  let filteredMarkets = markets || [];
-  if (activeCategory === 'Trending') {
-    filteredMarkets = [...filteredMarkets].sort((a, b) => b.volumeUsd - a.volumeUsd);
-  } else if (activeCategory !== 'All') {
-    filteredMarkets = filteredMarkets.filter((m: any) => m.category === activeCategory);
-  }
-
-  const sortedMarkets = [...filteredMarkets].sort((a, b) => {
-    const aResolved = !!marketStatus?.[a.id];
-    const bResolved = !!marketStatus?.[b.id];
-    if (aResolved === bResolved) return 0;
-    return aResolved ? 1 : -1; 
-  });
-
-  const isResolved = selectedMarket ? !!marketStatus?.[selectedMarket.id] : false;
-  const winningOutcome = selectedMarket ? marketStatus?.[selectedMarket.id] : null;
-  const currentPrices = selectedMarket ? (marketPrices?.[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
-  const marketBetTotal = selectedMarket ? (myBets || []).filter((b: any) => b.marketId === selectedMarket.id).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
-
-  const headerContent = (
-    <div className="sticky top-0 z-50 w-full flex flex-col items-center px-4 md:px-8 pt-6 pb-4 bg-zinc-50/90 dark:bg-[#0e0e12]/90 backdrop-blur-xl border-b border-zinc-200 dark:border-white/5 transition-colors duration-500">
-      <div className="w-full max-w-7xl flex justify-between items-center mb-6">
-        <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-500 cursor-pointer" onClick={closeMarket}>Vybecheck</h1>
-        <div className="flex items-center gap-2 md:gap-3">
-          <button onClick={toggleDarkMode} className="w-10 h-10 flex items-center justify-center rounded-full border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-sm active:scale-95 transition-all text-black dark:text-white font-bold text-xs uppercase">
-            {isDarkMode ? "LGT" : "DRK"}
-          </button>
-          
-          {isAuthLoading ? (
-            <div className="flex items-center gap-2">
-               <div className="w-24 h-10 rounded-full bg-zinc-200 dark:bg-white/5 animate-pulse"></div>
-               <div className="w-20 h-10 rounded-full bg-zinc-200 dark:bg-white/5 animate-pulse"></div>
-            </div>
-          ) : isLoggedIn ? (
-            <>
-              <div className="flex items-center gap-3 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 px-4 md:px-5 py-2.5 rounded-full shadow-sm cursor-default">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
-                <span className="text-xs md:text-sm font-mono font-bold text-zinc-900 dark:text-white">{(balance || 0).toFixed(2)} <span className="text-zinc-500 hidden md:inline">USDC</span></span>
-              </div>
-              <div className="relative" ref={dropdownRef}>
-                <button onClick={() => setIsProfileOpen(!isProfileOpen)} className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 h-10 rounded-full border transition-all shadow-sm active:scale-95 ${isProfileOpen ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/30' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full object-cover border border-zinc-200 dark:border-white/20" />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 border border-zinc-200 dark:border-white/20"></div>
-                  )}
-                  <span className="text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300 hidden sm:inline">{shortAddress(walletAddress)}</span>
+                <button onClick={handleLogout} className="h-10 w-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-500 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-all">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
                 </button>
-                {isProfileOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
-                      <div className="flex items-center justify-between mb-3">
-                         <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Wallet</span>
-                         <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-1 text-[10px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Settings</Link>
-                      </div>
-                      <div className="flex items-center gap-3">
-                         {avatarUrl ? (
-                           <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-                         ) : (
-                           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex-shrink-0"></div>
-                         )}
-                         <div className="overflow-hidden">
-                           <p className="text-zinc-900 dark:text-white font-bold text-sm italic uppercase truncate">{walletAddress}</p>
-                         </div>
-                      </div>
-                    </div>
-                    <div className="p-2 flex flex-col gap-1">
-                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center justify-center gap-2 w-full px-3 py-3 text-[11px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-all">Profile & Philosophy</Link>
-                      <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">How it Works</Link>
-                      <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
-                      <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
-                      <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
-                    </div>
-                    <div className="p-2 border-t border-zinc-100 dark:border-white/5">
-                      <button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2.5 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-500/10 rounded-xl transition-colors">Log Out</button>
-                    </div>
-                  </div>
-                )}
               </div>
-            </>
-          ) : (
-            <div className="relative" ref={dropdownRef}>
-              <button onClick={() => setIsProfileOpen(!isProfileOpen)} className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 h-10 rounded-full border transition-all shadow-sm active:scale-95 ${isProfileOpen ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/30' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
-                <svg className="w-5 h-5 text-zinc-600 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-300 hidden sm:inline">MENU</span>
+            ) : (
+              <button onClick={() => setIsLoginModalOpen(true)} className="group relative h-10 px-6 rounded-2xl bg-white text-black font-black text-xs uppercase tracking-widest hover:bg-zinc-200 transition-all overflow-hidden">
+                <span className="relative z-10">Log in</span>
+                <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
               </button>
-              {isProfileOpen && (
-                <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex flex-col items-center gap-3">
-                    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest text-center">Join the culture</p>
-                    <button onClick={() => { connectWallet(); setIsProfileOpen(false); }} className="w-full py-3 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-black text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md active:scale-95">Log In / Sign Up</button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* MAIN LAYOUT */}
+      <main className="max-w-[1600px] mx-auto px-4 md:px-8 py-8 flex flex-col xl:flex-row gap-8">
+        
+        {/* LEFT COLUMN: MARKETS */}
+        <div className="flex-1 min-w-0">
+          <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-8 pb-2 fade-edges">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`shrink-0 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                  activeCategory === cat 
+                  ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.1)]' 
+                  : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white border border-white/5'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-6">
+            {filteredMarkets.length === 0 ? (
+              <div className="col-span-full py-20 text-center border border-white/5 border-dashed rounded-[2rem] bg-white/[0.02]">
+                <p className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-2">No active markets</p>
+                <p className="text-[10px] text-zinc-600 uppercase tracking-widest">Check back later for new drops.</p>
+              </div>
+            ) : (
+              filteredMarkets.map((market: any) => {
+                const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5 };
+                const vibePct = Math.round(prices.vibe * 100);
+                const userBets = getMarketUserBets(market.id);
+                
+                // OPRAVA TYPŮ: přidáno (b: any) a (acc: number, curr: any)
+                const hasVibeBet = userBets.some((b: any) => b.type === 'VYBE');
+                const hasNoVibeBet = userBets.some((b: any) => b.type === 'NO_VYBE');
+                const totalBetAmount = userBets.reduce((acc: number, curr: any) => acc + curr.amount, 0);
+                
+                const currentBetAmount = betAmounts[market.id] || 10;
+                const status = marketStatus[market.id];
+
+                return (
+                  <div key={market.id} className="group bg-[#13131a] rounded-[2rem] border border-white/5 overflow-hidden hover:border-white/10 transition-colors flex flex-col relative shadow-xl">
+                    <div className="relative h-48 w-full overflow-hidden bg-zinc-900">
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#13131a] via-[#13131a]/50 to-transparent z-10"></div>
+                      {market.imageUrl && (
+                        <img src={market.imageUrl} alt={market.title} className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700 ease-out" />
+                      )}
+                      <div className="absolute top-4 left-4 z-20 flex flex-wrap gap-2">
+                        <span className="bg-black/50 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border border-white/10">
+                          Vol {market.volume}
+                        </span>
+                        {status && (
+                          <span className={`backdrop-blur-md text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border ${status === 'VYBE' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+                            Resolved: {status}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-6 flex-1 flex flex-col z-20 -mt-12">
+                      <h2 className="text-xl font-black text-white leading-tight mb-4 drop-shadow-md">
+                        {market.title}
+                      </h2>
+
+                      <div className="bg-black/40 rounded-2xl p-4 mb-6 border border-white/5">
+                        <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">
+                          <span>Current Vybe Check</span>
+                        </div>
+                        <div className="h-4 bg-zinc-900 rounded-full overflow-hidden flex ring-1 ring-white/5">
+                          <div className="bg-green-500 h-full transition-all duration-500 ease-out" style={{ width: `${vibePct}%` }}></div>
+                          <div className="bg-red-500 h-full transition-all duration-500 ease-out" style={{ width: `${100 - vibePct}%` }}></div>
+                        </div>
+                        <div className="flex justify-between text-xs font-black mt-3">
+                          <span className="text-green-400">{vibePct}%</span>
+                          <span className="text-red-400">{100 - vibePct}%</span>
+                        </div>
+                      </div>
+
+                      {status ? (
+                        <div className="mt-auto bg-white/5 rounded-2xl p-4 text-center border border-white/5">
+                          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Market is closed</p>
+                        </div>
+                      ) : (
+                        <div className="mt-auto space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Amount to bet (USDC)</span>
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Bal: {balance.toFixed(0)}</span>
+                          </div>
+                          <div className="flex gap-2 h-12">
+                            <input 
+                              type="number" 
+                              value={currentBetAmount}
+                              onChange={(e) => handleBetAmountChange(market.id, Number(e.target.value))}
+                              className="flex-1 bg-black/50 border border-white/10 rounded-2xl px-4 text-center text-sm font-black text-white outline-none focus:border-fuchsia-500 transition-colors"
+                              min="1"
+                            />
+                            {[10, 50].map(amt => (
+                              <button 
+                                key={amt}
+                                onClick={() => handleBetAmountChange(market.id, amt)}
+                                className={`w-14 rounded-2xl text-[10px] font-black transition-colors ${currentBetAmount === amt ? 'bg-white text-black' : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white border border-white/5'}`}
+                              >
+                                +{amt}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          {totalBetAmount > 0 && (
+                            <div className="flex items-center justify-between bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-2xl px-4 py-3">
+                              <span className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest">
+                                Vybechecked! ({totalBetAmount} USDC in play)
+                              </span>
+                              <span className="text-[10px] font-black bg-fuchsia-500 text-white px-2 py-0.5 rounded-lg">FLEX</span>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <button 
+                              onClick={() => {
+                                if(!isLoggedIn) setIsLoginModalOpen(true);
+                                else placeBet(market.id, 'VYBE', currentBetAmount);
+                              }}
+                              className={`relative overflow-hidden group h-14 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 ${
+                                hasVibeBet 
+                                ? 'bg-green-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.3)] border border-green-400' 
+                                : 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/30'
+                              }`}
+                            >
+                              <span className="relative z-10">Vybe</span>
+                              <div className="absolute inset-x-0 bottom-2 text-[8px] opacity-70 flex justify-center gap-1 z-10">
+                                <span>Predict @ {vibePct}¢</span>
+                              </div>
+                            </button>
+                            <button 
+                              onClick={() => {
+                                if(!isLoggedIn) setIsLoginModalOpen(true);
+                                else placeBet(market.id, 'NO_VYBE', currentBetAmount);
+                              }}
+                              className={`relative overflow-hidden group h-14 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 ${
+                                hasNoVibeBet 
+                                ? 'bg-red-500 text-black shadow-[0_0_20px_rgba(239,68,68,0.3)] border border-red-400' 
+                                : 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/30'
+                              }`}
+                            >
+                              <span className="relative z-10">No Vybe</span>
+                              <div className="absolute inset-x-0 bottom-2 text-[8px] opacity-70 flex justify-center gap-1 z-10">
+                                <span>Predict @ {100 - vibePct}¢</span>
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-6 pt-4 border-t border-white/5">
+                        <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold text-center">
+                          By trading, you agree to the <a href="#" className="underline decoration-zinc-700 hover:text-zinc-300 transition-colors">Terms & Conditions</a>.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-2 flex flex-col gap-1">
-                    <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">How it Works</Link>
-                    <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
-                    <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
-                    <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: CHAT & LEADERBOARD */}
+        <div className="xl:w-[400px] shrink-0 flex flex-col gap-8">
+          
+          {/* CHAT */}
+          <div className="h-[500px] xl:h-[600px] bg-[#13131a] rounded-[2rem] border border-white/5 shadow-xl flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-white/5 flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <h2 className="text-sm font-black text-white uppercase tracking-widest">Hot Now</h2>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <Chat marketId={markets[0]?.id || 1} />
+            </div>
+          </div>
+
+          {/* LEADERBOARD */}
+          <div className="bg-[#13131a] rounded-[2rem] border border-white/5 p-6 shadow-xl">
+            <h2 className="text-sm font-black text-white uppercase tracking-widest mb-1">Top Vybers</h2>
+            <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest mb-6">Top 5 win monthly airdrops!</p>
+            
+            <div className="space-y-3">
+              {dynamicLeaderboard.map((user: any) => (
+                <Link href={`/user/${user.id}`} key={user.rank}>
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 hover:bg-white/5 border border-white/5 transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white bg-gradient-to-tr ${user.color} shadow-lg shadow-black/50 group-hover:scale-110 transition-transform`}>
+                        {user.rank}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-zinc-300 group-hover:text-white transition-colors truncate max-w-[120px]">
+                          {user.name}
+                        </span>
+                        <span className="text-[9px] font-mono text-zinc-600">{user.address}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-black text-white">{user.points}</div>
+                      <div className="text-[8px] font-black text-fuchsia-500 uppercase tracking-widest">XP</div>
+                    </div>
                   </div>
+                </Link>
+              ))}
+              {dynamicLeaderboard.length === 0 && (
+                <div className="text-center py-6 border border-white/5 border-dashed rounded-2xl">
+                  <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Loading leaderboard...</p>
                 </div>
               )}
             </div>
-          )}
+          </div>
+
         </div>
-      </div>
-      {!selectedMarket && (
-        <div className="w-full max-w-7xl overflow-x-auto flex gap-2 pb-2 hide-scrollbar">
-          {CATEGORIES.map((cat: any) => (
-            <button key={cat} onClick={() => setActiveCategory(cat)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-xs font-bold transition-all shadow-sm ${activeCategory === cat ? 'bg-zinc-900 text-white dark:bg-white dark:text-black border-transparent' : 'bg-white dark:bg-white/5 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20'}`}>{cat}</button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+      </main>
 
-  const rightSidebar = (
-    <div className="w-full lg:w-[320px] shrink-0 flex flex-col gap-6 lg:sticky lg:top-36 lg:self-start mt-8 lg:mt-0">
-      <div className="bg-white dark:bg-[#18181b] rounded-[2rem] p-6 border border-zinc-200 dark:border-white/5 shadow-sm">
-        <h3 className="text-zinc-900 dark:text-white font-black italic uppercase mb-6 flex items-center gap-2 tracking-tight">Hot Now</h3>
-        <div className="flex flex-col gap-5">
-          {(markets || []).slice(0, 3).map((m: any) => (
-            <div key={m.id} onClick={() => openMarket(m)} className="flex gap-4 items-center cursor-pointer group">
-              <img src={m.imageUrl || m.image_url} alt={m.title} className="w-12 h-12 rounded-xl object-cover object-top shadow-sm group-hover:scale-105 transition-transform" />
-              <div className="flex-1">
-                <p className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-2 leading-tight group-hover:text-fuchsia-500 transition-colors">{m.title}</p>
-                <p className="text-[10px] text-zinc-500 font-mono mt-1">${m.volumeUsd || m.volume_usd || 0}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-[#18181b] rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-zinc-200 dark:border-white/5 bg-gradient-to-br from-fuchsia-500/10 to-orange-500/10 relative">
-          <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight flex items-center gap-2 text-xl relative z-10">Top Vybers</h3>
-          <p className="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10 bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">Top 5 win monthly airdrops!</p>
-        </div>
-        <div className="flex flex-col p-2">
-          {(dynamicLeaderboard || []).map((user: any) => {
-            if (user.id === 'me' && isAuthLoading) return null;
-            return (
-              <Link href={`/user/${encodeURIComponent(user.name)}`} key={user.id} className={`flex items-center justify-between p-4 rounded-2xl transition-colors cursor-pointer ${user.id === 'me' ? 'bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/20' : 'hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
-                <div className="flex items-center gap-4">
-                  <span className={`font-black italic text-lg w-4 ${user.rank === 1 ? 'text-yellow-500' : user.rank === 2 ? 'text-zinc-400' : user.rank === 3 ? 'text-amber-600' : 'text-zinc-300 dark:text-zinc-600'}`}>{user.rank}</span>
-                  <div className="flex items-center gap-3">
-                    {user.avatar ? (
-                      <img src={user.avatar} className="w-8 h-8 rounded-full object-cover shadow-sm border border-zinc-200 dark:border-white/10" alt="Avatar" />
-                    ) : (
-                      <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${user.color} shadow-sm`}></div>
-                    )}
-                    <div className="flex flex-col">
-                      <span className={`font-bold text-xs ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.name}</span>
-                      <span className="text-[9px] font-mono text-zinc-500">{user.address}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className={`font-black font-mono text-sm ${user.id === 'me' ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-900 dark:text-white'}`}>{user.points.toLocaleString('en-US')}</span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-
-  const flexModalContent = flexMarket && (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setFlexMarket(null)}>
-      <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-         <div className="text-center mb-2">
-           <h2 className="text-2xl font-black italic uppercase text-zinc-900 dark:text-white mb-1">Flex Your Position</h2>
-           <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest line-clamp-1">"{flexMarket.title}"</p>
-         </div>
-         <button 
-           onClick={() => {
-             const baseUrl = window.location.origin;
-             const customUrl = `${baseUrl}/?vybecard=${createSlug(flexMarket.title)}`; 
-             const textToShare = `I just bet on\n"${flexMarket.title}"\n\nJoin me on Vybecheck!`;
-             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(customUrl)}`, '_blank');
-           }} 
-           className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-black text-white hover:bg-zinc-800 dark:hover:bg-zinc-900 transition-colors font-black uppercase tracking-widest text-sm shadow-md"
-         >
-           Post to X
-         </button>
-         <button onClick={() => setFlexMarket(null)} className="mt-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors w-full py-2">Close</button>
-      </div>
-    </div>
-  );
-
-  const loginModalContent = isLoginModalOpen && (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsLoginModalOpen(false)}>
-      <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-         <div className="text-center mb-2">
-           <h2 className="text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">Log In</h2>
-           <p className="text-zinc-500 text-xs font-medium">Connect to start trading culture.</p>
-         </div>
-         
-         <button onClick={loginWithTwitter} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black hover:scale-105 transition-all font-black uppercase tracking-widest text-sm shadow-md active:scale-95">
-           Continue with X
-         </button>
-         
-         <button onClick={loginWithDiscord} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-[#5865F2] text-white hover:bg-[#4752C4] hover:scale-105 transition-all font-black uppercase tracking-widest text-sm shadow-md active:scale-95">
-           Continue with Discord
-         </button>
-
-         <div className="relative flex items-center py-2">
-            <div className="flex-grow border-t border-zinc-200 dark:border-white/10"></div>
-            <span className="flex-shrink-0 mx-4 text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Or Email</span>
-            <div className="flex-grow border-t border-zinc-200 dark:border-white/10"></div>
-         </div>
-
-         <div className="flex flex-col gap-2">
-            <input 
-              type="email" 
-              placeholder="name@example.com"
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-              className="w-full bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-fuchsia-500 transition-colors text-zinc-900 dark:text-white"
-            />
-            <button onClick={() => loginWithEmail(emailInput)} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-white/20 hover:scale-105 transition-all font-black uppercase tracking-widest text-sm active:scale-95">
-              Send Magic Link
-            </button>
-         </div>
-         
-         <button onClick={() => setIsLoginModalOpen(false)} className="mt-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors w-full">
-           Cancel
-         </button>
-      </div>
-    </div>
-  );
-
-  return (
-    <main className="flex min-h-screen flex-col items-center font-sans bg-zinc-50 dark:bg-[#0e0e12] transition-colors duration-500 relative">
-      {headerContent}
-      
-      {(!markets || markets.length === 0) ? (
-        <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-50">
-          <div className="w-12 h-12 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="font-bold text-xs uppercase tracking-widest text-zinc-500">Loading Vybecards...</p>
-        </div>
-      ) : selectedMarket ? (
-        <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-8 py-6 px-4 animate-in slide-in-from-bottom-8 duration-500">
-          <div className="w-full lg:flex-1 flex flex-col gap-6">
+      {/* LOGIN MODAL */}
+      {isLoginModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsLoginModalOpen(false)}></div>
+          <div className="relative w-full max-w-sm bg-[#13131a] border border-white/10 rounded-[2rem] p-8 shadow-2xl transform transition-all">
             
-            <div className="w-full aspect-video rounded-[2rem] overflow-hidden relative shadow-xl border border-zinc-200 dark:border-white/5">
-              <img src={selectedMarket.imageUrl || selectedMarket.image_url} alt={selectedMarket.title} className={`absolute inset-0 w-full h-full object-cover object-top ${isResolved ? 'grayscale' : ''}`} />
-              <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-50/40 dark:from-[#0e0e12] dark:via-[#0e0e12]/40 to-transparent transition-colors duration-500"></div>
-              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-widest border border-white/10 z-20 shadow-lg">Vol: ${selectedMarket.volumeUsd || selectedMarket.volume_usd || 0}</div>
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic mb-2">Log In</h2>
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Connect to start trading culture.</p>
             </div>
 
-            <div className="flex flex-col gap-5 -mt-16 md:-mt-20 relative z-10 px-0 md:px-8">
-              <h1 className="text-3xl md:text-4xl font-black leading-tight tracking-tight text-zinc-900 dark:text-white uppercase italic drop-shadow-lg px-4 md:px-0">{selectedMarket.title}</h1>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={loginWithTwitter}
+                className="w-full flex items-center justify-center gap-3 bg-white text-black py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-zinc-200 transition-all active:scale-95"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                Continue with X
+              </button>
               
-              <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-5 md:p-6 shadow-md mx-4 md:mx-0">
-                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Current Vybe Check</h3>
-                
-                <div className="relative h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center shadow-inner mb-6 border border-zinc-200 dark:border-white/5">
-                  <div className="h-full bg-green-500 flex items-center px-4 justify-start relative shadow-[0_0_20px_rgba(34,197,94,0.6)] transition-all duration-500 ease-out" style={{ width: `${(currentPrices?.vibe || 0.5) * 100}%` }}>
-                    <span className="text-white dark:text-black font-black italic text-sm z-10">{((currentPrices?.vibe || 0.5) * 100).toFixed(0)}%</span>
-                  </div>
-                  <div className="h-full bg-red-500 flex items-center px-4 justify-end relative shadow-[0_0_20px_rgba(239,68,68,0.6)] transition-all duration-500 ease-out" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }}>
-                    <span className="text-white dark:text-black font-black italic text-sm z-10">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span>
-                  </div>
-                </div>
+              <button 
+                onClick={loginWithGoogle}
+                className="w-full flex items-center justify-center gap-3 bg-white text-black py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-zinc-200 transition-all active:scale-95"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Continue with Google
+              </button>
 
-                {!isResolved && (
-                  <div className="mb-6 p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5">
-                    <div className="flex justify-between items-center mb-3">
-                      <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount to Bet (USDC)</label>
-                      <span className="text-[10px] font-bold text-zinc-500">Bal: {(balance || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <input 
-                        type="number" 
-                        value={betAmount} 
-                        onChange={(e) => setBetAmount(e.target.value)}
-                        className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-3 font-mono font-bold text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white"
-                        placeholder="0.00"
-                      />
-                      <button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 10).toString())} className="shrink-0 px-3 sm:px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">+10</button>
-                      <button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 50).toString())} className="shrink-0 px-3 sm:px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 dark:hover:bg-white/20 transition-colors">+50</button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-4">
-                  {marketBetTotal > 0 && (
-                    <div className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95">
-                      <span className="font-black text-xs md:text-sm uppercase tracking-widest">Vybechecked! ({marketBetTotal} USDC In Play)</span>
-                      <button onClick={(e) => handleFlex(e, selectedMarket)} className="flex items-center gap-1.5 bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-opacity shadow-md">FLEX</button>
-                    </div>
-                  )}
-                  {isResolved ? (
-                    <div className="w-full text-center p-6 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex flex-col items-center justify-center gap-2">
-                       <h4 className="font-black italic uppercase text-zinc-900 dark:text-white text-xl">Market Resolved</h4>
-                       <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      <div className="grid grid-cols-2 gap-4">
-                        <button onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className="group/btn flex flex-col items-center justify-center p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500 transition-all active:scale-95 shadow-sm">
-                          <span className="text-green-600 dark:text-green-400 group-hover/btn:text-green-700 dark:group-hover/btn:text-black font-black text-xl md:text-2xl uppercase italic">VYBE</span>
-                          <span className="text-[10px] text-green-600/70 dark:text-green-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {((currentPrices?.vibe || 0.5) * 100).toFixed(0)}¢</span>
-                        </button>
-                        <button onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className="group/btn flex flex-col items-center justify-center p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500 transition-all active:scale-95 shadow-sm">
-                          <span className="text-red-600 dark:text-red-400 group-hover/btn:text-red-700 dark:group-hover/btn:text-black font-black text-xl md:text-2xl uppercase italic">NO VYBE</span>
-                          <span className="text-[10px] text-red-600/70 dark:text-red-500/70 font-bold uppercase mt-1 dark:group-hover/btn:text-black/70">Predict @ {((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}¢</span>
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-zinc-400 text-center font-bold">
-                        By trading, you agree to the <Link href="/terms" className="underline hover:text-zinc-600 dark:hover:text-zinc-300">Terms & Conditions</Link>.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-6 md:p-8 shadow-md mx-4 md:mx-0">
-                <h3 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4">Resolution Rules</h3>
-                <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                  <p className="mb-3">This market will resolve to <strong className="text-green-500">VYBE</strong> if the specified event officially occurs before the resolution date.</p>
-                  <div className="p-3 bg-zinc-50 dark:bg-black/30 rounded-xl border border-zinc-200 dark:border-white/5 mb-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Resolution Source:</p>
-                    <p className="text-zinc-900 dark:text-zinc-200">{selectedMarket.resolutionSource || selectedMarket.resolution_source}</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* --- START: POLYMARKET CHAT LOGIC --- */}
-              <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] shadow-md mx-4 md:mx-0 overflow-hidden flex flex-col">
-                <div ref={chatTopRef} />
-                
-                <div className="p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between">
-                   <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight">Live Chat</h3>
-                </div>
-
-                {/* Psací pole nahoře */}
-                <div className="p-4 border-b border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20">
-                  {replyingTo && (
-                    <div className="flex items-center justify-between bg-fuchsia-500/10 px-3 py-1.5 rounded-t-lg border-x border-t border-fuchsia-500/20 text-[9px] font-medium text-fuchsia-500 mb-[-1px]">
-                      <span>Replying to <strong>@{replyingTo.user}</strong></span>
-                      <button onClick={() => setReplyingTo(null)} className="hover:text-red-500 font-bold">✕</button>
-                    </div>
-                  )}
-                  <div className="relative flex items-center">
-                    <input 
-                      type="text" 
-                      value={chatInput} 
-                      onChange={(e) => setChatInput(e.target.value)} 
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendChat()} 
-                      placeholder={isLoggedIn ? (replyingTo ? "Write a reply..." : "Share your vybe...") : "Log in to chat..."} 
-                      className={`w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 px-4 py-3 text-xs focus:outline-none focus:border-fuchsia-500 transition-all text-zinc-900 dark:text-white ${replyingTo ? 'rounded-b-xl rounded-tr-xl' : 'rounded-xl'}`} 
-                    />
-                    <button onClick={handleSendChat} className="absolute right-2 p-2 text-zinc-400 hover:text-fuchsia-500 transition-colors">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                    </button>
-                  </div>
-                </div>
-                
-                {/* VÝPIS ZPRÁV */}
-                <div className="p-5 flex flex-col gap-6">
-                   {visibleMessages.length === 0 && (
-                     <div className="text-center text-zinc-400 py-10 italic text-[11px]">Be the first to share your thoughts!</div>
-                   )}
-
-                   {visibleMessages.map((msg: any) => {
-                     const userBadge = getUserBetStatus(msg.user, selectedMarket.id);
-                     const replies = marketMessages.filter((r: any) => r.parentId === msg.id).sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-                     const isLikedByMe = msg.likedBy?.includes(nickname);
-
-                     return (
-                       <div key={msg.id} className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                         <div className="flex items-start gap-2">
-                           <Link href={`/user/${encodeURIComponent(msg.user)}`} className="mt-1 shrink-0 hover:opacity-80 transition-opacity">
-                             {msg.avatar ? <img src={msg.avatar} alt={msg.user} className="w-6 h-6 rounded-full object-cover shadow-sm" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 shadow-sm" />}
-                           </Link>
-                           <div className="flex flex-col gap-1 w-full text-[11px]">
-                             <div className="flex items-center gap-2 flex-wrap">
-                               <Link href={`/user/${encodeURIComponent(msg.user)}`} className={`font-black uppercase tracking-widest text-[9px] hover:underline ${msg.color || 'text-fuchsia-500'}`}>
-                                 {msg.user}
-                               </Link>
-                               <span className="text-[8px] text-zinc-400 dark:text-zinc-500 font-mono">{formatTimeAgo(msg.timestamp)}</span>
-                               {userBadge === 'VYBE' && <span className="px-1.5 py-[1px] rounded bg-green-500/10 border border-green-500/20 text-[7px] font-black text-green-500 uppercase tracking-widest italic">Vybe</span>}
-                               {userBadge === 'NO_VYBE' && <span className="px-1.5 py-[1px] rounded bg-red-500/10 border border-red-500/20 text-[7px] font-black text-red-500 uppercase tracking-widest italic">No Vybe</span>}
-                               {userBadge === 'HEDGED' && <span className="px-1.5 py-[1px] rounded bg-purple-500/10 border border-purple-500/20 text-[7px] font-black text-purple-500 uppercase tracking-widest italic">Hedged</span>}
-                             </div>
-                             <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed bg-zinc-100 dark:bg-white/5 p-3 rounded-2xl rounded-tl-sm border border-zinc-200 dark:border-white/10 inline-block w-fit max-w-[95%] text-xs">
-                               {msg.text}
-                             </span>
-                             <div className="flex items-center gap-4 mt-0.5 ml-1">
-                               <button onClick={() => toggleLikeMessage(msg.id, nickname)} className={`text-[9px] font-bold flex items-center gap-1 transition-colors ${isLikedByMe ? 'text-fuchsia-500' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'}`}>
-                                 ♥ {msg.likedBy?.length > 0 && msg.likedBy.length}
-                               </button>
-                               <button onClick={() => setReplyingTo({ id: msg.id, user: msg.user })} className="text-[9px] font-bold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">Reply</button>
-                             </div>
-                           </div>
-                         </div>
-
-                         {/* Odpovědi ve vlákně */}
-                         {replies.length > 0 && (
-                           <div className="flex flex-col gap-3 ml-8 pl-3 border-l border-zinc-200 dark:border-white/10 mt-1">
-                             {replies.map((reply: any) => {
-                               const isReplyLikedByMe = reply.likedBy?.includes(nickname);
-                               return (
-                                 <div key={reply.id} className="flex items-start gap-2">
-                                   <Link href={`/user/${encodeURIComponent(reply.user)}`} className="mt-0.5 shrink-0 hover:opacity-80 transition-opacity">
-                                     {reply.avatar ? (
-                                       <img src={reply.avatar} alt={reply.user} className="w-5 h-5 rounded-full object-cover shadow-sm" />
-                                     ) : (
-                                       <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 opacity-80 shadow-sm" />
-                                     )}
-                                   </Link>
-                                   <div className="flex flex-col gap-0.5 w-full">
-                                      <div className="flex items-center gap-2">
-                                        <Link href={`/user/${encodeURIComponent(reply.user)}`} className="font-black uppercase tracking-widest text-[8px] text-zinc-400 hover:underline hover:text-zinc-300">
-                                          {reply.user}
-                                        </Link>
-                                        <span className="text-[7px] text-zinc-500 font-medium">{formatTimeAgo(reply.timestamp)}</span>
-                                      </div>
-                                      
-                                      <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed bg-zinc-100 dark:bg-white/5 p-2.5 rounded-xl rounded-tl-sm border border-zinc-200 dark:border-white/10 inline-block w-fit max-w-[100%] text-[10px]">
-                                        {reply.text}
-                                      </span>
-
-                                      {/* TLAČÍTKA U ODPOVĚDÍ (Like + Reply) */}
-                                      <div className="flex items-center gap-4 mt-0.5 ml-1">
-                                        <button onClick={() => toggleLikeMessage(reply.id, nickname)} className={`text-[9px] font-bold flex items-center gap-1 transition-colors ${isReplyLikedByMe ? 'text-fuchsia-500' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'}`}>
-                                          ♥ {reply.likedBy?.length > 0 && reply.likedBy.length}
-                                        </button>
-                                        <button onClick={() => setReplyingTo({ id: msg.id, user: reply.user })} className="text-[9px] font-bold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">Reply</button>
-                                      </div>
-
-                                   </div>
-                                 </div>
-                               );
-                             })}
-                           </div>
-                         )}
-                       </div>
-                     );
-                   })}
-                </div>
-
-                {/* Dno chatu s tlačítky */}
-                <div className="p-4 border-t border-zinc-200 dark:border-white/5 flex items-center justify-between bg-zinc-50 dark:bg-black/20">
-                   {sortedMainMessages.length > visibleCount ? (
-                     <button onClick={() => setVisibleCount(prev => prev + 10)} className="px-4 py-2 bg-white dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-900 dark:text-white rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border border-zinc-200 dark:border-white/10 shadow-sm">
-                       Show more ({sortedMainMessages.length - visibleCount} left)
-                     </button>
-                   ) : (
-                     <span className="text-[10px] text-zinc-400 font-medium italic">End of conversation</span>
-                   )}
-                   {visibleCount >= 5 && (
-                     <button onClick={scrollToChatTop} className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-fuchsia-500 flex items-center gap-1 transition-colors">
-                       Back to top <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 15l-6-6-6 6"/></svg>
-                     </button>
-                   )}
-                </div>
-              </div>
-              {/* --- END: POLYMARKET CHAT LOGIC --- */}
-
+              <button 
+                onClick={loginWithDiscord}
+                className="w-full flex items-center justify-center gap-3 bg-[#5865F2] text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-[#4752C4] transition-all active:scale-95"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/>
+                </svg>
+                Continue with Discord
+              </button>
             </div>
-          </div>
-          {rightSidebar}
-        </div>
-      ) : (
-        <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-8 py-8 px-4">
-          <div className="w-full lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            {sortedMarkets.map((market: any) => {
-              const currentPrices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5 };
-              const isResolved = !!marketStatus?.[market.id];
-              const winningOutcome = marketStatus?.[market.id];
 
-              return (
-                <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isResolved ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
-                  
-                  <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
-                    <img src={market.imageUrl || market.image_url} alt={market.title} className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isResolved ? 'grayscale' : 'group-hover:scale-105'}`} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" />
-                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${market.volumeUsd || market.volume_usd || 0}</div>
-                  </div>
-                  
-                  <div className="p-6 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
-                    <h2 className="text-lg font-black leading-tight text-zinc-900 dark:text-white uppercase italic mb-4 line-clamp-2 h-12">{market.title}</h2>
-                    
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-1.5 px-1">
-                        <span className="text-[10px] font-black text-green-500 uppercase italic">{((currentPrices?.vibe || 0.5) * 100).toFixed(0)}%</span>
-                        <span className="text-[10px] font-black text-red-500 uppercase italic">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span>
-                      </div>
-                      <div className="relative h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5">
-                        <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${(currentPrices?.vibe || 0.5) * 100}%` }} />
-                        <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }} />
-                      </div>
-                    </div>
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 h-px bg-white/10"></div>
+              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">or email</span>
+              <div className="flex-1 h-px bg-white/10"></div>
+            </div>
 
-                    <div className="mt-auto flex flex-col gap-2">
-                      {isResolved ? (
-                        <div className="w-full text-center py-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-xs text-center transition-colors">Vybe</div>
-                          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-xs text-center transition-colors">No Vybe</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            <div className="flex flex-col gap-3">
+              <input 
+                type="email" 
+                placeholder="name@example.com" 
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-sm font-medium text-white outline-none focus:border-fuchsia-500 transition-colors"
+              />
+              <button 
+                onClick={() => loginWithEmail(emailInput)}
+                className="w-full bg-white/5 border border-white/10 text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95"
+              >
+                Send Magic Link
+              </button>
+            </div>
+
+            <button 
+              onClick={() => setIsLoginModalOpen(false)}
+              className="w-full mt-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
           </div>
-          {rightSidebar}
         </div>
       )}
-      
-      {flexModalContent}
-      {loginModalContent}
-    </main>
-  );
-}
-
-export default function Home() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    }>
-      <HomeContent />
-    </Suspense>
+    </div>
   );
 }
