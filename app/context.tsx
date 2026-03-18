@@ -44,7 +44,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
-  // REÁLNÉ SUPABASE PŘIHLAŠOVÁNÍ
+  // REÁLNÉ SUPABASE PŘIHLAŠOVÁNÍ (Posloucháme server, ne lokální paměť)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSupabaseSession(session);
@@ -59,12 +59,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const handleSupabaseSession = async (session: any) => {
     if (session && session.user) {
-      // Robustní získání identifikátoru z X/Discordu
-      const userIdentifier = session.user.email || session.user.user_metadata?.preferred_username || session.user.id;
-      const generatedNickname = session.user.user_metadata?.preferred_username || session.user.user_metadata?.full_name || userIdentifier.split('@')[0];
-      const userAvatar = session.user.user_metadata?.avatar_url || '';
+      const userEmail = session.user.email;
+      const generatedNickname = userEmail.split('@')[0];
 
-      const { data: user } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', userIdentifier).single();
+      const { data: user } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', userEmail).single();
       
       let finalBalance = 500;
       let finalXp = 0;
@@ -74,25 +72,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         finalXp = user.xp_points || 0;
       } else {
         await supabase.from('users').insert([{
-          wallet_address: userIdentifier,
+          wallet_address: userEmail,
           nickname: generatedNickname,
           balance: 500,
           xp_points: 0
         }]);
       }
       
-      setWalletAddress(userIdentifier);
+      setWalletAddress(userEmail);
       setNickname(generatedNickname);
-      setAvatarUrl(userAvatar);
       setBalance(finalBalance);
       setUserXp(finalXp);
       setIsLoggedIn(true);
-      fetchUserBets(userIdentifier);
+      fetchUserBets(userEmail);
     } else {
       setIsLoggedIn(false);
       setWalletAddress('');
       setNickname('');
-      setAvatarUrl('');
       setBalance(0);
       setUserXp(0);
       setMyBets([]);
@@ -163,7 +159,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // --- REÁLNÉ PŘIHLAŠOVACÍ FUNKCE PŘES SUPABASE ---
 
   const loginWithEmail = async (email: string) => {
-    if(!email || !email.includes('@')) return showToast("Please enter a valid email", "error");
+    if(!email) return showToast("Please enter an email", "error");
     setIsAuthLoading(true);
     
     const { error } = await supabase.auth.signInWithOtp({
@@ -175,40 +171,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       showToast(`Error: ${error.message}`, "error");
       setIsAuthLoading(false);
     } else {
-      showToast("Magic Link sent! Check your inbox (and SPAM folder).", "success");
+      showToast("Magic Link sent! Check your inbox.", "success");
       setIsLoginModalOpen(false); 
     }
   };
 
   const loginWithTwitter = async () => {
-    setIsAuthLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({ 
-      provider: 'x', // <--- OPRAVA! TADY BYLO 'twitter' MÍSTO 'x'
-      options: { redirectTo: window.location.origin }
-    });
-    if (error) {
-      showToast(error.message, "error");
-      setIsAuthLoading(false);
-    }
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'twitter' });
+    if (error) showToast(error.message, "error");
   };
 
   const loginWithDiscord = async () => {
-    setIsAuthLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({ 
-      provider: 'discord',
-      options: { redirectTo: window.location.origin }
-    });
-    if (error) {
-      showToast(error.message, "error");
-      setIsAuthLoading(false);
-    }
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'discord' });
+    if (error) showToast(error.message, "error");
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('vybe_secure_session');
+    localStorage.removeItem('vybe_session'); 
     showToast("Logged out.", "info");
-    setTimeout(() => window.location.reload(), 500);
+    window.location.reload();
   };
 
   // -----------------------------------------------------------
@@ -243,39 +225,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     if (balance < amount) return showToast("Insufficient balance!", "error");
+    
     const currentPrice = marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5;
     const entryPrice = currentPrice * 100;
-    const earnedXp = amount * 10;
-    
-    const { data: currentUserData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', walletAddress).single();
-    const currentDbBalance = currentUserData ? currentUserData.balance : balance;
-    const currentDbXp = currentUserData ? (currentUserData.xp_points || 0) : userXp;
-    const newBalance = currentDbBalance - amount;
-    const newXp = currentDbXp + earnedXp;
 
-    setBalance(newBalance);
-    setUserXp(newXp);
-    
-    await supabase.from('users').update({ balance: newBalance, xp_points: newXp }).eq('wallet_address', walletAddress);
-
-    const tempBet = { id: crypto.randomUUID(), marketId, type, amount, entryPrice };
-    setMyBets(prev => [...prev, tempBet]);
-
-    setMarketPrices((prev: any) => {
-      const current = prev[marketId] || { vibe: 0.5, noVibe: 0.5 };
-      const shift = amount / 1000; 
-      let newVibe = type === 'VYBE' ? Math.min(0.95, current.vibe + shift) : Math.max(0.05, current.vibe - shift);
-      return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
+    // VOLÁME BEZPEČNOU FUNKCI V DATABÁZI (Místo dřívějšího unsafe updatu)
+    const { data, error } = await supabase.rpc('place_bet_secure', {
+      p_market_id: marketId,
+      p_user_address: walletAddress,
+      p_user_name: nickname,
+      p_bet_type: type,
+      p_amount: amount,
+      p_entry_price: entryPrice
     });
-
-    const { data, error } = await supabase.from('bets').insert([{ market_id: marketId, user_address: walletAddress, user_name: nickname, type: type, amount: amount, entry_price: entryPrice }]).select();
 
     if (error) {
       console.error("Supabase Error:", error);
-      showToast(`DB Error: ${error.message}`, "error");
-    } else if (data) {
-      setMyBets(prev => prev.map(b => b.id === tempBet.id ? { ...data[0], marketId: data[0].market_id, entryPrice: data[0].entry_price } : b));
-      showToast(`Successfully bet ${amount} USDC on ${type}! (+${earnedXp} XP)`, "success");
+      showToast(`Transaction failed: ${error.message}`, "error");
+    } else if (data && data.success) {
+      // Aktualizujeme čísla na obrazovce z dat, která nám bezpečně vrátila databáze
+      setBalance(data.new_balance);
+      setUserXp(data.new_xp);
+
+      const tempBet = { 
+        id: data.bet_id, 
+        marketId, 
+        type, 
+        amount, 
+        entryPrice 
+      };
+      setMyBets(prev => [...prev, tempBet]);
+
+      setMarketPrices((prev: any) => {
+        const current = prev[marketId] || { vibe: 0.5, noVibe: 0.5 };
+        const shift = amount / 1000; 
+        let newVibe = type === 'VYBE' ? Math.min(0.95, current.vibe + shift) : Math.max(0.05, current.vibe - shift);
+        return { ...prev, [marketId]: { vibe: newVibe, noVibe: 1 - newVibe } };
+      });
+
+      showToast(`Successfully bet ${amount} USDC on ${type}!`, "success");
     }
   };
 
