@@ -1,5 +1,6 @@
 import "./globals.css";
 import { AppProvider } from "./context";
+import Navbar from "./Navbar"; // PŘIDÁNO
 
 export const metadata = {
   title: "Vybecheck",
@@ -9,9 +10,9 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-zinc-950 text-white antialiased">
+      <body className="bg-zinc-50 dark:bg-[#0e0e12] text-zinc-900 dark:text-white antialiased transition-colors duration-500 relative">
         <AppProvider>
-          {/* Zde nesmí být žádný jiný Modal ani Header, vše obstará page.tsx */}
+          <Navbar /> {/* PŘIDÁNO SEM */}
           {children}
         </AppProvider>
       </body>
