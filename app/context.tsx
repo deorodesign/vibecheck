@@ -16,11 +16,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [balance, setBalance] = useState(0);
   const [userXp, setUserXp] = useState(0);
   const [marketPrices, setMarketPrices] = useState<any>({});
-  
-  // --- ZÁKLADNÍ OPRAVA PRO VYČIŠTĚNÍ STAVU ---
   const [myBets, setMyBets] = useState<any[]>([]);
-  // ------------------------------------------
-
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [selectedMarket, setSelectedMarket] = useState<any>(null);
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -55,10 +51,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setBalance(0);
     setUserXp(0);
     setAvatarUrl('');
-    setMyBets([]); // <--- TOTÁLNÍ RESET SÁZEK PREEDCHODZÍHO UŽIVATELE
+    setMyBets([]); 
     setSelectedMarket(null);
   }, []);
-  // ------------------------------------------------------------
 
   // REÁLNÉ SUPABASE PŘIHLAŠOVÁNÍ (Posloucháme server)
   useEffect(() => {
@@ -74,9 +69,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchUserBets = useCallback(async (address: string) => {
-    // --- OPRAVA: Vynutit vyčištění starých sázek před novým načtením ---
+    // Vynutit vyčištění starých sázek před novým načtením
     setMyBets([]); 
-    // ----------------------------------------------------------------
     const { data, error } = await supabase.from('bets').select('*').eq('user_address', address);
     if (error) {
       console.error("Error fetching bets:", error);
@@ -96,8 +90,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (session && session.user) {
       const userEmail = session.user.email;
       
-      // Pokusíme se načíst profil. Díky našemu Database Triggeru už nemusíme
-      // profil v Reactu zakládat, databáze to udělá za nás.
+      // Pokusíme se načíst profil vytvořený databázovým Triggerem
       const { data: user, error } = await supabase
         .from('users')
         .select('nickname, balance, xp_points, avatar_url')
@@ -105,11 +98,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .single();
       
       if (error) {
-        // Pokud trigger selhal nebo profil ještě není (málo pravděpodobné)
         console.warn("User profile not found in DB yet, trigger might be delayed.");
-        // Zobrazíme fallbacky, ale nezakládáme profil unsafe cestou z frontendu
         setNickname(userEmail.split('@')[0]);
         setBalance(0); 
+        setUserXp(0);
       } else if (user) {
         setNickname(user.nickname || userEmail.split('@')[0]);
         setBalance(user.balance || 0);
@@ -128,7 +120,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Načtení marketů a cen
+      // 1. Načtení marketů a cen
       const { data: marketsData } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
       if (marketsData) {
         setMarkets(marketsData.map(m => ({
@@ -137,14 +129,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         let prices: any = {};
         let statuses: any = {};
         marketsData.forEach((m: any) => {
-          prices[m.id] = { vibe: 0.5, noVibe: 0.5 }; // Fallback ceny, měly by se načítat dynamicky
+          prices[m.id] = { vibe: 0.5, noVibe: 0.5 };
           if (m.is_resolved) statuses[m.id] = m.winning_outcome;
         });
         setMarketPrices(prices);
         setMarketStatus(statuses);
       }
 
-      // Načtení chatu
+      // 2. Načtení chatu
       const { data: chatData } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
       if (chatData) {
         setChatMessages(chatData.map(c => ({
@@ -161,18 +153,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })));
       }
 
-      // Načtení leaderboardu
-      const { data: usersData } = await supabase.from('users').select('*').order('xp_points', { ascending: false }).limit(5);
+      // 3. Načtení dynamického Leaderboardu (TOP 10 Vybers)
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('*')
+        .order('xp_points', { ascending: false })
+        .limit(10);
+        
       if (usersData) {
-        const colors = ['from-yellow-400 to-yellow-600', 'from-zinc-300 to-zinc-500', 'from-orange-400 to-orange-600', 'from-blue-400 to-blue-600', 'from-green-400 to-green-600'];
+        const colors = [
+          'from-yellow-400 to-yellow-600', // 1. místo
+          'from-zinc-300 to-zinc-500',     // 2. místo
+          'from-orange-400 to-orange-600', // 3. místo
+          'from-blue-400 to-blue-600',     // 4. místo
+          'from-green-400 to-green-600'    // 5. místo
+        ];
+        
         setDynamicLeaderboard(usersData.map((u, i) => ({
           id: u.wallet_address || `unknown-${i}`,
           rank: i + 1,
-          name: u.nickname || 'Unknown User',
+          name: u.nickname || 'Anonymous Vyber',
           address: u.wallet_address ? `${u.wallet_address.substring(0, 4)}...${u.wallet_address.slice(-4)}` : '0x...',
           points: u.xp_points || 0, 
           avatar: u.avatar_url || '',
-          color: colors[i] || 'from-fuchsia-400 to-fuchsia-600'
+          color: colors[i] || 'from-fuchsia-400 to-fuchsia-600' // Ostatní budou fialoví
         })));
       }
     };
@@ -211,17 +215,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleLogout = async () => {
-    // Před odhlášením vyčistíme stav v Reactu
     resetAppStaleState();
     await supabase.auth.signOut();
     localStorage.removeItem('vybe_session'); 
     showToast("Logged out.", "info");
-    // Vynutíme tvrdý refresh pro jistotu
     window.location.reload();
   };
 
   const sendChatMessage = async (marketId: number, text: string, user: string, avatar: string, parentId: string | null = null) => {
-    // ... (chat logika zůstává stejná)
+    const userBetsForMarket = myBets.filter((bet: any) => bet.marketId === marketId);
+    let finalBetType = null;
+    if (userBetsForMarket.length > 0) {
+      const hasVybe = userBetsForMarket.some(b => b.type === 'VYBE');
+      const hasNoVybe = userBetsForMarket.some(b => b.type === 'NO_VYBE');
+      if (hasVybe && hasNoVybe) finalBetType = 'HEDGED';
+      else if (hasVybe) finalBetType = 'VYBE';
+      else if (hasNoVybe) finalBetType = 'NO_VYBE';
+    }
+    const localId = crypto.randomUUID();
+    const tempMessage = { id: localId, marketId, parentId, text, user, avatar, betType: finalBetType, timestamp: new Date().toISOString(), color: 'text-fuchsia-500', likedBy: [] };
+    setChatMessages((prev: any) => [...prev, tempMessage]);
+    await supabase.from('chat_messages').insert([{ market_id: marketId, parent_id: parentId, user_name: user, avatar_url: avatar, text: text, bet_type: finalBetType, color: 'text-fuchsia-500' }]);
   };
 
   const toggleLikeMessage = (messageId: string, userName: string) => {
@@ -242,7 +256,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const currentPrice = marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5;
     const entryPrice = currentPrice * 100;
 
-    // VOLÁME BEZPEČNOU FUNKCI V DATABÁZI
     const { data, error } = await supabase.rpc('place_bet_secure', {
       p_market_id: marketId,
       p_user_address: walletAddress,
@@ -256,7 +269,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error("Supabase RPC Error:", error);
       showToast(`Transaction failed: ${error.message}`, "error");
     } else if (data && data.success) {
-      // Aktualizujeme čísla z dat z databáze
       setBalance(data.new_balance);
       setUserXp(data.new_xp);
 
