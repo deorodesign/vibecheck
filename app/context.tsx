@@ -105,7 +105,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const fetchData = async () => {
       const { data: marketsData } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
-      const { data: allBets } = await supabase.from('bets').select('market_id, type, amount');
+      
+      // OPRAVA A: Načítáme i status, abychom z grafu vyloučili "cashed_out" sázky
+      const { data: allBets } = await supabase.from('bets').select('market_id, type, amount, status');
 
       if (marketsData) {
         setMarkets(marketsData.map(m => ({ ...m, imageUrl: m.image_url, volumeUsd: m.volume_usd, volume: `$${m.volume_usd || 0}`, resolutionSource: m.resolution_source })));
@@ -115,6 +117,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         if (allBets) {
           allBets.forEach((b: any) => {
+            // Ignorujeme sázky, které už si hráči vybrali zpět (prodali je)
+            if (b.status === 'cashed_out') return;
+            
             if (!pools[b.market_id]) pools[b.market_id] = { vybe: 0, noVybe: 0 };
             if (b.type === 'VYBE') pools[b.market_id].vybe += Number(b.amount);
             if (b.type === 'NO_VYBE') pools[b.market_id].noVybe += Number(b.amount);
@@ -154,17 +159,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       betSubscription = supabase.channel('realtime-bets')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bets' }, (payload) => {
-          const newBet = payload.new;
-          setMarketPrices((prev: any) => {
-            const current = prev[newBet.market_id] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
-            const updatedVybePool = current.vybePool + (newBet.type === 'VYBE' ? Number(newBet.amount) : 0);
-            const updatedNoVybePool = current.noVybePool + (newBet.type === 'NO_VYBE' ? Number(newBet.amount) : 0);
-            const LIQUIDITY = 100;
-            let v = (updatedVybePool + LIQUIDITY) / (updatedVybePool + updatedNoVybePool + (LIQUIDITY * 2));
-            v = Math.max(0.01, Math.min(0.99, v));
-            return { ...prev, [newBet.market_id]: { vibe: v, noVibe: 1 - v, vybePool: updatedVybePool, noVybePool: updatedNoVybePool } };
-          });
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
+          // Aby se grafy měnily live i při Cash Outu, musíme přepočítat data při jakékoliv změně sázek (INSERT i UPDATE)
+          fetchData(); 
         }).subscribe();
     };
     
@@ -195,12 +192,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendChatMessage = async (marketId: number, text: string, user: string, avatar: string, parentId: string | null = null) => {
-    const userBetsForMarket = myBets.filter((bet: any) => bet.marketId === marketId);
+    // V chat odznaku kontrolujeme jen aktivní sázky
+    const activeUserBetsForMarket = myBets.filter((bet: any) => bet.marketId === marketId && (!bet.status || bet.status === 'pending'));
     let finalBetType = null;
-    if (userBetsForMarket.length > 0) {
-      if (userBetsForMarket.some(b => b.type === 'VYBE') && userBetsForMarket.some(b => b.type === 'NO_VYBE')) finalBetType = 'HEDGED';
-      else if (userBetsForMarket.some(b => b.type === 'VYBE')) finalBetType = 'VYBE';
-      else if (userBetsForMarket.some(b => b.type === 'NO_VYBE')) finalBetType = 'NO_VYBE';
+    if (activeUserBetsForMarket.length > 0) {
+      if (activeUserBetsForMarket.some(b => b.type === 'VYBE') && activeUserBetsForMarket.some(b => b.type === 'NO_VYBE')) finalBetType = 'HEDGED';
+      else if (activeUserBetsForMarket.some(b => b.type === 'VYBE')) finalBetType = 'VYBE';
+      else if (activeUserBetsForMarket.some(b => b.type === 'NO_VYBE')) finalBetType = 'NO_VYBE';
     }
     const tempMessage = { id: crypto.randomUUID(), marketId, parentId, text, user, avatar, betType: finalBetType, timestamp: new Date().toISOString(), color: 'text-fuchsia-500', likedBy: [] };
     setChatMessages((prev: any) => [...prev, tempMessage]);
@@ -231,17 +229,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else if (data && data.success) {
       setBalance(data.new_balance);
       setUserXp(data.new_xp);
-      setMyBets(prev => [...prev, { id: data.bet_id, marketId, type, amount, entryPrice }]);
+      setMyBets(prev => [...prev, { id: data.bet_id, marketId, type, amount, entryPrice, status: 'pending' }]);
       showToast(`Successfully bet ${amount} USDC!`, "success");
     }
   };
 
-  // --- NOVÁ FUNKCE: PŘEDČASNÝ VÝBĚR (CASH OUT) ---
   const cashOutBet = async (betId: number, currentPriceRaw: number) => {
     const betToSell = myBets.find(b => b.id === betId);
     if (!betToSell) return;
 
-    // Matematika prodeje: Podíl (Shares) * Aktuální cena
     const shares = betToSell.amount / (betToSell.entryPrice / 100);
     const cashOutValue = shares * (currentPriceRaw / 100);
 
@@ -254,10 +250,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       showToast(`Cash out failed: ${error.message}`, "error");
     } else if (data && data.success) {
-      // Aktualizujeme UI
       setBalance(data.new_balance);
-      
-      // Přehodíme sázku z "pending" na "cashed_out" ať zmizí z aktivních
       setMyBets(prev => prev.map(b => b.id === betId ? { ...b, status: 'cashed_out', payout: cashOutValue } : b));
       
       const profit = cashOutValue - betToSell.amount;

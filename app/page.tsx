@@ -88,9 +88,9 @@ function HomeContent() {
 
   const getUserBetStatus = (userName: string, marketId: number) => {
     if (userName !== nickname) return null;
-    const userBetsOnThisMarket = myBets.filter((bet: any) => bet.marketId === marketId);
-    const hasVybe = userBetsOnThisMarket.some((b: any) => b.type === 'VYBE');
-    const hasNoVibe = userBetsOnThisMarket.some((b: any) => b.type === 'NO_VYBE');
+    const activeUserBetsOnThisMarket = myBets.filter((bet: any) => bet.marketId === marketId && (!bet.status || bet.status === 'pending'));
+    const hasVybe = activeUserBetsOnThisMarket.some((b: any) => b.type === 'VYBE');
+    const hasNoVibe = activeUserBetsOnThisMarket.some((b: any) => b.type === 'NO_VYBE');
     if (hasVybe && hasNoVibe) return 'HEDGED';
     if (hasVybe) return 'VYBE';
     if (hasNoVibe) return 'NO_VYBE';
@@ -137,7 +137,9 @@ function HomeContent() {
   const isResolved = selectedMarket ? !!marketStatus[selectedMarket.id] : false;
   const winningOutcome = selectedMarket ? marketStatus[selectedMarket.id] : null;
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
-  const marketBetTotal = selectedMarket ? myBets.filter((b: any) => b.marketId === selectedMarket.id).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
+  
+  // OPRAVA B: Sečíst jen sázky, které NEBYLY prodány (pending)
+  const marketBetTotal = selectedMarket ? myBets.filter((b: any) => b.marketId === selectedMarket.id && (!b.status || b.status === 'pending')).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
 
   const headerContent = (
     <div className="sticky top-0 z-50 w-full flex flex-col items-center px-4 md:px-8 pt-6 pb-4 bg-zinc-50/90 dark:bg-[#0e0e12]/90 backdrop-blur-xl border-b border-zinc-200 dark:border-white/5 transition-colors duration-500">
@@ -375,7 +377,6 @@ function HomeContent() {
                                 <button onClick={() => setReplyingTo({ id: msg.id, user: msg.user })} className="text-[9px] font-bold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">Reply</button>
                               </div>
                               
-                              {/* OPRAVENÁ BARVA, LIKES A KLIKACÍ JMÉNA U ODPOVĚDÍ VE VLÁKNĚ */}
                               {replies.length > 0 && (
                                 <div className="flex flex-col gap-3 ml-8 pl-3 border-l border-zinc-200 dark:border-white/10 mt-1">
                                   {replies.map((reply: any) => (
