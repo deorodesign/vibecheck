@@ -25,7 +25,7 @@ async function getCroppedImg(imageSrc: string, pixelCrop: { x: number; y: number
 }
 
 export default function ProfilePage() {
-  const { balance, userXp, myBets, markets, isAuthLoading, nickname, avatarUrl, walletAddress, showToast } = useAppContext();
+  const { balance, userXp, myBets, markets, marketPrices, isAuthLoading, nickname, avatarUrl, walletAddress, showToast, cashOutBet } = useAppContext();
   
   const [payoutAddress, setPayoutAddress] = useState('');
   const [savingWallet, setSavingWallet] = useState(false);
@@ -146,7 +146,7 @@ export default function ProfilePage() {
   });
 
   const activeBetsList = enrichedBets.filter((b: any) => b.status === 'pending' || !b.status);
-  const resolvedBetsList = enrichedBets.filter((b: any) => b.status === 'won' || b.status === 'lost');
+  const resolvedBetsList = enrichedBets.filter((b: any) => b.status === 'won' || b.status === 'lost' || b.status === 'cashed_out');
 
   const totalVolume = enrichedBets.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
   const activeBetsValue = activeBetsList.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
@@ -154,15 +154,15 @@ export default function ProfilePage() {
   const currentPortfolioValue = safeBalance + activeBetsValue;
 
   const netReturn = baseStartingBalance > 0 ? ((currentPortfolioValue - baseStartingBalance) / baseStartingBalance) * 100 : 0;
-  const wins = resolvedBetsList.filter((b: any) => b.status === 'won').length;
-  const losses = resolvedBetsList.filter((b: any) => b.status === 'lost').length;
+  
+  const wins = resolvedBetsList.filter((b: any) => b.status === 'won' || (b.status === 'cashed_out' && b.payout > b.amount)).length;
+  const losses = resolvedBetsList.filter((b: any) => b.status === 'lost' || (b.status === 'cashed_out' && b.payout <= b.amount)).length;
 
   if (isAuthLoading) return <div className="min-h-screen bg-zinc-50 dark:bg-[#0a0a0a] flex items-center justify-center font-black uppercase tracking-widest text-fuchsia-500 italic">Loading Profile...</div>;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-[#0a0a0a] text-zinc-900 dark:text-white font-mono transition-colors duration-500 p-4 md:p-10">
       
-      {/* CROPPER OVERLAY */}
       {imageSrc && (
         <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-md">
           <div className="relative w-full max-w-sm h-[40vh] bg-zinc-900 rounded-3xl overflow-hidden mb-6 shadow-2xl">
@@ -189,13 +189,10 @@ export default function ProfilePage() {
           </h1>
         </header>
 
-        {/* HLAVNÍ PROFILOVÁ KARTA */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-6 md:p-8 shadow-lg flex flex-col justify-between gap-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-fuchsia-500/10 to-transparent rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
           
-          {/* OPRAVA Z-INDEXU: Zvýšeno na z-30, aby tooltip nepřekrýval spodní div */}
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left relative z-30">
-            
             <div className="relative group shrink-0">
               <div className="w-24 h-24 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex items-center justify-center text-4xl sm:text-3xl font-black shadow-lg text-white border-4 border-white dark:border-[#0a0a0a] overflow-hidden">
                 {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : (nickname ? nickname.charAt(0).toUpperCase() : 'V')}
@@ -234,19 +231,12 @@ export default function ProfilePage() {
                     <svg className="w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </p>
                   
-                  {/* XP PRAVIDLA TOOLTIP S NOVOU LOGIKOU */}
                   {showXpRules && (
                     <div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-2 w-72 p-4 bg-zinc-900 dark:bg-black border border-zinc-700 dark:border-zinc-800 rounded-xl shadow-2xl z-50 animate-in fade-in zoom-in-95">
                       <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 border-b border-zinc-800 pb-2">How XP Works</h4>
                       <ul className="text-xs text-zinc-300 font-sans space-y-2">
-                        <li className="flex items-start gap-2">
-                          <span className="text-fuchsia-500 mt-0.5 font-bold">▪</span>
-                          <span><strong>+1 XP</strong> for every 1 USDC traded (Volume).</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-green-500 mt-0.5 font-bold">▪</span>
-                          <span><strong>+10 XP</strong> for every 1 USDC of net profit.</span>
-                        </li>
+                        <li className="flex items-start gap-2"><span className="text-fuchsia-500 mt-0.5 font-bold">▪</span><span><strong>+1 XP</strong> for every 1 USDC traded (Volume).</span></li>
+                        <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5 font-bold">▪</span><span><strong>+10 XP</strong> for every 1 USDC of net profit.</span></li>
                       </ul>
                       <p className="text-[10px] text-fuchsia-400 mt-3 font-bold italic">Smart trading beats big spending.</p>
                       <p className="text-[9px] text-zinc-500 mt-2 pt-2 border-t border-zinc-800 uppercase tracking-widest">Top 5 players win monthly airdrops.</p>
@@ -281,7 +271,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* PAYOUT WALLET KARTA */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-6 md:p-8 shadow-md">
           <div className="mb-6">
             <h3 className="text-lg font-black uppercase italic tracking-widest mb-2">Payout Wallet</h3>
@@ -298,7 +287,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ACTIVE BETS KARTA */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-6 md:p-8 shadow-md">
           <h3 className="text-lg font-black uppercase italic tracking-widest mb-6">My Active Bets</h3>
           <div className="space-y-4">
@@ -308,26 +296,52 @@ export default function ProfilePage() {
                 <Link href="/" className="px-6 py-3 rounded-xl bg-zinc-900 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">Start Trading</Link>
               </div>
             ) : (
-              activeBetsList.map((bet: any) => (
-                <div key={bet.id} className="flex justify-between items-center p-4 sm:p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-                  <div className="flex items-center gap-4">
-                    {(bet.markets?.image_url || bet.markets?.imageUrl) && <img src={bet.markets?.image_url || bet.markets?.imageUrl} alt="" className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-zinc-200 dark:border-zinc-800 flex-shrink-0" />}
-                    <div>
-                      <p className="font-bold text-xs sm:text-sm line-clamp-1">{bet.markets?.title || 'Unknown Market'}</p>
-                      <p className="text-[9px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Bet: <span className={bet.type === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{bet.type}</span></p>
+              activeBetsList.map((bet: any) => {
+                const currentPriceObj = marketPrices[bet.marketId];
+                const currentPriceRaw = currentPriceObj ? (bet.type === 'VYBE' ? currentPriceObj.vibe : currentPriceObj.noVibe) : 0.5;
+                const currentPrice = currentPriceRaw * 100;
+                
+                const entryPrice = bet.entryPrice || 50;
+                const shares = bet.amount / (entryPrice / 100);
+                const currentValue = shares * currentPriceRaw;
+                const profitLoss = currentValue - bet.amount;
+
+                return (
+                  <div key={bet.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-4 sm:p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors gap-4">
+                    <div className="flex items-center gap-4">
+                      {(bet.markets?.image_url || bet.markets?.imageUrl) && <img src={bet.markets?.image_url || bet.markets?.imageUrl} alt="" className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-zinc-200 dark:border-zinc-800 flex-shrink-0" />}
+                      <div>
+                        <p className="font-bold text-xs sm:text-sm line-clamp-1">{bet.markets?.title || 'Unknown Market'}</p>
+                        <p className="text-[9px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Bet: <span className={bet.type === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{bet.type}</span></p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-auto w-full">
+                      <div className="text-right">
+                        <p className="font-black text-sm font-mono">{bet.amount} USDC</p>
+                        <p className={`text-[9px] font-mono mt-1 ${profitLoss > 0 ? 'text-green-500' : profitLoss < 0 ? 'text-red-500' : 'text-zinc-500'}`}>
+                          Value: ${currentValue.toFixed(2)}
+                        </p>
+                      </div>
+                      
+                      <button 
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to cash out for ${currentValue.toFixed(2)} USDC?`)) {
+                            cashOutBet(bet.id, currentPrice);
+                          }
+                        }}
+                        className="px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-[10px] rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md"
+                      >
+                        SELL
+                      </button>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-black text-sm font-mono">{bet.amount} USDC</p>
-                    <p className="text-[9px] font-mono text-zinc-500 mt-1">Entry: {(bet.entryPrice || 50).toFixed(0)}¢</p>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
 
-        {/* HISTORY */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-6 md:p-8 shadow-md">
           <h3 className="text-lg font-black uppercase italic tracking-widest mb-6">History</h3>
           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
@@ -340,11 +354,15 @@ export default function ProfilePage() {
                 <div key={bet.id} className="flex justify-between items-center p-4 sm:p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 opacity-80 hover:opacity-100 transition-opacity">
                   <div>
                     <p className="font-bold text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 line-clamp-1">{bet.markets?.title || 'Unknown Market'}</p>
-                    <p className="text-[9px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">{bet.type} | <span className={bet.status === 'won' ? 'text-green-500' : 'text-red-500'}>{bet.status}</span></p>
+                    <p className="text-[9px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">
+                      {bet.type} | <span className={bet.status === 'won' ? 'text-green-500' : bet.status === 'cashed_out' ? 'text-blue-500' : 'text-red-500'}>{bet.status === 'cashed_out' ? 'SOLD' : bet.status}</span>
+                    </p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="font-black text-xs sm:text-sm text-zinc-500 font-mono">{bet.amount} USDC</p>
-                    <p className={`text-[9px] sm:text-[10px] font-black font-mono tracking-widest mt-1 ${bet.status === 'won' ? 'text-green-500' : 'text-red-500'}`}>{bet.status === 'won' ? '+' : ''}{(bet.payout || 0).toFixed(2)} USDC</p>
+                    <p className={`text-[9px] sm:text-[10px] font-black font-mono tracking-widest mt-1 ${bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? 'text-green-500' : 'text-red-500'}`}>
+                      {bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? '+' : ''}{(bet.payout || 0).toFixed(2)} USDC
+                    </p>
                   </div>
                 </div>
               ))
@@ -353,7 +371,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* AVATAR UPLOAD MODAL */}
       {isAvatarModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setIsAvatarModalOpen(false)}>
           <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-8 max-w-sm w-full shadow-2xl flex flex-col gap-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
@@ -375,7 +392,6 @@ export default function ProfilePage() {
                 <div className="flex-grow border-t border-zinc-200 dark:border-white/10"></div>
               </div>
               
-              {/* OPRAVA: Reset fotky při zadání URL */}
               <input 
                 type="text" 
                 value={avatarInputUrl} 
