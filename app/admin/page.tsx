@@ -50,14 +50,6 @@ export default function AdminPanel() {
   const { isLoggedIn, isAuthLoading, walletAddress } = useAppContext();
   const [isAdminVerified, setIsAdminVerified] = useState(false);
 
-  // --- ZDE SI NASTAV SVŮJ ADMIN E-MAIL NEBO PENĚŽENKU ---
-  const ADMIN_WALLETS = [
-    'twitter_user@vybecheck.xyz', 
-    'discord_user@vybecheck.xyz',
-    'tvuj.skutecny.email@gmail.com',
-    '0xTvojeSkutecnaPenezenka'
-  ];
-
   const [markets, setMarkets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -76,15 +68,44 @@ export default function AdminPanel() {
   const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null);
 
   useEffect(() => {
-    if (!isAuthLoading) {
-      if (isLoggedIn && ADMIN_WALLETS.includes(walletAddress)) {
-        setIsAdminVerified(true);
-        fetchMarkets();
-      } else {
-        setLoading(false); 
+    const verifyAdminSafely = async () => {
+      if (isAuthLoading) return;
+      
+      if (!isLoggedIn) {
+        setLoading(false);
+        return;
       }
-    }
-  }, [isAuthLoading, isLoggedIn, walletAddress]);
+
+      try {
+        // 1. KROK: Získáme bezpečně ID přihlášeného uživatele z backend tokenu (nelze zfalšovat na frontendu)
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+          setLoading(false);
+          return;
+        }
+
+        // 2. KROK: Podíváme se do tabulky public.users, jestli má tento uživatel roli ADMIN
+        const { data: profile, error: profileError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (profile && profile.role === 'ADMIN') {
+          setIsAdminVerified(true);
+          fetchMarkets(); // Načteme data, protože uživatel je legit admin
+        } else {
+          setLoading(false); // Není admin, necháme ho spadnout do "Access Denied" obrazovky
+        }
+      } catch (error) {
+        console.error("Critical error during admin verification:", error);
+        setLoading(false);
+      }
+    };
+
+    verifyAdminSafely();
+  }, [isAuthLoading, isLoggedIn]); // walletAddress už nepotřebujeme sledovat pro bezpečnost
 
   const fetchMarkets = async () => {
     const { data } = await supabase
@@ -196,7 +217,6 @@ export default function AdminPanel() {
     setUploading(false);
   };
 
-  // OPRAVA: Při vyhodnocení výherce mu teď přičteme nejen USDC, ale i +500 XP
   const resolveMarket = async (marketId: number, winningOutcome: 'VYBE' | 'NO_VYBE') => {
     if (!window.confirm(`Are you sure you want to resolve this market as ${winningOutcome}?`)) return;
     try {
@@ -212,7 +232,6 @@ export default function AdminPanel() {
           await supabase.from('bets').update({ status: isWinner ? 'won' : 'lost', payout: payoutAmount }).eq('id', bet.id);
 
           if (isWinner) {
-            // Najdeme uživatele a přidáme mu USDC výhru a +500 XP za úspěch
             const { data: userData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', bet.user_address).single();
             if (userData) {
               await supabase.from('users').update({
@@ -246,7 +265,7 @@ export default function AdminPanel() {
     }
   };
 
-  if (isAuthLoading || (loading && isAdminVerified)) {
+  if (isAuthLoading || (loading && !isAdminVerified)) {
     return <div className="min-h-screen bg-zinc-950 text-zinc-500 p-10 font-mono uppercase text-center py-32 flex flex-col items-center justify-center gap-4">
       <div className="w-8 h-8 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
       Verifying Admin Access...
@@ -295,7 +314,7 @@ export default function AdminPanel() {
           </div>
           <div className="text-right">
              <p className="text-[10px] text-green-500 uppercase tracking-widest font-bold">Admin Verified ✓</p>
-             <p className="text-xs text-zinc-500">{walletAddress}</p>
+             <p className="text-xs text-zinc-500">{walletAddress || "Authenticated"}</p>
           </div>
         </header>
 
