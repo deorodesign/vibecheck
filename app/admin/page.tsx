@@ -47,7 +47,8 @@ async function getCroppedImg(
 }
 
 export default function AdminPanel() {
-  const { isLoggedIn, isAuthLoading, walletAddress } = useAppContext();
+  // PŘIDÁNO: showToast
+  const { isLoggedIn, isAuthLoading, walletAddress, showToast } = useAppContext();
   const [isAdminVerified, setIsAdminVerified] = useState(false);
 
   const [markets, setMarkets] = useState<any[]>([]);
@@ -77,7 +78,6 @@ export default function AdminPanel() {
       }
 
       try {
-        // 1. KROK: Získáme bezpečně ID přihlášeného uživatele z backend tokenu (nelze zfalšovat na frontendu)
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
@@ -85,7 +85,6 @@ export default function AdminPanel() {
           return;
         }
 
-        // 2. KROK: Podíváme se do tabulky public.users, jestli má tento uživatel roli ADMIN
         const { data: profile, error: profileError } = await supabase
           .from('users')
           .select('role')
@@ -94,9 +93,9 @@ export default function AdminPanel() {
 
         if (profile && profile.role === 'ADMIN') {
           setIsAdminVerified(true);
-          fetchMarkets(); // Načteme data, protože uživatel je legit admin
+          fetchMarkets(); 
         } else {
-          setLoading(false); // Není admin, necháme ho spadnout do "Access Denied" obrazovky
+          setLoading(false); 
         }
       } catch (error) {
         console.error("Critical error during admin verification:", error);
@@ -105,7 +104,7 @@ export default function AdminPanel() {
     };
 
     verifyAdminSafely();
-  }, [isAuthLoading, isLoggedIn]); // walletAddress už nepotřebujeme sledovat pro bezpečnost
+  }, [isAuthLoading, isLoggedIn]);
 
   const fetchMarkets = async () => {
     const { data } = await supabase
@@ -162,9 +161,11 @@ export default function AdminPanel() {
     }
   };
 
+  // VYLEPŠENÉ UKLÁDÁNÍ DO DATABÁZE
   const saveMarket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle) return alert("Market title is required!");
+    if (!newTitle) return showToast("Market title is required!", "error");
+    
     setUploading(true);
     let finalImageUrl = newImageUrl;
     
@@ -182,7 +183,7 @@ export default function AdminPanel() {
         }
       } catch (err: any) {
         console.error("Image upload failed:", err);
-        alert("Image upload failed: " + err.message);
+        showToast("Image upload failed: " + err.message, "error");
         setUploading(false);
         return;
       }
@@ -194,22 +195,42 @@ export default function AdminPanel() {
       image_url: finalImageUrl,
       rules: newRules,
       resolution_source: newRules,
-      volume_usd: Number(fakeVolume) || 0
+      volume_usd: Number(fakeVolume) || 0,
+      is_resolved: false
     };
     
+    console.log("Odesílám tato data do Supabase:", marketData);
+
     if (editingId) {
-      const { error } = await supabase.from('markets').update(marketData).eq('id', editingId);
-      if (error) alert("Error updating market: " + error.message);
-      else {
-        alert("Market updated!");
+      // UPDATE
+      const { data, error } = await supabase.from('markets').update(marketData).eq('id', editingId).select();
+      if (error) {
+        console.error("Supabase UPDATE Error:", error);
+        showToast("Database error: " + error.message, "error");
+      } else {
+        console.log("Supabase úspěšně aktualizovala řádek:", data);
+        showToast("Market updated successfully!", "success");
         cancelEdit();
         fetchMarkets();
       }
     } else {
-      const { error } = await supabase.from('markets').insert([{ ...marketData, is_resolved: false }]);
-      if (error) alert("Error creating market: " + error.message);
-      else {
-        alert("Market deployed successfully!");
+      // INSERT (Nový market)
+      const { data, error } = await supabase.from('markets').insert([marketData]).select();
+      
+      if (error) {
+        console.error("Supabase INSERT Error:", error);
+        showToast("Database rejected it: " + error.message, "error");
+      } else {
+        console.log("Supabase úspěšně vytvořila tento nový řádek:", data);
+        
+        // Zde odhalíme RLS chybu: Pokud Supabase vrátí prázdné pole, znamená to, že data sice uložila, ale hned je skryla
+        if (data && data.length === 0) {
+           console.warn("POZOR: Supabase vložila data, ale vrátila prázdné pole []. Zkontroluj RLS politiky, pravděpodobně ti nedovolují číst nově vložené řádky!");
+           showToast("Warning: Inserted but invisible (RLS issue)", "error");
+        } else {
+           showToast("Market deployed successfully!", "success");
+        }
+
         cancelEdit();
         fetchMarkets();
       }
@@ -242,10 +263,10 @@ export default function AdminPanel() {
           }
         }
       }
-      alert(`Market resolved! Payouts & XP calculated and distributed.`);
+      showToast(`Market resolved! Payouts distributed.`, "success");
       fetchMarkets();
     } catch (error) {
-      alert("Error resolving the market.");
+      showToast("Error resolving the market.", "error");
     }
   };
 
@@ -258,10 +279,10 @@ export default function AdminPanel() {
       await supabase.from('bets').delete().eq('market_id', marketId);
       const { error } = await supabase.from('markets').delete().eq('id', marketId);
       if (error) throw error;
-      alert("Market and its bets deleted successfully.");
+      showToast("Market deleted successfully.", "success");
       fetchMarkets();
     } catch (error: any) {
-      alert("Error deleting market: " + error.message);
+      showToast("Error deleting market: " + error.message, "error");
     }
   };
 
@@ -389,30 +410,6 @@ export default function AdminPanel() {
             </div>
           ))}
           {activeMarkets.length === 0 && <p className="text-zinc-600 font-bold uppercase tracking-widest text-[10px] text-center">No active markets</p>}
-        </section>
-
-        <section className="space-y-4 pt-10 border-t border-zinc-800">
-          <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-zinc-600">Resolved Markets Archive</h2>
-          {resolvedMarkets.map((market) => (
-            <div key={market.id} className="p-4 rounded-[1.5rem] border border-zinc-800/50 bg-zinc-900/30 opacity-70 hover:opacity-100 transition-opacity">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover object-top grayscale" />}
-                  <div>
-                    <h2 className="text-sm font-bold text-white line-clamp-1">{market.title}</h2>
-                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">
-                      Won: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => handleEdit(market)} className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Edit</button>
-                  <button onClick={() => deleteMarket(market.id)} className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500/70 hover:text-red-500 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
-                </div>
-              </div>
-            </div>
-          ))}
-          {resolvedMarkets.length === 0 && <p className="text-zinc-600 font-bold uppercase tracking-widest text-[10px] text-center">No resolved markets</p>}
         </section>
 
       </div>
