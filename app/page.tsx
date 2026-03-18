@@ -169,7 +169,7 @@ export default function Page() {
           <div className="relative w-full max-w-sm bg-[#13131a] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl">
             
             <div className="text-center mb-10">
-              <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-2">Log In</h2>
+              <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-2">LOG IN TEST 123</h2>
               <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Join the culture</p>
             </div>
 
