@@ -99,11 +99,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.warn("User profile not found in DB yet, trigger might be delayed.");
-        setNickname(userEmail.split('@')[0]);
+        setNickname(userEmail?.split('@')[0] || 'User');
         setBalance(0); 
         setUserXp(0);
       } else if (user) {
-        setNickname(user.nickname || userEmail.split('@')[0]);
+        setNickname(user.nickname || userEmail?.split('@')[0] || 'User');
         setBalance(user.balance || 0);
         setUserXp(user.xp_points || 0);
         setAvatarUrl(user.avatar_url || '');
@@ -204,8 +204,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // ZMĚNA: Přihlašování nově běží čistě na 'x' (OAuth 2.0)
   const loginWithTwitter = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'twitter' });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'x' as any });
     if (error) showToast(error.message, "error");
   };
 
