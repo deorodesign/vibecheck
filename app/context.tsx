@@ -105,8 +105,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const fetchData = async () => {
       const { data: marketsData } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
-      
-      // OPRAVA A: Načítáme i status, abychom z grafu vyloučili "cashed_out" sázky
       const { data: allBets } = await supabase.from('bets').select('market_id, type, amount, status');
 
       if (marketsData) {
@@ -117,9 +115,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         if (allBets) {
           allBets.forEach((b: any) => {
-            // Ignorujeme sázky, které už si hráči vybrali zpět (prodali je)
             if (b.status === 'cashed_out') return;
-            
             if (!pools[b.market_id]) pools[b.market_id] = { vybe: 0, noVybe: 0 };
             if (b.type === 'VYBE') pools[b.market_id].vybe += Number(b.amount);
             if (b.type === 'NO_VYBE') pools[b.market_id].noVybe += Number(b.amount);
@@ -158,9 +154,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })));
       }
 
+      // Realtime listener (Pokud ho někdy zapneš v Supabase)
       betSubscription = supabase.channel('realtime-bets')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
-          // Aby se grafy měnily live i při Cash Outu, musíme přepočítat data při jakékoliv změně sázek (INSERT i UPDATE)
           fetchData(); 
         }).subscribe();
     };
@@ -192,7 +188,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendChatMessage = async (marketId: number, text: string, user: string, avatar: string, parentId: string | null = null) => {
-    // V chat odznaku kontrolujeme jen aktivní sázky
     const activeUserBetsForMarket = myBets.filter((bet: any) => bet.marketId === marketId && (!bet.status || bet.status === 'pending'));
     let finalBetType = null;
     if (activeUserBetsForMarket.length > 0) {
@@ -225,11 +220,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       p_market_id: marketId, p_user_address: walletAddress, p_user_name: nickname, p_bet_type: type, p_amount: amount, p_entry_price: entryPrice
     });
 
-    if (error) { showToast(`Transaction failed: ${error.message}`, "error");
+    if (error) { 
+      showToast(`Transaction failed: ${error.message}`, "error");
     } else if (data && data.success) {
       setBalance(data.new_balance);
       setUserXp(data.new_xp);
       setMyBets(prev => [...prev, { id: data.bet_id, marketId, type, amount, entryPrice, status: 'pending' }]);
+      
+      // OPTIMISTICKÝ UPDATE GRAFU (Hned po sázce!)
+      setMarketPrices((prev: any) => {
+        const current = prev[marketId] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
+        const updatedVybePool = current.vybePool + (type === 'VYBE' ? amount : 0);
+        const updatedNoVybePool = current.noVybePool + (type === 'NO_VYBE' ? amount : 0);
+        const LIQUIDITY = 100;
+        let v = (updatedVybePool + LIQUIDITY) / (updatedVybePool + updatedNoVybePool + (LIQUIDITY * 2));
+        v = Math.max(0.01, Math.min(0.99, v));
+        return {
+          ...prev,
+          [marketId]: { vibe: v, noVibe: 1 - v, vybePool: updatedVybePool, noVybePool: updatedNoVybePool }
+        };
+      });
+
       showToast(`Successfully bet ${amount} USDC!`, "success");
     }
   };
@@ -253,6 +264,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setBalance(data.new_balance);
       setMyBets(prev => prev.map(b => b.id === betId ? { ...b, status: 'cashed_out', payout: cashOutValue } : b));
       
+      // OPTIMISTICKÝ UPDATE GRAFU (Odstranění peněz po Cash Outu!)
+      setMarketPrices((prev: any) => {
+        const current = prev[betToSell.marketId] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
+        const updatedVybePool = Math.max(0, current.vybePool - (betToSell.type === 'VYBE' ? betToSell.amount : 0));
+        const updatedNoVybePool = Math.max(0, current.noVybePool - (betToSell.type === 'NO_VYBE' ? betToSell.amount : 0));
+        const LIQUIDITY = 100;
+        let v = (updatedVybePool + LIQUIDITY) / (updatedVybePool + updatedNoVybePool + (LIQUIDITY * 2));
+        v = Math.max(0.01, Math.min(0.99, v));
+        return {
+          ...prev,
+          [betToSell.marketId]: { vibe: v, noVibe: 1 - v, vybePool: updatedVybePool, noVybePool: updatedNoVybePool }
+        };
+      });
+
       const profit = cashOutValue - betToSell.amount;
       const profitText = profit >= 0 ? `+${profit.toFixed(2)}` : `${profit.toFixed(2)}`;
       showToast(`Cashed out for ${cashOutValue.toFixed(2)} USDC (${profitText})`, "success");

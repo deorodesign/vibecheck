@@ -51,6 +51,7 @@ export default function AdminPanel() {
   const [isAdminVerified, setIsAdminVerified] = useState(false);
 
   const [markets, setMarkets] = useState<any[]>([]);
+  const [marketStats, setMarketStats] = useState<any>({}); // NOVÉ: Stav pro statistiky
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -106,12 +107,40 @@ export default function AdminPanel() {
   }, [isAuthLoading, isLoggedIn]);
 
   const fetchMarkets = async () => {
-    const { data } = await supabase
+    const { data: marketsData } = await supabase
       .from('markets')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (data) setMarkets(data);
+    // NOVÉ: Načtení sázek pro výpočet statistik
+    const { data: betsData } = await supabase
+      .from('bets')
+      .select('market_id, amount, status, payout');
+
+    if (marketsData) {
+      setMarkets(marketsData);
+      
+      const stats: any = {};
+      marketsData.forEach(m => {
+        stats[m.id] = { totalVolume: 0, cashedOutVolume: 0, activeVolume: 0, betCount: 0 };
+      });
+
+      if (betsData) {
+        betsData.forEach(bet => {
+          if (stats[bet.market_id]) {
+            stats[bet.market_id].betCount += 1;
+            stats[bet.market_id].totalVolume += Number(bet.amount);
+            
+            if (bet.status === 'cashed_out') {
+              stats[bet.market_id].cashedOutVolume += Number(bet.payout || 0);
+            } else {
+              stats[bet.market_id].activeVolume += Number(bet.amount);
+            }
+          }
+        });
+      }
+      setMarketStats(stats);
+    }
     setLoading(false);
   };
 
@@ -218,15 +247,13 @@ export default function AdminPanel() {
     setUploading(false);
   };
 
-  // --- REVOLUČNÍ XP MATEMATIKA A VYHODNOCENÍ TRHU ---
   const resolveMarket = async (marketId: number, winningOutcome: 'VYBE' | 'NO_VYBE') => {
     if (!window.confirm(`Are you sure you want to resolve this market as ${winningOutcome}?`)) return;
     try {
-      // 1. Změníme status trhu na vyřešený
       await supabase.from('markets').update({ is_resolved: true, winning_outcome: winningOutcome }).eq('id', marketId);
       
-      // 2. Načteme všechny sázky pro tento trh
-      const { data: marketBets } = await supabase.from('bets').select('*').eq('market_id', marketId);
+      // Při vyhodnocení filtrujeme jen ty sázky, které NEBYLY prodány
+      const { data: marketBets } = await supabase.from('bets').select('*').eq('market_id', marketId).neq('status', 'cashed_out');
       
       if (marketBets) {
         for (const bet of marketBets) {
@@ -234,13 +261,10 @@ export default function AdminPanel() {
           const entryPrice = Number(bet.entry_price) || 50;
           const amount = Number(bet.amount);
           
-          // Výpočet výplaty (kolik vyhrál celkově vč. vkladu)
           const payoutAmount = isWinner ? (amount / entryPrice) * 100 : 0;
           
-          // Označíme sázku jako won/lost
           await supabase.from('bets').update({ status: isWinner ? 'won' : 'lost', payout: payoutAmount }).eq('id', bet.id);
 
-          // Načteme uživatele pro připsání výhry a XP
           const { data: userData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', bet.user_address).single();
           
           if (userData) {
@@ -249,11 +273,7 @@ export default function AdminPanel() {
               newBalance += payoutAmount;
             }
 
-            // *** NOVÁ XP MATEMATIKA ***
-            // Pravidlo 1: 1 XP za každý vsazený 1 USDC (Získá i poražený)
             let earnedXp = amount; 
-            
-            // Pravidlo 2: 10 XP za každý 1 USDC čistého zisku
             if (isWinner) {
               const netProfit = payoutAmount - amount;
               if (netProfit > 0) {
@@ -261,7 +281,6 @@ export default function AdminPanel() {
               }
             }
             
-            // Uložíme nový zůstatek a sečtené body
             await supabase.from('users').update({
               balance: newBalance,
               xp_points: Number(userData.xp_points || 0) + Math.round(earnedXp)
@@ -396,7 +415,7 @@ export default function AdminPanel() {
           <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-white">Active Markets</h2>
           {activeMarkets.map((market) => (
             <div key={market.id} className="p-6 rounded-[2rem] border border-zinc-800 bg-zinc-900 relative group">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-4">
                   {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover object-top border border-zinc-800" />}
                   <div>
@@ -409,6 +428,27 @@ export default function AdminPanel() {
                   <button onClick={() => deleteMarket(market.id)} className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-[10px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
                 </div>
               </div>
+              
+              {/* NOVÉ: Tabulka statistik pod trhem */}
+              <div className="grid grid-cols-4 gap-2 mb-6 p-4 bg-zinc-950 rounded-2xl border border-zinc-800/50">
+                <div>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Total Vol.</p>
+                  <p className="font-mono text-sm">${marketStats[market.id]?.totalVolume?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Cashed Out</p>
+                  <p className="font-mono text-sm text-blue-500">${marketStats[market.id]?.cashedOutVolume?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Active Pool</p>
+                  <p className="font-mono text-sm text-fuchsia-500">${marketStats[market.id]?.activeVolume?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Total Bets</p>
+                  <p className="font-mono text-sm text-zinc-300">{marketStats[market.id]?.betCount || 0}</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <button onClick={() => resolveMarket(market.id, 'VYBE')} className="bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">WINNER: VYBE</button>
                 <button onClick={() => resolveMarket(market.id, 'NO_VYBE')} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">WINNER: NO VYBE</button>
@@ -421,13 +461,13 @@ export default function AdminPanel() {
         <section className="space-y-4 pt-10 border-t border-zinc-800">
           <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-zinc-600">Resolved Markets Archive</h2>
           {resolvedMarkets.map((market) => (
-            <div key={market.id} className="p-4 rounded-[1.5rem] border border-zinc-800/50 bg-zinc-900/30 opacity-70 hover:opacity-100 transition-opacity">
+            <div key={market.id} className="p-5 rounded-[1.5rem] border border-zinc-800/50 bg-zinc-900/30 opacity-80 hover:opacity-100 transition-opacity flex flex-col gap-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                  {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover object-top grayscale" />}
+                  {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover object-top grayscale" />}
                   <div>
                     <h2 className="text-sm font-bold text-white line-clamp-1">{market.title}</h2>
-                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">
+                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">
                       Won: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span>
                     </p>
                   </div>
@@ -435,6 +475,26 @@ export default function AdminPanel() {
                 <div className="flex gap-2">
                   <button onClick={() => handleEdit(market)} className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Edit</button>
                   <button onClick={() => deleteMarket(market.id)} className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500/70 hover:text-red-500 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
+                </div>
+              </div>
+              
+              {/* STATISTIKY U UZAVŘENÝCH TRHŮ */}
+              <div className="grid grid-cols-4 gap-2 pt-4 border-t border-zinc-800/50">
+                <div>
+                  <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Total Vol.</p>
+                  <p className="font-mono text-xs text-zinc-300">${marketStats[market.id]?.totalVolume?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div>
+                  <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Cashed Out</p>
+                  <p className="font-mono text-xs text-blue-500/70">${marketStats[market.id]?.cashedOutVolume?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div>
+                  <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Final Pool</p>
+                  <p className="font-mono text-xs text-fuchsia-500/70">${marketStats[market.id]?.activeVolume?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div>
+                  <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Bets</p>
+                  <p className="font-mono text-xs text-zinc-500">{marketStats[market.id]?.betCount || 0}</p>
                 </div>
               </div>
             </div>
