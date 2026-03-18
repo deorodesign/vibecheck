@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext, CATEGORIES } from './context';
 
 const createSlug = (title: string) => {
-  return title.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+  return title.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');     
 };
 
 function formatTimeAgo(dateString: string) {
@@ -26,8 +26,8 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const vybecardParam = searchParams.get('vybecard');
-  const {
-    markets, isLoggedIn, isAuthLoading, walletAddress, balance, connectWallet, handleLogout,
+  const { 
+    markets, isLoggedIn, isAuthLoading, walletAddress, balance, handleLogout,
     marketPrices, myBets, placeBet, chatMessages, sendChatMessage, toggleLikeMessage,
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
@@ -157,15 +157,51 @@ function HomeContent() {
               </div>
               <div className="relative" ref={dropdownRef}>
                 <button onClick={() => setIsProfileOpen(!isProfileOpen)} className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 h-10 rounded-full border transition-all shadow-sm active:scale-95 ${isProfileOpen ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/30' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
-                  {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full object-cover" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500"></div>}
-                  <span className="text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300 hidden sm:inline">{nickname || shortAddress(walletAddress)}</span>
+                  {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full object-cover border border-zinc-200 dark:border-white/20" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 border border-zinc-200 dark:border-white/20 flex items-center justify-center font-black text-white text-[10px]">{nickname?.charAt(0).toUpperCase() || 'U'}</div>}
+                  <span className="text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300 hidden sm:inline">{shortAddress(walletAddress)}</span>
                 </button>
                 {isProfileOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
-                    <div className="p-4 bg-zinc-50 dark:bg-white/5 border-b border-zinc-100 dark:border-white/5 text-[10px] font-bold uppercase text-zinc-500">Wallet Connected</div>
+                  <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Wallet</span>
+                        <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-1 text-[10px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Settings</Link>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex-shrink-0"></div>
+                        )}
+                        <div className="overflow-hidden">
+                          <p className="text-zinc-900 dark:text-white font-bold text-sm italic uppercase truncate">{walletAddress || nickname}</p>
+                        </div>
+                      </div>
+                    </div>
                     <div className="p-2 flex flex-col gap-1">
-                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="px-3 py-2 text-xs font-bold hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Profile Settings</Link>
-                      <button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors">Log Out</button>
+                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center justify-center gap-2 w-full px-3 py-3 text-[11px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-all">
+                        Profile & Philosophy
+                      </Link>
+                      <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">
+                        How it Works
+                      </Link>
+                      <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">
+                        Rules & Policies
+                      </Link>
+                      <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">
+                        Disclaimer
+                      </Link>
+                      <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">
+                        Airdrops & Rewards
+                      </Link>
+                    </div>
+                    <div className="p-2 border-t border-zinc-100 dark:border-white/5">
+                      <button 
+                        onClick={() => { handleLogout(); setIsProfileOpen(false); }} 
+                        className="w-full text-left px-3 py-2.5 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-500/10 rounded-xl transition-colors"
+                      >
+                        Log Out
+                      </button>
                     </div>
                   </div>
                 )}
@@ -213,7 +249,7 @@ function HomeContent() {
               <div className="flex items-center gap-4">
                 <span className={`font-black italic text-lg w-4 ${user.rank === 1 ? 'text-yellow-500' : user.rank === 2 ? 'text-zinc-400' : user.rank === 3 ? 'text-amber-600' : 'text-zinc-300 dark:text-zinc-600'}`}>{user.rank}</span>
                 <div className="flex items-center gap-3">
-                  {user.avatar ? <img src={user.avatar} className="w-8 h-8 rounded-full object-cover shadow-sm" alt="Avatar" /> : <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${user.color}`}></div>}
+                  {user.avatar ? <img src={user.avatar} className="w-8 h-8 rounded-full object-cover" alt="Avatar" /> : <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${user.color}`}></div>}
                   <div className="flex flex-col">
                     <span className="font-bold text-xs text-zinc-900 dark:text-white">{user.name}</span>
                     <span className="text-[9px] font-mono text-zinc-500">{user.address}</span>
@@ -255,6 +291,7 @@ function HomeContent() {
         <div className="flex flex-col gap-3">
           <button onClick={loginWithTwitter} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black hover:scale-105 transition-all font-black uppercase tracking-widest text-sm shadow-md active:scale-95">Continue with X</button>
           
+          {/* TLAČÍTKO PRO GOOGLE */}
           <button onClick={loginWithGoogle} className="flex items-center justify-center gap-4 w-full py-3.5 rounded-xl bg-white text-black border border-zinc-200 font-black uppercase tracking-widest text-xs shadow-md active:scale-95 transition-all">
             <svg className="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
             Continue with Gmail
@@ -289,14 +326,14 @@ function HomeContent() {
               <h1 className="text-3xl md:text-4xl font-black leading-tight tracking-tight text-zinc-900 dark:text-white uppercase italic drop-shadow-lg px-4 md:px-0">{selectedMarket.title}</h1>
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-5 md:p-6 shadow-md mx-4 md:mx-0">
                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Current Vybe Check</h3>
-                <div className="relative h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center mb-6 shadow-inner border border-zinc-200 dark:border-white/5">
+                <div className="relative h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center mb-6 border border-zinc-200 dark:border-white/5 shadow-inner">
                   <div className="h-full bg-green-500 flex items-center px-4 justify-start transition-all duration-500 ease-out shadow-[0_0_20px_rgba(34,197,94,0.6)]" style={{ width: `${(currentPrices?.vibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-sm z-10">{((currentPrices?.vibe || 0.5) * 100).toFixed(0)}%</span></div>
                   <div className="h-full bg-red-500 flex items-center px-4 justify-end transition-all duration-500 ease-out shadow-[0_0_20px_rgba(239,68,68,0.6)]" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-sm z-10">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span></div>
                 </div>
                 {!isResolved && (
                   <div className="mb-6 p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5">
                     <div className="flex justify-between items-center mb-3"><label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount to Bet (USDC)</label><span className="text-[10px] font-bold text-zinc-500">Bal: {balance.toFixed(2)}</span></div>
-                    <div className="flex gap-2"><input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-3 font-mono font-bold text-sm outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white" /><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 10).toString())} className="shrink-0 px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 transition-colors">+10</button><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 50).toString())} className="shrink-0 px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 transition-colors">+50</button></div>
+                    <div className="flex gap-2"><input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-3 font-mono font-bold text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white" /><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 10).toString())} className="shrink-0 px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 transition-colors">+10</button><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 50).toString())} className="shrink-0 px-4 py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[10px] font-bold hover:bg-zinc-300 transition-colors">+50</button></div>
                   </div>
                 )}
                 <div className="flex flex-col gap-4">
@@ -318,7 +355,7 @@ function HomeContent() {
                   {replyingTo && (<div className="flex items-center justify-between bg-fuchsia-500/10 px-3 py-1.5 rounded-t-lg border-x border-t border-fuchsia-500/20 text-[9px] font-medium text-fuchsia-500 mb-[-1px]"><span>Replying to <strong>@{replyingTo.user}</strong></span><button onClick={() => setReplyingTo(null)} className="font-bold">✕</button></div>)}
                   <div className="relative flex items-center"><input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendChat()} placeholder={isLoggedIn ? (replyingTo ? "Write a reply..." : "Share your vybe...") : "Log in to chat..."} className={`w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 px-4 py-3 text-xs outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white ${replyingTo ? 'rounded-b-xl rounded-tr-xl' : 'rounded-xl'}`} /><button onClick={handleSendChat} className="absolute right-2 p-2 text-zinc-400 hover:text-fuchsia-500 transition-colors"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg></button></div>
                 </div>
-                <div className="p-5 flex flex-col gap-6 max-h-[600px] overflow-y-auto scrollbar-hide">
+                <div className="p-5 flex flex-col gap-6">
                   {visibleMessages.length === 0 ? <p className="text-center text-zinc-400 py-10 italic text-[11px]">Be the first to share your thoughts!</p> : 
                     visibleMessages.map((msg: any) => {
                       const userBadge = getUserBetStatus(msg.user, selectedMarket.id);
@@ -326,20 +363,38 @@ function HomeContent() {
                       return (
                         <div key={msg.id} className="flex flex-col gap-2">
                           <div className="flex items-start gap-2">
-                            {msg.avatar ? <img src={msg.avatar} alt="" className="w-6 h-6 rounded-full object-cover mt-1 flex-shrink-0 shadow-sm" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 mt-1 flex-shrink-0" />}
+                            {msg.avatar ? <img src={msg.avatar} alt="" className="w-6 h-6 rounded-full object-cover mt-1 flex-shrink-0" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 mt-1 flex-shrink-0" />}
                             <div className="flex flex-col gap-1 w-full text-[11px]">
-                              <div className="flex items-center gap-2 flex-wrap"><Link href={`/user/${encodeURIComponent(msg.user)}`} className="font-black uppercase tracking-widest text-[9px] text-fuchsia-500 hover:underline">{msg.user}</Link><span className="text-[8px] text-zinc-400 font-mono">{formatTimeAgo(msg.timestamp)}</span>{userBadge && <span className={`px-1.5 py-[1px] rounded ${userBadge === 'VYBE' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-red-500/10 border-red-500/20 text-red-500'} border text-[7px] font-black uppercase italic tracking-widest`}>{userBadge}</span>}</div>
-                              <span className="text-zinc-700 dark:text-zinc-300 font-medium bg-zinc-100 dark:bg-white/5 p-3 rounded-2xl rounded-tl-sm border border-zinc-200 dark:border-white/10 inline-block w-fit max-w-[95%] text-xs leading-relaxed">{msg.text}</span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Link href={`/user/${encodeURIComponent(msg.user)}`} className="font-black uppercase tracking-widest text-[9px] text-fuchsia-500 hover:underline">{msg.user}</Link>
+                                <span className="text-[8px] text-zinc-400 font-mono">{formatTimeAgo(msg.timestamp)}</span>
+                                {userBadge && <span className="px-1.5 py-[1px] rounded bg-green-500/10 border border-green-500/20 text-[7px] font-black text-green-500 uppercase italic tracking-widest">{userBadge}</span>}
+                              </div>
+                              <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed bg-zinc-100 dark:bg-white/5 p-3 rounded-2xl rounded-tl-sm border border-zinc-200 dark:border-white/10 inline-block w-fit max-w-[95%] text-xs">{msg.text}</span>
                               <div className="flex items-center gap-4 mt-0.5 ml-1">
                                 <button onClick={() => toggleLikeMessage(msg.id, nickname)} className={`text-[9px] font-bold transition-colors ${(msg.likedBy || []).includes(nickname) ? 'text-fuchsia-500' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'}`}>♥ {(msg.likedBy || []).length || ''} Likes</button>
                                 <button onClick={() => setReplyingTo({ id: msg.id, user: msg.user })} className="text-[9px] font-bold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">Reply</button>
                               </div>
+                              
+                              {/* OPRAVA: ZDE JSOU TY TMAVÉ BUBLINY PRO ODPOVĚDI */}
                               {replies.length > 0 && (
                                 <div className="flex flex-col gap-3 ml-8 pl-3 border-l border-zinc-100 dark:border-white/5 mt-1">
                                   {replies.map((reply: any) => (
                                     <div key={reply.id} className="flex items-start gap-2">
-                                      {reply.avatar ? <img src={reply.avatar} alt="" className="w-5 h-5 rounded-full object-cover mt-0.5 flex-shrink-0 shadow-sm" /> : <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 mt-0.5 flex-shrink-0 opacity-80 shadow-sm" />}
-                                      <div className="flex flex-col gap-0.5 w-full"><div className="flex items-center gap-2"><span className="font-black uppercase tracking-widest text-[8px] text-zinc-400">{reply.user}</span><span className="text-[7px] text-zinc-500 font-medium">{formatTimeAgo(reply.timestamp)}</span></div><span className="text-zinc-600 dark:text-zinc-300 font-medium bg-zinc-900/50 p-2 rounded-xl rounded-tl-sm border border-zinc-800 dark:border-white/5 inline-block w-fit max-w-[100%] text-[10px]">{reply.text}</span></div>
+                                      {reply.avatar ? (
+                                        <img src={reply.avatar} alt="" className="w-5 h-5 rounded-full object-cover mt-0.5 flex-shrink-0 shadow-sm" />
+                                      ) : (
+                                        <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 mt-0.5 flex-shrink-0 opacity-80 shadow-sm" />
+                                      )}
+                                      <div className="flex flex-col gap-0.5 w-full">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400">{reply.user}</span>
+                                          <span className="text-[7px] text-zinc-500 font-medium">{formatTimeAgo(reply.timestamp)}</span>
+                                        </div>
+                                        <span className="text-zinc-600 dark:text-zinc-300 font-medium bg-zinc-900/50 p-2 rounded-xl rounded-tl-sm border border-zinc-800 dark:border-white/5 inline-block w-fit max-w-[100%] text-[10px]">
+                                          {reply.text}
+                                        </span>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -352,7 +407,7 @@ function HomeContent() {
                   }
                 </div>
                 <div className="p-4 border-t border-zinc-200 dark:border-white/5 flex items-center justify-between bg-zinc-50 dark:bg-black/20">
-                  {sortedMainMessages.length > visibleCount ? <button onClick={() => setVisibleCount(prev => prev + 10)} className="px-4 py-2 bg-white dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-900 dark:text-white rounded-lg text-[10px] font-bold uppercase tracking-widest border border-zinc-200 dark:border-white/10 shadow-sm transition-all active:scale-95">Show more</button> : <span className="text-[10px] text-zinc-400 font-medium italic">End of conversation</span>}
+                  {sortedMainMessages.length > visibleCount ? <button onClick={() => setVisibleCount(prev => prev + 10)} className="px-4 py-2 bg-white dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-900 dark:text-white rounded-lg text-[10px] font-bold uppercase tracking-widest border border-zinc-200 dark:border-white/10 shadow-sm">Show more</button> : <span className="text-[10px] text-zinc-400 font-medium italic">End of conversation</span>}
                   <button onClick={scrollToChatTop} className="text-[9px] font-black uppercase text-zinc-400 hover:text-fuchsia-500 flex items-center gap-1 transition-colors">Back to top</button>
                 </div>
               </div>
@@ -362,20 +417,20 @@ function HomeContent() {
         </div>
       ) : (
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-8 py-8 px-4">
-          <div className="w-full lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          <div className="w-full lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             {sortedMarkets.map((market: any) => {
               const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5 };
               const isRes = !!marketStatus[market.id];
               return (
                 <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isRes ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
-                  <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10"><img src={market.imageUrl || market.image_url} alt="" className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isRes ? 'grayscale' : 'group-hover:scale-110'}`} /><div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" /><div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${market.volumeUsd || market.volume_usd || 0}</div></div>
-                  <div className="p-8 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
+                  <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10"><img src={market.imageUrl || market.image_url} alt="" className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isRes ? 'grayscale' : 'group-hover:scale-105'}`} /><div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" /><div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${market.volumeUsd || market.volume_usd || 0}</div></div>
+                  <div className="p-6 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
                     <h2 className="text-lg font-black leading-tight text-zinc-900 dark:text-white uppercase italic mb-4 line-clamp-2 h-12">{market.title}</h2>
                     <div className="mb-4">
                       <div className="flex justify-between items-center mb-1.5 px-1"><span className="text-[10px] font-black text-green-500 uppercase italic">{(prices.vibe * 100).toFixed(0)}%</span><span className="text-[10px] font-black text-red-500 uppercase italic">{(prices.noVibe * 100).toFixed(0)}%</span></div>
-                      <div className="relative h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5 shadow-inner"><div className="h-full bg-green-500 transition-all duration-500 shadow-[0_0_15px_rgba(34,197,94,0.4)]" style={{ width: `${prices.vibe * 100}%` }} /><div className="h-full bg-red-500 transition-all duration-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]" style={{ width: `${prices.noVibe * 100}%` }} /></div>
+                      <div className="relative h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${prices.vibe * 100}%` }} /><div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${prices.noVibe * 100}%` }} /></div>
                     </div>
-                    <div className="mt-auto flex flex-col gap-2">{isRes ? <div className="w-full text-center py-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-sm"><p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]}</span></p></div> : <div className="grid grid-cols-2 gap-2"><div className="p-3 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-xs text-center transition-colors shadow-sm">Vybe</div><div className="p-3 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-xs text-center transition-colors shadow-sm">No Vybe</div></div>}</div>
+                    <div className="mt-auto flex flex-col gap-2">{isRes ? <div className="w-full text-center py-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10"><p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]}</span></p></div> : <div className="grid grid-cols-2 gap-2"><div className="p-3 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-xs text-center transition-colors">Vybe</div><div className="p-3 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-xs text-center transition-colors">No Vybe</div></div>}</div>
                   </div>
                 </div>
               );
@@ -392,6 +447,6 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0e0e12] flex items-center justify-center font-black uppercase italic tracking-widest text-fuchsia-500">Loading Vybecheck...</div>}><HomeContent /></Suspense>
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center"><div className="w-10 h-10 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div></div>}><HomeContent /></Suspense>
   );
 }
