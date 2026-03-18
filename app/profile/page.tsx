@@ -3,27 +3,52 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAppContext } from '../context';
+import { supabase } from '../lib/supabase';
 
 export default function ProfilePage() {
-  // Přidáno vytažení userXp z contextu
-  const { balance, userXp, myBets, markets, isAuthLoading, nickname } = useAppContext();
+  const { balance, userXp, myBets, markets, isAuthLoading, nickname, walletAddress, showToast } = useAppContext();
   const [payoutAddress, setPayoutAddress] = useState('');
   const [saving, setSaving] = useState(false);
 
   const baseStartingBalance = 500;
 
+  // 1. NAČTENÍ ULOŽENÉ PENĚŽENKY PŘÍMO ZE SUPABASE
   useEffect(() => {
-    const savedWallet = localStorage.getItem('payoutWallet') || '';
-    setPayoutAddress(savedWallet);
-  }, []);
+    const fetchWallet = async () => {
+      if (walletAddress) {
+        const { data } = await supabase
+          .from('users')
+          .select('payout_wallet')
+          .eq('wallet_address', walletAddress)
+          .single();
+          
+        if (data && data.payout_wallet) {
+          setPayoutAddress(data.payout_wallet);
+        }
+      }
+    };
+    fetchWallet();
+  }, [walletAddress]);
 
-  const saveWallet = () => {
+  // 2. BEZPEČNÉ ULOŽENÍ DO DATABÁZE PŘES RPC FUNKCI
+  const saveWallet = async () => {
+    if (!payoutAddress.trim()) {
+      return showToast('Please enter a valid wallet address.', 'error');
+    }
+    
     setSaving(true);
-    localStorage.setItem('payoutWallet', payoutAddress);
-    setTimeout(() => {
-      alert('Payout wallet saved successfully!');
-      setSaving(false);
-    }, 500);
+    
+    const { error } = await supabase.rpc('save_payout_wallet', {
+      p_wallet: payoutAddress.trim()
+    });
+
+    if (error) {
+      showToast(`Error saving wallet: ${error.message}`, 'error');
+    } else {
+      showToast('Payout wallet saved successfully!', 'success');
+    }
+    
+    setSaving(false);
   };
 
   const enrichedBets = myBets.map((bet: any) => {
@@ -40,7 +65,6 @@ export default function ProfilePage() {
   const totalVolume = enrichedBets.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
   const activeBetsValue = activeBetsList.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
   
-  // Bezpečná záloha na nulu, pokud by balance ještě nebyl načtený
   const safeBalance = balance || 0;
   const currentPortfolioValue = safeBalance + activeBetsValue;
 
@@ -71,18 +95,18 @@ export default function ProfilePage() {
           </h1>
         </header>
 
+        {/* PROFILOVÁ KARTA */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-6">
             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex items-center justify-center text-3xl font-black shadow-lg">
-              {nickname ? nickname.charAt(0).toUpperCase() : 'T'}
+              {nickname ? nickname.charAt(0).toUpperCase() : 'V'}
             </div>
             <div>
-              <h2 className="text-2xl font-black uppercase tracking-widest mb-1">{nickname || 'TWITTER_USER'}</h2>
+              <h2 className="text-2xl font-black uppercase tracking-widest mb-1">{nickname || 'ANONYMOUS VYBER'}</h2>
               <div className="flex flex-col gap-1 mt-2">
                 <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">
                   Bankroll: <span className="text-green-500">{safeBalance.toFixed(2)} USDC</span>
                 </p>
-                {/* ZDE ZOBRAZUJEME XP BODY PRO MĚSÍČNÍ SEZÓNU */}
                 <p className="text-[10px] font-black text-fuchsia-500 uppercase tracking-widest">
                   Season XP: {userXp || 0}
                 </p>
@@ -114,29 +138,54 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* NOVÁ SEKCE PAYOUT WALLET S DISCLAIMEREM */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-md">
-          <h3 className="text-lg font-black uppercase italic tracking-widest mb-4">Payout Wallet</h3>
-          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-6 leading-relaxed">
-            Add your Solana or EVM address to receive monthly USDC airdrops if you make it to the top 5 on the leaderboard.
-          </p>
+          <div className="mb-6">
+            <h3 className="text-lg font-black uppercase italic tracking-widest mb-2">Payout Wallet</h3>
+            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-relaxed">
+              Add your Solana or EVM address to receive monthly USDC airdrops if you make it to the top 5 on the leaderboard.
+            </p>
+          </div>
+
+          {/* WARNING BOX */}
+          <div className="bg-zinc-950 border border-fuchsia-500/20 rounded-2xl p-5 mb-6 shadow-inner">
+            <div className="flex items-center gap-2 text-fuchsia-400 font-black text-xs uppercase tracking-widest mb-3">
+              <span className="text-base">⚠️</span> Important Disclaimer
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed font-mono">
+              Vybecheck is currently a <strong>free-to-play</strong> platform. Your Bankroll consists of virtual points (Play Money) and <strong>cannot</strong> be withdrawn. We do not accept real-money deposits. 
+              <br /><br />
+              This payout address is strictly used by our team to manually reward our best players at the end of each season.
+            </p>
+            
+            <div className="mt-4 pt-4 border-t border-zinc-800/50">
+              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black leading-relaxed">
+                <span className="text-zinc-300">Don't have a crypto wallet?</span><br />
+                Download the <a href="https://phantom.app/" target="_blank" rel="noreferrer" className="text-fuchsia-400 hover:text-fuchsia-300 transition-colors underline decoration-fuchsia-500/30 underline-offset-4">Phantom</a> extension (for Solana) or <a href="https://metamask.io/" target="_blank" rel="noreferrer" className="text-fuchsia-400 hover:text-fuchsia-300 transition-colors underline decoration-fuchsia-500/30 underline-offset-4">MetaMask</a> (for Ethereum). Create a free wallet and paste your public address below.
+              </p>
+            </div>
+          </div>
+
+          {/* FORMULÁŘ */}
           <div className="flex flex-col sm:flex-row gap-4">
             <input 
               type="text" 
               value={payoutAddress}
               onChange={(e) => setPayoutAddress(e.target.value)}
               placeholder="Paste your 0x... or Solana address here" 
-              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-sm text-white outline-none focus:border-fuchsia-500 transition-colors"
+              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-sm text-white outline-none focus:border-fuchsia-500 transition-colors placeholder:text-zinc-600"
             />
             <button 
               onClick={saveWallet}
               disabled={saving}
-              className="bg-white text-black hover:bg-zinc-200 active:scale-95 font-black px-8 py-4 rounded-xl uppercase tracking-widest transition-all disabled:opacity-50"
+              className="bg-white text-black hover:bg-zinc-200 active:scale-95 font-black px-8 py-4 rounded-xl uppercase tracking-widest transition-all disabled:opacity-50 disabled:active:scale-100 min-w-[140px]"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
 
+        {/* ACTIVE BETS */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-md">
           <h3 className="text-lg font-black uppercase italic tracking-widest mb-6">My Active Bets</h3>
           <div className="space-y-4">
@@ -169,6 +218,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* HISTORY */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-md">
           <h3 className="text-lg font-black uppercase italic tracking-widest mb-6">History</h3>
           <div className="space-y-4">
