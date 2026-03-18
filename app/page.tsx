@@ -351,10 +351,10 @@ function HomeContent() {
                 <div ref={chatTopRef} />
                 <div className="p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between"><h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight">Live Chat</h3></div>
                 <div className="p-4 border-b border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20">
-                  {replyingTo && (<div className="flex items-center justify-between bg-fuchsia-500/10 px-3 py-1.5 rounded-t-lg border-x border-t border-fuchsia-500/20 text-[9px] font-medium text-fuchsia-500 mb-[-1px]"><span>Replying to <strong>@{replyingTo.user}</strong></span><button onClick={() => setReplyingTo(null)} className="font-bold">✕</button></div>)}
+                  {replyingTo && (<div className="flex items-center justify-between bg-fuchsia-500/10 px-3 py-1.5 rounded-t-lg border-x border-t border-fuchsia-500/20 text-[9px] font-medium text-fuchsia-500 mb-[-1px]"><span>Replying to <strong>@{replyingTo.user}</strong></span><button onClick={() => setReplyingTo(null)} className="font-bold hover:text-fuchsia-700">✕</button></div>)}
                   <div className="relative flex items-center"><input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendChat()} placeholder={isLoggedIn ? (replyingTo ? "Write a reply..." : "Share your vybe...") : "Log in to chat..."} className={`w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 px-4 py-3 text-xs outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white ${replyingTo ? 'rounded-b-xl rounded-tr-xl' : 'rounded-xl'}`} /><button onClick={handleSendChat} className="absolute right-2 p-2 text-zinc-400 hover:text-fuchsia-500 transition-colors"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg></button></div>
                 </div>
-                <div className="p-5 flex flex-col gap-6">
+                <div className="p-5 flex flex-col gap-6 max-h-[600px] overflow-y-auto scrollbar-hide">
                   {visibleMessages.length === 0 ? <p className="text-center text-zinc-400 py-10 italic text-[11px]">Be the first to share your thoughts!</p> : 
                     visibleMessages.map((msg: any) => {
                       const userBadge = getUserBetStatus(msg.user, selectedMarket.id);
@@ -375,19 +375,23 @@ function HomeContent() {
                                 <button onClick={() => setReplyingTo({ id: msg.id, user: msg.user })} className="text-[9px] font-bold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">Reply</button>
                               </div>
                               
-                              {/* OPRAVENÁ BARVA A LIKES U ODPOVĚDÍ VE VLÁKNĚ */}
+                              {/* OPRAVENÁ BARVA, LIKES A KLIKACÍ JMÉNA U ODPOVĚDÍ VE VLÁKNĚ */}
                               {replies.length > 0 && (
                                 <div className="flex flex-col gap-3 ml-8 pl-3 border-l border-zinc-200 dark:border-white/10 mt-1">
                                   {replies.map((reply: any) => (
                                     <div key={reply.id} className="flex items-start gap-2">
-                                      {reply.avatar ? (
-                                        <img src={reply.avatar} alt="" className="w-5 h-5 rounded-full object-cover mt-0.5 flex-shrink-0 shadow-sm" />
-                                      ) : (
-                                        <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 mt-0.5 flex-shrink-0 opacity-80 shadow-sm" />
-                                      )}
+                                      <Link href={`/user/${encodeURIComponent(reply.user)}`} className="flex-shrink-0 mt-0.5">
+                                        {reply.avatar ? (
+                                          <img src={reply.avatar} alt="" className="w-5 h-5 rounded-full object-cover shadow-sm" />
+                                        ) : (
+                                          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 opacity-80 shadow-sm" />
+                                        )}
+                                      </Link>
                                       <div className="flex flex-col gap-1 w-full">
                                         <div className="flex items-center gap-2">
-                                          <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400">{reply.user}</span>
+                                          <Link href={`/user/${encodeURIComponent(reply.user)}`} className="font-black uppercase tracking-widest text-[8px] text-zinc-400 hover:text-fuchsia-500 hover:underline transition-colors">
+                                            {reply.user}
+                                          </Link>
                                           <span className="text-[7px] text-zinc-400 dark:text-zinc-500 font-mono">{formatTimeAgo(reply.timestamp)}</span>
                                         </div>
                                         <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed bg-zinc-100 dark:bg-white/5 p-2.5 rounded-2xl rounded-tl-sm border border-zinc-200 dark:border-white/10 inline-block w-fit max-w-[95%] text-[11px]">
