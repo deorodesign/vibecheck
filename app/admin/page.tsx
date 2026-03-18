@@ -47,7 +47,6 @@ async function getCroppedImg(
 }
 
 export default function AdminPanel() {
-  // PŘIDÁNO: showToast
   const { isLoggedIn, isAuthLoading, walletAddress, showToast } = useAppContext();
   const [isAdminVerified, setIsAdminVerified] = useState(false);
 
@@ -161,7 +160,6 @@ export default function AdminPanel() {
     }
   };
 
-  // VYLEPŠENÉ UKLÁDÁNÍ DO DATABÁZE
   const saveMarket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle) return showToast("Market title is required!", "error");
@@ -182,7 +180,6 @@ export default function AdminPanel() {
           finalImageUrl = publicUrlData.publicUrl;
         }
       } catch (err: any) {
-        console.error("Image upload failed:", err);
         showToast("Image upload failed: " + err.message, "error");
         setUploading(false);
         return;
@@ -198,39 +195,22 @@ export default function AdminPanel() {
       volume_usd: Number(fakeVolume) || 0,
       is_resolved: false
     };
-    
-    console.log("Odesílám tato data do Supabase:", marketData);
 
     if (editingId) {
-      // UPDATE
       const { data, error } = await supabase.from('markets').update(marketData).eq('id', editingId).select();
       if (error) {
-        console.error("Supabase UPDATE Error:", error);
         showToast("Database error: " + error.message, "error");
       } else {
-        console.log("Supabase úspěšně aktualizovala řádek:", data);
         showToast("Market updated successfully!", "success");
         cancelEdit();
         fetchMarkets();
       }
     } else {
-      // INSERT (Nový market)
       const { data, error } = await supabase.from('markets').insert([marketData]).select();
-      
       if (error) {
-        console.error("Supabase INSERT Error:", error);
         showToast("Database rejected it: " + error.message, "error");
       } else {
-        console.log("Supabase úspěšně vytvořila tento nový řádek:", data);
-        
-        // Zde odhalíme RLS chybu: Pokud Supabase vrátí prázdné pole, znamená to, že data sice uložila, ale hned je skryla
-        if (data && data.length === 0) {
-           console.warn("POZOR: Supabase vložila data, ale vrátila prázdné pole []. Zkontroluj RLS politiky, pravděpodobně ti nedovolují číst nově vložené řádky!");
-           showToast("Warning: Inserted but invisible (RLS issue)", "error");
-        } else {
-           showToast("Market deployed successfully!", "success");
-        }
-
+        showToast("Market deployed successfully!", "success");
         cancelEdit();
         fetchMarkets();
       }
@@ -238,32 +218,58 @@ export default function AdminPanel() {
     setUploading(false);
   };
 
+  // --- REVOLUČNÍ XP MATEMATIKA A VYHODNOCENÍ TRHU ---
   const resolveMarket = async (marketId: number, winningOutcome: 'VYBE' | 'NO_VYBE') => {
     if (!window.confirm(`Are you sure you want to resolve this market as ${winningOutcome}?`)) return;
     try {
+      // 1. Změníme status trhu na vyřešený
       await supabase.from('markets').update({ is_resolved: true, winning_outcome: winningOutcome }).eq('id', marketId);
+      
+      // 2. Načteme všechny sázky pro tento trh
       const { data: marketBets } = await supabase.from('bets').select('*').eq('market_id', marketId);
       
       if (marketBets) {
         for (const bet of marketBets) {
           const isWinner = bet.type === winningOutcome;
           const entryPrice = Number(bet.entry_price) || 50;
-          const payoutAmount = isWinner ? (Number(bet.amount) / entryPrice) * 100 : 0;
+          const amount = Number(bet.amount);
           
+          // Výpočet výplaty (kolik vyhrál celkově vč. vkladu)
+          const payoutAmount = isWinner ? (amount / entryPrice) * 100 : 0;
+          
+          // Označíme sázku jako won/lost
           await supabase.from('bets').update({ status: isWinner ? 'won' : 'lost', payout: payoutAmount }).eq('id', bet.id);
 
-          if (isWinner) {
-            const { data: userData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', bet.user_address).single();
-            if (userData) {
-              await supabase.from('users').update({
-                balance: Number(userData.balance) + payoutAmount,
-                xp_points: Number(userData.xp_points || 0) + 500
-              }).eq('wallet_address', bet.user_address);
+          // Načteme uživatele pro připsání výhry a XP
+          const { data: userData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', bet.user_address).single();
+          
+          if (userData) {
+            let newBalance = Number(userData.balance);
+            if (isWinner) {
+              newBalance += payoutAmount;
             }
+
+            // *** NOVÁ XP MATEMATIKA ***
+            // Pravidlo 1: 1 XP za každý vsazený 1 USDC (Získá i poražený)
+            let earnedXp = amount; 
+            
+            // Pravidlo 2: 10 XP za každý 1 USDC čistého zisku
+            if (isWinner) {
+              const netProfit = payoutAmount - amount;
+              if (netProfit > 0) {
+                earnedXp += (netProfit * 10);
+              }
+            }
+            
+            // Uložíme nový zůstatek a sečtené body
+            await supabase.from('users').update({
+              balance: newBalance,
+              xp_points: Number(userData.xp_points || 0) + Math.round(earnedXp)
+            }).eq('wallet_address', bet.user_address);
           }
         }
       }
-      showToast(`Market resolved! Payouts distributed.`, "success");
+      showToast(`Market resolved! Payouts & XP accurately distributed.`, "success");
       fetchMarkets();
     } catch (error) {
       showToast("Error resolving the market.", "error");
@@ -410,6 +416,30 @@ export default function AdminPanel() {
             </div>
           ))}
           {activeMarkets.length === 0 && <p className="text-zinc-600 font-bold uppercase tracking-widest text-[10px] text-center">No active markets</p>}
+        </section>
+
+        <section className="space-y-4 pt-10 border-t border-zinc-800">
+          <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-zinc-600">Resolved Markets Archive</h2>
+          {resolvedMarkets.map((market) => (
+            <div key={market.id} className="p-4 rounded-[1.5rem] border border-zinc-800/50 bg-zinc-900/30 opacity-70 hover:opacity-100 transition-opacity">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover object-top grayscale" />}
+                  <div>
+                    <h2 className="text-sm font-bold text-white line-clamp-1">{market.title}</h2>
+                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">
+                      Won: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => handleEdit(market)} className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Edit</button>
+                  <button onClick={() => deleteMarket(market.id)} className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500/70 hover:text-red-500 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {resolvedMarkets.length === 0 && <p className="text-zinc-600 font-bold uppercase tracking-widest text-[10px] text-center">No resolved markets</p>}
         </section>
 
       </div>
