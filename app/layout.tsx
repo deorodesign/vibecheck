@@ -1,16 +1,13 @@
 import "./globals.css";
 import { AppProvider } from "./context";
-
-export const metadata = {
-  title: "Vybecheck",
-  description: "Predict the culture.",
-};
+import Navbar from "./Navbar"; // Importuj náš nový Navbar
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-zinc-50 dark:bg-[#0e0e12] text-zinc-900 dark:text-white antialiased transition-colors duration-500 relative">
+      <body className="bg-zinc-950 text-white antialiased">
         <AppProvider>
+          <Navbar /> {/* Přidej ho sem NAD children */}
           {children}
         </AppProvider>
       </body>
