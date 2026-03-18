@@ -44,7 +44,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
-  // --- FUNKCE PRO ÚPLNÉ VYČIŠTĚNÍ STAVU (Anti-contamination) ---
   const resetAppStaleState = useCallback(() => {
     setWalletAddress('');
     setNickname('');
@@ -55,7 +54,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSelectedMarket(null);
   }, []);
 
-  // REÁLNÉ SUPABASE PŘIHLAŠOVÁNÍ (Posloucháme server)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSupabaseSession(session);
@@ -69,7 +67,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchUserBets = useCallback(async (address: string) => {
-    // Vynutit vyčištění starých sázek před novým načtením
     setMyBets([]); 
     const { data, error } = await supabase.from('bets').select('*').eq('user_address', address);
     if (error) {
@@ -83,14 +80,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const handleSupabaseSession = useCallback(async (session: any) => {
     setIsAuthLoading(true);
-    
-    // Vždy nejdříve vyčistíme starý stav, ať se děje cokoli
     resetAppStaleState();
 
     if (session && session.user) {
       const userEmail = session.user.email;
       
-      // Pokusíme se načíst profil vytvořený databázovým Triggerem
       const { data: user, error } = await supabase
         .from('users')
         .select('nickname, balance, xp_points, avatar_url')
@@ -120,7 +114,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      // 1. Načtení marketů a cen
       const { data: marketsData } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
       if (marketsData) {
         setMarkets(marketsData.map(m => ({
@@ -136,7 +129,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMarketStatus(statuses);
       }
 
-      // 2. Načtení chatu
       const { data: chatData } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
       if (chatData) {
         setChatMessages(chatData.map(c => ({
@@ -153,7 +145,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })));
       }
 
-      // 3. Načtení dynamického Leaderboardu (TOP 10 Vybers)
       const { data: usersData } = await supabase
         .from('users')
         .select('*')
@@ -162,11 +153,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         
       if (usersData) {
         const colors = [
-          'from-yellow-400 to-yellow-600', // 1. místo
-          'from-zinc-300 to-zinc-500',     // 2. místo
-          'from-orange-400 to-orange-600', // 3. místo
-          'from-blue-400 to-blue-600',     // 4. místo
-          'from-green-400 to-green-600'    // 5. místo
+          'from-yellow-400 to-yellow-600', 
+          'from-zinc-300 to-zinc-500',     
+          'from-orange-400 to-orange-600', 
+          'from-blue-400 to-blue-600',     
+          'from-green-400 to-green-600'    
         ];
         
         setDynamicLeaderboard(usersData.map((u, i) => ({
@@ -176,7 +167,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           address: u.wallet_address ? `${u.wallet_address.substring(0, 4)}...${u.wallet_address.slice(-4)}` : '0x...',
           points: u.xp_points || 0, 
           avatar: u.avatar_url || '',
-          color: colors[i] || 'from-fuchsia-400 to-fuchsia-600' // Ostatní budou fialoví
+          color: colors[i] || 'from-fuchsia-400 to-fuchsia-600' 
         })));
       }
     };
@@ -204,7 +195,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // ZMĚNA: Přihlašování nově běží čistě na 'x' (OAuth 2.0)
   const loginWithTwitter = async () => {
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'x' as any });
     if (error) showToast(error.message, "error");
@@ -214,6 +204,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'discord' });
     if (error) showToast(error.message, "error");
   };
+
+  // --- NOVÁ FUNKCE PRO GOOGLE PŘIHLÁŠENÍ ---
+  const loginWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ 
+      provider: 'google',
+      options: {
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+    if (error) showToast(error.message, "error");
+  };
+  // ----------------------------------------
 
   const handleLogout = async () => {
     resetAppStaleState();
@@ -302,7 +307,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       selectedMarket, setSelectedMarket, avatarUrl, setAvatarUrl, nickname, setNickname,
       isDarkMode, toggleDarkMode, marketStatus, setMarketStatus, dynamicLeaderboard,
       showToast, isLoginModalOpen, setIsLoginModalOpen, connectWallet, handleLogout,
-      loginWithTwitter, loginWithDiscord, loginWithEmail, placeBet
+      loginWithTwitter, loginWithDiscord, loginWithEmail, loginWithGoogle, placeBet // <-- PŘIDÁNO SEM
     }}>
       {children}
       <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
