@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AppProvider } from './context'
+import { Analytics } from '@vercel/analytics/react' // TADY IMPORTUJEME ANALYTIKU
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -9,11 +10,11 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Vybecheck | The Cultural Prediction Market',
   description: 'Predict culture, trade virtual USDC, and win real airdrops. Are you following the vybe or fading it?',
-  metadataBase: new URL('https://vybecheck.com'), // V budoucnu nahraď svou reálnou doménou
+  metadataBase: new URL('https://vybecheck.xyz'), // Tvoje reálná doména
   openGraph: {
     title: 'Vybecheck | Predict the Culture',
     description: 'Trade on pop culture, gaming, and crypto events. Play smart, level up your Season XP, and win real monthly airdrops.',
-    url: 'https://vybecheck.com',
+    url: 'https://vybecheck.xyz',
     siteName: 'Vybecheck',
     images: [
       {
@@ -46,6 +47,8 @@ export default function RootLayout({
         <AppProvider>
           {children}
         </AppProvider>
+        {/* TADY SE SPUSTÍ SLEDOVÁNÍ NÁVŠTĚVNOSTI */}
+        <Analytics />
       </body>
     </html>
   )
