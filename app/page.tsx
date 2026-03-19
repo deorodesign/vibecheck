@@ -202,6 +202,21 @@ function HomeContent() {
                       <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
                       <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
                     </div>
+                    
+                    {/* NOVÁ SEKCE: COMMUNITY & SUPPORT */}
+                    <div className="p-2 border-t border-zinc-100 dark:border-white/5 flex flex-col gap-1">
+                      <span className="px-3 pt-1 pb-2 text-[9px] font-black uppercase tracking-widest text-zinc-400">Community</span>
+                      <a href="#" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors">
+                        👾 Join Discord / TG
+                      </a>
+                      <a href="#" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl transition-colors">
+                        🐦 Follow on X
+                      </a>
+                      <a href="mailto:hello@vybecheck.xyz" className="flex items-center gap-2 px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:text-white dark:hover:bg-white/10 rounded-xl transition-colors">
+                        📧 Contact Support
+                      </a>
+                    </div>
+
                     <div className="p-2 border-t border-zinc-100 dark:border-white/5"><button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-500/10 rounded-xl transition-colors">Log Out</button></div>
                   </div>
                 )}
