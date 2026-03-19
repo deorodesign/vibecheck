@@ -150,11 +150,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data: usersData } = await supabase.from('users').select('*').order('xp_points', { ascending: false }).limit(10);
     if (usersData) {
       const colors = ['from-yellow-400 to-yellow-600', 'from-zinc-300 to-zinc-500', 'from-orange-400 to-orange-600', 'from-blue-400 to-blue-600', 'from-green-400 to-green-600'];
-      setDynamicLeaderboard(usersData.map((u, i) => ({
-        id: u.wallet_address || `unknown-${i}`, rank: i + 1, name: u.nickname || 'Anonymous Vyber',
-        address: u.wallet_address ? `${u.wallet_address.substring(0, 4)}...${u.wallet_address.slice(-4)}` : '0x...',
-        points: u.xp_points || 0, avatar: u.avatar_url || '', color: colors[i] || 'from-fuchsia-400 to-fuchsia-600' 
-      })));
+      setDynamicLeaderboard(usersData.map((u, i) => {
+        // OPRAVA OCHRANY SOUKROMÍ: Pokud je adresa e-mail, napíšeme "Private Auth", jinak ji ukážeme (pro crypto peněženky)
+        const isEmail = u.wallet_address && u.wallet_address.includes('@');
+        const displayAddress = isEmail ? 'Private Auth' : (u.wallet_address ? `${u.wallet_address.substring(0, 4)}...${u.wallet_address.slice(-4)}` : '0x...');
+        
+        return {
+          id: u.wallet_address || `unknown-${i}`, 
+          rank: i + 1, 
+          name: u.nickname || 'Anonymous Vyber',
+          address: displayAddress,
+          points: u.xp_points || 0, 
+          avatar: u.avatar_url || '', 
+          color: colors[i] || 'from-fuchsia-400 to-fuchsia-600' 
+        };
+      }));
     }
 
     const { data: archiveData } = await supabase.from('season_archives').select('*').order('season_date', { ascending: false }).limit(1).single();
@@ -162,7 +172,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setLatestArchive(archiveData);
     }
 
-    // Refresh sázek aktuálního uživatele
     const { data: sessionData } = await supabase.auth.getSession();
     if (sessionData && sessionData.session && sessionData.session.user && sessionData.session.user.email) {
       const { data: betsData } = await supabase.from('bets').select('*').eq('user_address', sessionData.session.user.email);
