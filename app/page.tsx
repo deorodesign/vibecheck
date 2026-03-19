@@ -146,7 +146,7 @@ function HomeContent() {
 
   const shortAddress = (addr: string) => {
     if (!addr) return "";
-    if (addr.includes('@')) return "Verified"; 
+    if (addr.includes('@')) return ""; 
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
@@ -241,7 +241,7 @@ function HomeContent() {
       <div className="bg-white dark:bg-[#18181b] rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden flex flex-col">
         <div className="p-5 md:p-6 border-b border-zinc-200 dark:border-white/5 bg-gradient-to-br from-fuchsia-500/10 to-orange-500/10 relative">
           <h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight flex items-center gap-2 text-lg md:text-xl relative z-10">Top Vybers</h3>
-          <p className="text-[9px] md:text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10 bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">Top 5 win monthly airdrops!</p>
+          <p className="text-[9px] md:text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10 bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">Top 3 win airdrops every 14 days!</p>
         </div>
         <div className="flex flex-col p-2">
           {dynamicLeaderboard.map((user: any) => (
