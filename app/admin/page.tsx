@@ -51,10 +51,12 @@ export default function AdminPanel() {
   const [isAdminVerified, setIsAdminVerified] = useState(false);
 
   const [markets, setMarkets] = useState<any[]>([]);
-  const [marketStats, setMarketStats] = useState<any>({}); // NOVÉ: Stav pro statistiky
+  const [marketStats, setMarketStats] = useState<any>({});
+  const [archives, setArchives] = useState<any[]>([]); // Pro výsledky sezón
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isEndingSeason, setIsEndingSeason] = useState(false);
   
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState('Pop Culture');
@@ -94,6 +96,7 @@ export default function AdminPanel() {
         if (profile && profile.role === 'ADMIN') {
           setIsAdminVerified(true);
           fetchMarkets(); 
+          fetchArchives();
         } else {
           setLoading(false); 
         }
@@ -112,7 +115,6 @@ export default function AdminPanel() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    // NOVÉ: Načtení sázek pro výpočet statistik
     const { data: betsData } = await supabase
       .from('bets')
       .select('market_id, amount, status, payout');
@@ -142,6 +144,11 @@ export default function AdminPanel() {
       setMarketStats(stats);
     }
     setLoading(false);
+  };
+
+  const fetchArchives = async () => {
+    const { data } = await supabase.from('season_archives').select('*').order('season_date', { ascending: false });
+    if (data) setArchives(data);
   };
 
   const handleEdit = (market: any) => {
@@ -252,7 +259,6 @@ export default function AdminPanel() {
     try {
       await supabase.from('markets').update({ is_resolved: true, winning_outcome: winningOutcome }).eq('id', marketId);
       
-      // Při vyhodnocení filtrujeme jen ty sázky, které NEBYLY prodány
       const { data: marketBets } = await supabase.from('bets').select('*').eq('market_id', marketId).neq('status', 'cashed_out');
       
       if (marketBets) {
@@ -311,6 +317,22 @@ export default function AdminPanel() {
     }
   };
 
+  const handleEndSeason = async () => {
+    const confirmReset = window.prompt("WARNING: This will archive top players and RESET ALL XP TO 0. Type 'RESET' to confirm.");
+    if (confirmReset !== 'RESET') return;
+
+    setIsEndingSeason(true);
+    const { data, error } = await supabase.rpc('end_season_and_reset');
+    
+    if (error) {
+      showToast(`Error ending season: ${error.message}`, "error");
+    } else if (data && data.success) {
+      showToast(data.message, "success");
+      fetchArchives();
+    }
+    setIsEndingSeason(false);
+  };
+
   if (isAuthLoading || (loading && !isAdminVerified)) {
     return <div className="min-h-screen bg-zinc-950 text-zinc-500 p-10 font-mono uppercase text-center py-32 flex flex-col items-center justify-center gap-4">
       <div className="w-8 h-8 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
@@ -363,6 +385,47 @@ export default function AdminPanel() {
              <p className="text-xs text-zinc-500">{walletAddress || "Authenticated"}</p>
           </div>
         </header>
+
+        {/* NOVÁ SEKCE: SEASON MANAGEMENT */}
+        <section className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h2 className="text-xl font-black uppercase italic tracking-widest text-white mb-2">Season Management</h2>
+              <p className="text-xs text-zinc-400">Archive current leaderboard to history and reset all XP to zero. (User balances are kept intact).</p>
+            </div>
+            <button 
+              onClick={handleEndSeason} 
+              disabled={isEndingSeason}
+              className="w-full md:w-auto px-8 py-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-xl font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-md disabled:opacity-50"
+            >
+              {isEndingSeason ? 'Processing...' : '⚠️ End Season & Reset XP'}
+            </button>
+          </div>
+
+          {archives.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-zinc-800">
+              <h3 className="text-sm font-black uppercase tracking-widest text-zinc-500 mb-4">Past Season Winners</h3>
+              <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                {archives.map(arch => (
+                  <div key={arch.id} className="p-4 bg-zinc-950 rounded-xl border border-zinc-800/50">
+                    <p className="text-xs text-fuchsia-500 font-bold mb-3">Season Ended: {new Date(arch.season_date).toLocaleDateString()}</p>
+                    <div className="space-y-2">
+                      {arch.top_players.map((p: any, i: number) => (
+                        <div key={i} className="flex justify-between items-center text-xs">
+                          <span className="text-zinc-300"><strong className="text-white mr-2">#{i+1}</strong> {p.nickname}</span>
+                          <div className="text-right">
+                            <span className="text-fuchsia-400 font-mono mr-4">{p.xp_points} XP</span>
+                            <span className="text-zinc-600 font-mono text-[9px]">{p.payout_wallet || p.wallet_address}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
 
         <section className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8">
           <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest">{editingId ? 'Edit Market' : 'Deploy New Market'}</h2>
@@ -429,7 +492,6 @@ export default function AdminPanel() {
                 </div>
               </div>
               
-              {/* NOVÉ: Tabulka statistik pod trhem */}
               <div className="grid grid-cols-4 gap-2 mb-6 p-4 bg-zinc-950 rounded-2xl border border-zinc-800/50">
                 <div>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Total Vol.</p>
@@ -478,7 +540,6 @@ export default function AdminPanel() {
                 </div>
               </div>
               
-              {/* STATISTIKY U UZAVŘENÝCH TRHŮ */}
               <div className="grid grid-cols-4 gap-2 pt-4 border-t border-zinc-800/50">
                 <div>
                   <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Total Vol.</p>

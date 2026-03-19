@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAppContext } from '../context';
 import { supabase } from '../lib/supabase';
 import Cropper from 'react-easy-crop';
@@ -25,7 +26,8 @@ async function getCroppedImg(imageSrc: string, pixelCrop: { x: number; y: number
 }
 
 export default function ProfilePage() {
-  const { balance, userXp, myBets, markets, marketPrices, isAuthLoading, nickname, avatarUrl, walletAddress, showToast, cashOutBet, claimReliefFund } = useAppContext();
+  const router = useRouter();
+  const { isLoggedIn, isAuthLoading, walletAddress, balance, userXp, nickname, avatarUrl, myBets, markets, marketPrices, cashOutBet, showToast, claimReliefFund, fetchData } = useAppContext();
   
   const [payoutAddress, setPayoutAddress] = useState('');
   const [savingWallet, setSavingWallet] = useState(false);
@@ -45,6 +47,17 @@ export default function ProfilePage() {
   const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null);
 
   const baseStartingBalance = 500;
+
+  // Vynucení stažení čerstvých dat při vstupu na profil
+  useEffect(() => {
+    if (!isAuthLoading) {
+      if (!isLoggedIn) {
+        router.push('/'); 
+      } else if (walletAddress) {
+        fetchData();
+      }
+    }
+  }, [isAuthLoading, isLoggedIn, walletAddress, router, fetchData]);
 
   useEffect(() => {
     const fetchWallet = async () => {
@@ -354,49 +367,56 @@ export default function ProfilePage() {
 
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-5 md:p-8 shadow-md">
           <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-5">History</h3>
-          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 
+              [&::-webkit-scrollbar]:w-2 
+              [&::-webkit-scrollbar-track]:bg-zinc-100 [&::-webkit-scrollbar-track]:dark:bg-black/20 [&::-webkit-scrollbar-track]:rounded-full
+              [&::-webkit-scrollbar-thumb]:bg-zinc-300 [&::-webkit-scrollbar-thumb]:dark:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-zinc-400 [&::-webkit-scrollbar-thumb]:dark:hover:bg-zinc-600
+          ">
             {resolvedBetsList.length === 0 ? (
-              <div className="text-center py-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-950/50">
-                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">No history yet.</p>
-              </div>
+              <div className="text-center py-10 opacity-60"><p className="text-[10px] uppercase font-bold tracking-widest text-zinc-600">No completed trades.</p></div>
             ) : (
-              resolvedBetsList.map((bet: any) => (
-                <div key={bet.id} className="flex flex-col gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 opacity-90 hover:opacity-100 transition-opacity">
-                  <div className="flex justify-between items-center">
-                    <div className="pr-4">
-                      <p className="font-bold text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 line-clamp-1">{bet.markets?.title || 'Unknown Market'}</p>
-                      <p className="text-[8px] sm:text-[9px] font-black text-zinc-500 uppercase tracking-widest mt-1">
-                        {bet.type} | <span className={bet.status === 'won' ? 'text-green-500' : bet.status === 'cashed_out' ? 'text-blue-500' : 'text-red-500'}>{bet.status === 'cashed_out' ? 'SOLD' : bet.status}</span>
-                      </p>
+              resolvedBetsList.map((bet: any) => {
+                const marketDetails = markets.find((m: any) => m.id === bet.marketId);
+                return (
+                  <div key={bet.id} className="grid grid-cols-12 gap-3 items-center p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5 transition-opacity">
+                    <div className="col-span-8 flex items-center gap-4">
+                      {marketDetails?.imageUrl && (
+                        <img src={marketDetails.imageUrl} alt="" className="w-10 h-10 rounded-xl object-cover grayscale shrink-0" />
+                      )}
+                      <div>
+                        <p className="font-bold text-xs md:text-sm text-zinc-900 dark:text-white line-clamp-1 leading-tight">{marketDetails?.title || 'Unknown Market'}</p>
+                        <p className={`text-[8px] md:text-[9px] font-black uppercase tracking-widest mt-1 ${bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? 'text-green-500' : 'text-zinc-500'}`}>{bet.type} | {bet.status === 'cashed_out' ? 'SOLD' : bet.status}</p>
+                      </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-black text-[11px] sm:text-xs text-zinc-500 font-mono">{bet.amount} USDC</p>
-                      <p className={`text-[9px] sm:text-[10px] font-black font-mono tracking-widest mt-1 ${bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? 'text-green-500' : 'text-red-500'}`}>
+                    
+                    <div className="col-span-4 flex flex-col items-end gap-1">
+                      <p className="text-[10px] md:text-xs font-black font-mono text-zinc-500">{bet.amount} USDC</p>
+                      <p className={`text-[9px] md:text-[11px] font-mono font-bold mt-0.5 ${bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? 'text-green-500' : 'text-red-500'}`}>
                         {bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? '+' : ''}{(bet.payout || 0).toFixed(2)} USDC
                       </p>
+                      
+                      {(bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount)) && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const profit = (bet.payout || 0) - bet.amount;
+                            const roi = Math.round((profit / bet.amount) * 100);
+                            const cleanTitle = marketDetails?.title || 'a market';
+                            const link = `${window.location.origin}`; 
+                            
+                            const tweetText = `Just secured a massive +${roi}% ROI ($${profit.toFixed(0)} profit) predicting "${cleanTitle}" on @Vybecheck! 🔮📈\n\nAre you fading me or following my vybe? 👀👇\n${link}`;
+                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
+                          }}
+                          className="mt-1 flex items-center gap-1.5 px-2 py-1 bg-black dark:bg-white text-white dark:text-black rounded text-[7px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md active:scale-95"
+                        >
+                          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                          FLEX
+                        </button>
+                      )}
                     </div>
                   </div>
-                  
-                  {(bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount)) && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const profit = (bet.payout || 0) - bet.amount;
-                        const roi = Math.round((profit / bet.amount) * 100);
-                        const cleanTitle = bet.markets?.title || 'a market';
-                        const link = `${window.location.origin}`; 
-                        
-                        const tweetText = `Just secured a massive +${roi}% ROI ($${profit.toFixed(0)} profit) predicting "${cleanTitle}" on @Vybecheck! 🔮📈\n\nAre you fading me or following my vybe? 👀👇\n${link}`;
-                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
-                      }}
-                      className="self-start inline-flex items-center gap-2 px-3 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg text-[8px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md active:scale-95"
-                    >
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.93H5.078z"/></svg>
-                      FLEX ON X
-                    </button>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

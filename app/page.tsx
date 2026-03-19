@@ -37,12 +37,15 @@ function HomeContent() {
 
   const [activeCategory, setActiveCategory] = useState('All');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [flexMarket, setFlexMarket] = useState<any>(null);
   const [betAmount, setBetAmount] = useState<string>("10");
   const [chatInput, setChatInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [replyingTo, setReplyingTo] = useState<{ id: string, user: string } | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
+  
+  // UNIVERZÁLNÍ SDÍLECÍ STATE
+  const [shareData, setShareData] = useState<{title: string, text: string, url: string} | null>(null);
+
   const chatTopRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -114,9 +117,40 @@ function HomeContent() {
     else placeBet(marketId, type, amountToBet);
   };
 
-  const handleFlex = (e: React.MouseEvent, market: any) => {
-    e.stopPropagation();
-    setFlexMarket(market);
+  // UNIVERZÁLNÍ SDÍLECÍ FUNKCE S ODMĚNOU
+  const openShareModal = (type: 'ASK' | 'FLEX', market: any) => {
+    const url = `${window.location.origin}/?vybecard=${createSlug(market.title)}`;
+    let text = "";
+
+    if (type === 'ASK') {
+      text = `What's the vybe on this? 🔮\n\n"${market.title}"\n\nI'm checking the odds on @Vybecheck. Are you fading or following the crowd? 👀👇`;
+    } else {
+      text = `I just took a position on\n"${market.title}"\n\nJoin me on Vybecheck and let's see who's right! 💸🔮`;
+    }
+
+    setShareData({ title: market.title, text, url });
+  };
+
+  const executeShare = (platform: string) => {
+    if (!shareData) return;
+    
+    if (isLoggedIn) {
+      claimShareReward();
+    }
+
+    const { text, url } = shareData;
+    
+    if (platform === 'X') {
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+    } else if (platform === 'TELEGRAM') {
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
+    } else if (platform === 'WHATSAPP') {
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text + '\n\n' + url)}`, '_blank');
+    } else if (platform === 'COPY') {
+      navigator.clipboard.writeText(`${text}\n\n${url}`);
+      showToast("Link copied to clipboard!", "success");
+    }
+    setShareData(null);
   };
 
   const shortAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "Not Connected";
@@ -137,7 +171,6 @@ function HomeContent() {
   const isResolved = selectedMarket ? !!marketStatus[selectedMarket.id] : false;
   const winningOutcome = selectedMarket ? marketStatus[selectedMarket.id] : null;
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
-  
   const marketBetTotal = selectedMarket ? myBets.filter((b: any) => b.marketId === selectedMarket.id && (!b.status || b.status === 'pending')).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
 
   const headerContent = (
@@ -245,7 +278,6 @@ function HomeContent() {
           <p className="text-[9px] md:text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10 bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">Top 5 win monthly airdrops!</p>
         </div>
         <div className="flex flex-col p-2">
-          {/* TADY JE AKTUALIZOVANÝ LEADERBOARD S ODKAZEM NA PROFIL */}
           {dynamicLeaderboard.map((user: any) => (
             <Link href={`/user/${encodeURIComponent(user.name)}`} key={user.id} className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors group cursor-pointer">
               <div className="flex items-center gap-3 md:gap-4">
@@ -262,23 +294,6 @@ function HomeContent() {
             </Link>
           ))}
         </div>
-      </div>
-    </div>
-  );
-
-  const flexModalContent = flexMarket && (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm" onClick={() => setFlexMarket(null)}>
-      <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-        <div className="text-center mb-2">
-          <h2 className="text-xl md:text-2xl font-black italic uppercase mb-1">Flex Your Position</h2>
-          <p className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-widest line-clamp-1">"{flexMarket.title}"</p>
-        </div>
-        <button onClick={() => {
-          const customUrl = `${window.location.origin}/?vybecard=${createSlug(flexMarket.title)}`;
-          const textToShare = `I just bet on\n"${flexMarket.title}"\n\nJoin me on Vybecheck!`;
-          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(customUrl)}`, '_blank');
-        }} className="flex items-center justify-center gap-3 w-full py-3.5 md:py-4 rounded-xl bg-black text-white hover:bg-zinc-800 transition-colors font-black uppercase tracking-widest text-xs md:text-sm shadow-md">Post to X</button>
-        <button onClick={() => setFlexMarket(null)} className="mt-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-[10px] md:text-xs font-bold uppercase tracking-widest transition-colors w-full py-2">Close</button>
       </div>
     </div>
   );
@@ -310,9 +325,48 @@ function HomeContent() {
     </div>
   );
 
+  const shareModalContent = shareData && (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm" onClick={() => setShareData(null)}>
+      <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col gap-5 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+        <div className="text-center mb-1">
+          <h2 className="text-xl md:text-2xl font-black italic uppercase mb-2">Share the Vybe</h2>
+          <p className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-widest line-clamp-2 mb-4">"{shareData.title}"</p>
+          <div className="inline-block bg-gradient-to-r from-fuchsia-500/10 to-orange-500/10 border border-fuchsia-500/20 text-fuchsia-500 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm">
+            🎁 Get +50 USDC & +50 XP daily!
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <button onClick={() => executeShare('X')} className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-black text-white dark:bg-white dark:text-black hover:scale-105 transition-transform shadow-md">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.93H5.078z"/></svg>
+            <span className="text-[10px] font-black uppercase tracking-widest">X (Twitter)</span>
+          </button>
+          
+          <button onClick={() => executeShare('TELEGRAM')} className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-[#229ED9] text-white hover:scale-105 transition-transform shadow-md">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.32.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.892-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+            <span className="text-[10px] font-black uppercase tracking-widest">Telegram</span>
+          </button>
+
+          <button onClick={() => executeShare('WHATSAPP')} className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-[#25D366] text-white hover:scale-105 transition-transform shadow-md">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.375-.883-.711-1.48-1.591-1.653-1.89-.173-.298-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+            <span className="text-[10px] font-black uppercase tracking-widest">WhatsApp</span>
+          </button>
+
+          <button onClick={() => executeShare('COPY')} className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-zinc-200 text-zinc-900 dark:bg-white/10 dark:text-white hover:scale-105 transition-transform shadow-md">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+            <span className="text-[10px] font-black uppercase tracking-widest">Copy Link</span>
+          </button>
+        </div>
+
+        <button onClick={() => setShareData(null)} className="mt-4 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-[10px] md:text-xs font-bold uppercase tracking-widest transition-colors w-full py-2">Cancel</button>
+      </div>
+    </div>
+  );
+
   return (
     <main className="flex min-h-screen flex-col items-center font-sans bg-zinc-50 dark:bg-[#0e0e12] transition-colors duration-500 relative">
       {headerContent}
+      
       {markets.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-50"><div className="w-10 h-10 md:w-12 md:h-12 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin mb-4"></div><p className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-zinc-500">Loading Vybecards...</p></div>
       ) : selectedMarket ? (
@@ -331,17 +385,11 @@ function HomeContent() {
                 </h1>
                 
                 <button 
-                  onClick={() => {
-                    if (isLoggedIn) claimShareReward(); 
-                    const cleanTitle = selectedMarket.title;
-                    const url = `${window.location.origin}/?vybecard=${createSlug(cleanTitle)}`;
-                    const tweetText = `What's the vybe on this? 🔮\n\n"${cleanTitle}"\n\nI'm checking the odds on @Vybecheck. Are you fading or following the crowd? 👀👇\n${url}`;
-                    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
-                  }}
+                  onClick={() => openShareModal('ASK', selectedMarket)}
                   className="shrink-0 w-fit self-start sm:self-auto flex items-center justify-center gap-2 bg-black dark:bg-white text-white dark:text-black px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl group relative overflow-hidden"
                 >
                   <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-fuchsia-500/20 to-orange-500/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
-                  <svg className="w-3 h-3 md:w-3.5 md:h-3.5 relative z-10" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.93H5.078z"/></svg>
+                  <svg className="w-3.5 h-3.5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
                   <span className="relative z-10">Share & Earn <span className="hidden sm:inline">50 USDC</span></span>
                 </button>
               </div>
@@ -360,7 +408,7 @@ function HomeContent() {
                 )}
                 <div className="flex flex-col gap-4">
                   {marketBetTotal > 0 && (
-                    <div className="w-full flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95"><span className="font-black text-[10px] md:text-xs uppercase tracking-widest truncate mr-2">Vybechecked! ({marketBetTotal} USDC In Play)</span><button onClick={(e) => handleFlex(e, selectedMarket)} className="bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:opacity-90 shadow-md shrink-0">FLEX</button></div>
+                    <div className="w-full flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95"><span className="font-black text-[10px] md:text-xs uppercase tracking-widest truncate mr-2">Vybechecked! ({marketBetTotal} USDC In Play)</span><button onClick={() => openShareModal('FLEX', selectedMarket)} className="bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:opacity-90 shadow-md shrink-0">FLEX</button></div>
                   )}
                   {isResolved ? (
                     <div className="w-full text-center p-5 md:p-6 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex flex-col gap-2"><h4 className="font-black italic uppercase text-zinc-900 dark:text-white text-lg md:text-xl">Market Resolved</h4><p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p></div>
@@ -459,16 +507,35 @@ function HomeContent() {
             {sortedMarkets.map((market: any) => {
               const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5 };
               const isRes = !!marketStatus[market.id];
+              const userBetType = getUserBetStatus(nickname, market.id);
+
               return (
                 <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isRes ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
-                  <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10"><img src={market.imageUrl || market.image_url} alt="" className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isRes ? 'grayscale' : 'group-hover:scale-105'}`} /><div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 dark:from-[#18181b] dark:via-[#18181b]/20 to-transparent z-10" /><div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-2.5 md:py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${market.volumeUsd || market.volume_usd || 0}</div></div>
+                  <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
+                    <img src={market.imageUrl || market.image_url} alt="" className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isRes ? 'grayscale' : 'group-hover:scale-105'}`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 dark:from-[#18181b] dark:via-[#18181b]/10 to-transparent z-10" />
+                    <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-2.5 md:py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${market.volumeUsd || market.volume_usd || 0}</div>
+                    
+                    {!isRes && (
+                       <button onClick={(e) => { e.stopPropagation(); openShareModal('ASK', market); }} className="absolute bottom-4 right-4 z-30 px-3 py-2 bg-black/60 hover:bg-black/90 text-white rounded-lg text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-lg flex items-center gap-1.5 transition-all active:scale-95">
+                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                         Share & Earn
+                       </button>
+                    )}
+                  </div>
+
                   <div className="p-5 md:p-6 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
-                    <h2 className="text-base md:text-lg font-black leading-tight text-zinc-900 dark:text-white uppercase italic mb-3 md:mb-4 line-clamp-2 h-10 md:h-12">{market.title}</h2>
-                    <div className="mb-3 md:mb-4">
-                      <div className="flex justify-between items-center mb-1.5 px-1"><span className="text-[9px] md:text-[10px] font-black text-green-500 uppercase italic">{(prices.vibe * 100).toFixed(0)}%</span><span className="text-[9px] md:text-[10px] font-black text-red-500 uppercase italic">{(prices.noVibe * 100).toFixed(0)}%</span></div>
-                      <div className="relative h-1.5 md:h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${prices.vibe * 100}%` }} /><div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${prices.noVibe * 100}%` }} /></div>
+                    <div className="flex justify-between items-start mb-3 md:mb-4 h-10 md:h-12 gap-2">
+                        <h2 className="text-base md:text-lg font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-2">{market.title}</h2>
+                        {userBetType && <span className="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-[6px] md:text-[7px] font-black text-green-500 uppercase italic tracking-widest shrink-0 mt-0.5">{userBetType}</span>}
                     </div>
-                    <div className="mt-auto flex flex-col gap-2">{isRes ? <div className="w-full text-center py-2.5 md:py-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10"><p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]}</span></p></div> : <div className="grid grid-cols-2 gap-2"><div className="p-2.5 md:p-3 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-[10px] md:text-xs text-center transition-colors">Vybe</div><div className="p-2.5 md:p-3 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-[10px] md:text-xs text-center transition-colors">No Vybe</div></div>}</div>
+
+                    <div className="mb-4 md:mb-5 p-3 rounded-2xl bg-zinc-50 dark:bg-black/30 border border-zinc-100 dark:border-white/5 shadow-inner">
+                      <div className="flex justify-between items-center mb-2 px-1"><span className="text-[10px] md:text-xs font-black text-green-500 uppercase italic">{(prices.vibe * 100).toFixed(0)}% Vybe</span><span className="text-[10px] md:text-xs font-black text-red-500 uppercase italic">{(prices.noVibe * 100).toFixed(0)}% No Vybe</span></div>
+                      <div className="relative h-2 md:h-2.5 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${prices.vibe * 100}%` }} /><div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${prices.noVibe * 100}%` }} /></div>
+                    </div>
+                    
+                    <div className="mt-auto flex flex-col gap-2">{isRes ? <div className="w-full text-center py-2.5 md:py-3 rounded-xl bg-zinc-100 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5"><p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]}</span></p></div> : <div className="grid grid-cols-2 gap-2"><div className="p-2.5 md:p-3 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-[10px] md:text-xs text-center transition-colors">Vybe</div><div className="p-2.5 md:p-3 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-[10px] md:text-xs text-center transition-colors">No Vybe</div></div>}</div>
                   </div>
                 </div>
               );
@@ -477,8 +544,8 @@ function HomeContent() {
           {rightSidebar}
         </div>
       )}
-      {flexModalContent}
       {loginModalContent}
+      {shareModalContent}
     </main>
   );
 }
