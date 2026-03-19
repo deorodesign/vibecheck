@@ -32,7 +32,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [latestArchive, setLatestArchive] = useState<any>(null);
   const [showSeasonModal, setShowSeasonModal] = useState(false);
-  const [isTop5Winner, setIsTop5Winner] = useState(false);
+  const [isTop3Winner, setIsTop3Winner] = useState(false);
   const [playerRank, setPlayerRank] = useState<number | null>(null);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -151,9 +151,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (usersData) {
       const colors = ['from-yellow-400 to-yellow-600', 'from-zinc-300 to-zinc-500', 'from-orange-400 to-orange-600', 'from-blue-400 to-blue-600', 'from-green-400 to-green-600'];
       setDynamicLeaderboard(usersData.map((u, i) => {
-        // OPRAVA OCHRANY SOUKROMÍ: Pokud je adresa e-mail, napíšeme "Private Auth", jinak ji ukážeme (pro crypto peněženky)
         const isEmail = u.wallet_address && u.wallet_address.includes('@');
-        const displayAddress = isEmail ? 'Private Auth' : (u.wallet_address ? `${u.wallet_address.substring(0, 4)}...${u.wallet_address.slice(-4)}` : '0x...');
+        const displayAddress = isEmail ? '' : (u.wallet_address ? `${u.wallet_address.substring(0, 4)}...${u.wallet_address.slice(-4)}` : '');
         
         return {
           id: u.wallet_address || `unknown-${i}`, 
@@ -203,11 +202,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const topPlayers = latestArchive.top_players || [];
         const index = topPlayers.findIndex((p: any) => p.wallet_address === walletAddress);
         
-        if (index !== -1 && index < 5) {
-          setIsTop5Winner(true);
+        // ZMĚNA ZDE: Upozorní jen hráče v Top 3
+        if (index !== -1 && index < 3) {
+          setIsTop3Winner(true);
           setPlayerRank(index + 1);
         } else {
-          setIsTop5Winner(false);
+          setIsTop3Winner(false);
           setPlayerRank(index !== -1 ? index + 1 : null);
         }
         
@@ -353,20 +353,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       {showSeasonModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-500">
-          <div className={`relative w-full max-w-md p-8 md:p-10 rounded-[2rem] shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-500 overflow-hidden ${isTop5Winner ? 'bg-gradient-to-b from-yellow-500/10 to-zinc-950 border-2 border-yellow-500/50' : 'bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10'}`}>
+          <div className={`relative w-full max-w-md p-8 md:p-10 rounded-[2rem] shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-500 overflow-hidden ${isTop3Winner ? 'bg-gradient-to-b from-yellow-500/10 to-zinc-950 border-2 border-yellow-500/50' : 'bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10'}`}>
             
-            {isTop5Winner && <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400"></div>}
+            {isTop3Winner && <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400"></div>}
 
             <div className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-3xl md:text-4xl mb-6 shadow-inner bg-zinc-100 dark:bg-black">
-              {isTop5Winner ? '🏆' : '🔄'}
+              {isTop3Winner ? '🏆' : '🔄'}
             </div>
 
-            <h2 className={`text-2xl md:text-3xl font-black uppercase italic mb-3 tracking-tighter ${isTop5Winner ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600' : 'text-zinc-900 dark:text-white'}`}>
-              {isTop5Winner ? 'You won the season!' : 'Season Ended'}
+            <h2 className={`text-2xl md:text-3xl font-black uppercase italic mb-3 tracking-tighter ${isTop3Winner ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600' : 'text-zinc-900 dark:text-white'}`}>
+              {isTop3Winner ? 'You won the season!' : 'Season Ended'}
             </h2>
             
             <div className="text-sm md:text-base font-medium text-zinc-600 dark:text-zinc-400 leading-relaxed mb-8">
-              {isTop5Winner ? (
+              {isTop3Winner ? (
                 <>
                   <p className="mb-4">Incredible! You finished <strong>#{playerRank}</strong> on the leaderboard this season.</p>
                   <div className="p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs md:text-sm">
@@ -383,13 +383,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex flex-col w-full gap-3">
-              {isTop5Winner && (
+              {isTop3Winner && (
                 <Link href="/profile" onClick={closeSeasonModal} className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-black uppercase tracking-widest text-xs md:text-sm hover:scale-105 active:scale-95 transition-all shadow-lg">
                   Set Payout Wallet
                 </Link>
               )}
-              <button onClick={closeSeasonModal} className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-xs md:text-sm hover:scale-105 active:scale-95 transition-all ${isTop5Winner ? 'bg-transparent text-zinc-500 hover:text-white' : 'bg-black text-white dark:bg-white dark:text-black shadow-lg'}`}>
-                {isTop5Winner ? 'I already did this' : 'Let\'s Go'}
+              <button onClick={closeSeasonModal} className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-xs md:text-sm hover:scale-105 active:scale-95 transition-all ${isTop3Winner ? 'bg-transparent text-zinc-500 hover:text-white' : 'bg-black text-white dark:bg-white dark:text-black shadow-lg'}`}>
+                {isTop3Winner ? 'I already did this' : 'Let\'s Go'}
               </button>
             </div>
           </div>
