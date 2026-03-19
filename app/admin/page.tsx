@@ -270,14 +270,20 @@ export default function AdminPanel() {
     }
   };
 
+  // OPRAVENÁ FUNKCE MAZÁNÍ (Maže sázky i chat!)
   const deleteMarket = async (marketId: number) => {
     const confirmDelete = window.confirm(
-      "DANGER: Are you absolutely sure you want to delete this market? This will also delete all bets associated with it and cannot be undone!"
+      "DANGER: Are you absolutely sure you want to delete this market? This will also delete all bets and chat messages associated with it and cannot be undone!"
     );
     if (!confirmDelete) return;
     try {
+      // 1. Smazat všechny sázky
       await supabase.from('bets').delete().eq('market_id', marketId);
+      // 2. Smazat všechny zprávy v chatu
+      await supabase.from('chat_messages').delete().eq('market_id', marketId);
+      // 3. Nakonec smazat samotný trh
       const { error } = await supabase.from('markets').delete().eq('id', marketId);
+      
       if (error) throw error;
       showToast("Market deleted successfully.", "success");
       fetchMarkets();
