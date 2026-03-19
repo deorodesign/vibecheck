@@ -52,7 +52,7 @@ export default function AdminPanel() {
 
   const [markets, setMarkets] = useState<any[]>([]);
   const [marketStats, setMarketStats] = useState<any>({});
-  const [archives, setArchives] = useState<any[]>([]); // Pro výsledky sezón
+  const [archives, setArchives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -87,7 +87,7 @@ export default function AdminPanel() {
           return;
         }
 
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile } = await supabase
           .from('users')
           .select('role')
           .eq('id', user.id)
@@ -233,7 +233,7 @@ export default function AdminPanel() {
     };
 
     if (editingId) {
-      const { data, error } = await supabase.from('markets').update(marketData).eq('id', editingId).select();
+      const { error } = await supabase.from('markets').update(marketData).eq('id', editingId).select();
       if (error) {
         showToast("Database error: " + error.message, "error");
       } else {
@@ -242,7 +242,7 @@ export default function AdminPanel() {
         fetchMarkets();
       }
     } else {
-      const { data, error } = await supabase.from('markets').insert([marketData]).select();
+      const { error } = await supabase.from('markets').insert([marketData]).select();
       if (error) {
         showToast("Database rejected it: " + error.message, "error");
       } else {
@@ -257,47 +257,16 @@ export default function AdminPanel() {
   const resolveMarket = async (marketId: number, winningOutcome: 'VYBE' | 'NO_VYBE') => {
     if (!window.confirm(`Are you sure you want to resolve this market as ${winningOutcome}?`)) return;
     try {
-      await supabase.from('markets').update({ is_resolved: true, winning_outcome: winningOutcome }).eq('id', marketId);
+      const { data, error } = await supabase.rpc('resolve_market_secure', {
+        p_market_id: marketId,
+        p_winning_outcome: winningOutcome
+      });
       
-      const { data: marketBets } = await supabase.from('bets').select('*').eq('market_id', marketId).neq('status', 'cashed_out');
-      
-      if (marketBets) {
-        for (const bet of marketBets) {
-          const isWinner = bet.type === winningOutcome;
-          const entryPrice = Number(bet.entry_price) || 50;
-          const amount = Number(bet.amount);
-          
-          const payoutAmount = isWinner ? (amount / entryPrice) * 100 : 0;
-          
-          await supabase.from('bets').update({ status: isWinner ? 'won' : 'lost', payout: payoutAmount }).eq('id', bet.id);
-
-          const { data: userData } = await supabase.from('users').select('balance, xp_points').eq('wallet_address', bet.user_address).single();
-          
-          if (userData) {
-            let newBalance = Number(userData.balance);
-            if (isWinner) {
-              newBalance += payoutAmount;
-            }
-
-            let earnedXp = amount; 
-            if (isWinner) {
-              const netProfit = payoutAmount - amount;
-              if (netProfit > 0) {
-                earnedXp += (netProfit * 10);
-              }
-            }
-            
-            await supabase.from('users').update({
-              balance: newBalance,
-              xp_points: Number(userData.xp_points || 0) + Math.round(earnedXp)
-            }).eq('wallet_address', bet.user_address);
-          }
-        }
-      }
+      if (error) throw error;
       showToast(`Market resolved! Payouts & XP accurately distributed.`, "success");
       fetchMarkets();
-    } catch (error) {
-      showToast("Error resolving the market.", "error");
+    } catch (error: any) {
+      showToast("Error resolving the market: " + error.message, "error");
     }
   };
 
@@ -386,7 +355,6 @@ export default function AdminPanel() {
           </div>
         </header>
 
-        {/* NOVÁ SEKCE: SEASON MANAGEMENT */}
         <section className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>

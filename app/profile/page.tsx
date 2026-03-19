@@ -48,7 +48,6 @@ export default function ProfilePage() {
 
   const baseStartingBalance = 500;
 
-  // Vynucení stažení čerstvých dat při vstupu na profil
   useEffect(() => {
     if (!isAuthLoading) {
       if (!isLoggedIn) {
@@ -367,31 +366,26 @@ export default function ProfilePage() {
 
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-5 md:p-8 shadow-md">
           <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-5">History</h3>
-          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 
-              [&::-webkit-scrollbar]:w-2 
-              [&::-webkit-scrollbar-track]:bg-zinc-100 [&::-webkit-scrollbar-track]:dark:bg-black/20 [&::-webkit-scrollbar-track]:rounded-full
-              [&::-webkit-scrollbar-thumb]:bg-zinc-300 [&::-webkit-scrollbar-thumb]:dark:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-zinc-400 [&::-webkit-scrollbar-thumb]:dark:hover:bg-zinc-600
-          ">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 scrollbar-hide">
             {resolvedBetsList.length === 0 ? (
-              <div className="text-center py-10 opacity-60"><p className="text-[10px] uppercase font-bold tracking-widest text-zinc-600">No completed trades.</p></div>
+              <div className="text-center py-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-950/50">
+                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">No history yet.</p>
+              </div>
             ) : (
               resolvedBetsList.map((bet: any) => {
                 const marketDetails = markets.find((m: any) => m.id === bet.marketId);
                 return (
-                  <div key={bet.id} className="grid grid-cols-12 gap-3 items-center p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5 transition-opacity">
-                    <div className="col-span-8 flex items-center gap-4">
-                      {marketDetails?.imageUrl && (
-                        <img src={marketDetails.imageUrl} alt="" className="w-10 h-10 rounded-xl object-cover grayscale shrink-0" />
-                      )}
-                      <div>
-                        <p className="font-bold text-xs md:text-sm text-zinc-900 dark:text-white line-clamp-1 leading-tight">{marketDetails?.title || 'Unknown Market'}</p>
-                        <p className={`text-[8px] md:text-[9px] font-black uppercase tracking-widest mt-1 ${bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? 'text-green-500' : 'text-zinc-500'}`}>{bet.type} | {bet.status === 'cashed_out' ? 'SOLD' : bet.status}</p>
-                      </div>
+                  <div key={bet.id} className="flex justify-between items-center p-4 rounded-xl md:rounded-2xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 opacity-90 hover:opacity-100 transition-opacity">
+                    <div className="pr-4 flex-1">
+                      <p className="font-bold text-[11px] sm:text-sm text-zinc-700 dark:text-zinc-300 line-clamp-1">{marketDetails?.title || 'Unknown Market'}</p>
+                      <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest mt-1">
+                        {bet.type} | <span className={bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? 'text-green-500' : bet.status === 'cashed_out' ? 'text-blue-500' : 'text-zinc-500'}>{bet.status === 'cashed_out' ? 'SOLD' : bet.status}</span>
+                      </p>
                     </div>
                     
-                    <div className="col-span-4 flex flex-col items-end gap-1">
-                      <p className="text-[10px] md:text-xs font-black font-mono text-zinc-500">{bet.amount} USDC</p>
-                      <p className={`text-[9px] md:text-[11px] font-mono font-bold mt-0.5 ${bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? 'text-green-500' : 'text-red-500'}`}>
+                    <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                      <p className="font-black text-[10px] sm:text-xs text-zinc-500 font-mono">{bet.amount} USDC</p>
+                      <p className={`text-[9px] sm:text-[11px] font-black font-mono tracking-widest ${bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? 'text-green-500' : 'text-red-500'}`}>
                         {bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? '+' : ''}{(bet.payout || 0).toFixed(2)} USDC
                       </p>
                       

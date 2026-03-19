@@ -30,7 +30,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   const [dynamicLeaderboard, setDynamicLeaderboard] = useState<any[]>([]);
 
-  // STAVY PRO KONEC SEZÓNY
   const [latestArchive, setLatestArchive] = useState<any>(null);
   const [showSeasonModal, setShowSeasonModal] = useState(false);
   const [isTop5Winner, setIsTop5Winner] = useState(false);
@@ -107,7 +106,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsAuthLoading(false);
   }, [resetAppStaleState, fetchUserBets]);
 
-  // EXPORTOVANÁ FUNKCE PRO NAČÍTÁNÍ DAT
   const fetchData = useCallback(async () => {
     const { data: marketsData } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
     const { data: allBets } = await supabase.from('bets').select('market_id, type, amount, status');
@@ -163,6 +161,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (archiveData) {
       setLatestArchive(archiveData);
     }
+
+    // Refresh sázek aktuálního uživatele
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData && sessionData.session && sessionData.session.user && sessionData.session.user.email) {
+      const { data: betsData } = await supabase.from('bets').select('*').eq('user_address', sessionData.session.user.email);
+      if (betsData) {
+        setMyBets(betsData.map(b => ({ ...b, marketId: b.market_id, entryPrice: b.entry_price })));
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -179,7 +186,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => { if (betSubscription) supabase.removeChannel(betSubscription); };
   }, [fetchData]);
 
-  // LOGIKA PRO ZOBRAZENÍ MODALU O KONCI SEZÓNY
   useEffect(() => {
     if (isLoggedIn && walletAddress && latestArchive) {
       const seenArchiveId = localStorage.getItem('seen_season_archive_id');
@@ -278,7 +284,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setBalance(data.new_balance);
       setUserXp(data.new_xp);
       setMyBets(prev => [...prev, { id: data.bet_id, marketId, type, amount, entryPrice, status: 'pending' }]);
-      fetchData(); // Vynucení refreshe dat
+      fetchData();
       showToast(`Successfully bet ${amount} USDC!`, "success");
     }
   };
@@ -299,7 +305,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else if (data && data.success) {
       setBalance(data.new_balance);
       setMyBets(prev => prev.map(b => b.id === betId ? { ...b, status: 'cashed_out', payout: cashOutValue } : b));
-      fetchData(); // Vynucení refreshe dat
+      fetchData();
       const profit = cashOutValue - betToSell.amount;
       const profitText = profit >= 0 ? `+${profit.toFixed(2)}` : `${profit.toFixed(2)}`;
       showToast(`Cashed out for ${cashOutValue.toFixed(2)} USDC (${profitText})`, "success");
