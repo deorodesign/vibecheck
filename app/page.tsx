@@ -144,9 +144,8 @@ function HomeContent() {
     setShareData(null);
   };
 
-  // OPRAVA OCHRANY SOUKROMÍ - v hlavičce webu to už taky schová e-mail
   const shortAddress = (addr: string) => {
-    if (!addr) return "Not Connected";
+    if (!addr) return "";
     if (addr.includes('@')) return "Verified"; 
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
@@ -184,7 +183,7 @@ function HomeContent() {
               <div className="relative shrink-0" ref={dropdownRef}>
                 <button onClick={() => setIsProfileOpen(!isProfileOpen)} className={`flex items-center gap-2 md:gap-3 px-2 md:px-4 h-9 md:h-10 rounded-full border transition-all shadow-sm active:scale-95 ${isProfileOpen ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/30' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
                   {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-5 h-5 md:w-6 md:h-6 rounded-full object-cover border border-zinc-200 dark:border-white/20" /> : <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 border border-zinc-200 dark:border-white/20 flex items-center justify-center font-black text-white text-[9px] md:text-[10px]">{nickname?.charAt(0).toUpperCase() || 'U'}</div>}
-                  <span className="text-[9px] md:text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300 hidden sm:inline">{shortAddress(walletAddress)}</span>
+                  {shortAddress(walletAddress) && <span className="text-[9px] md:text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-300 hidden sm:inline">{shortAddress(walletAddress)}</span>}
                 </button>
                 {isProfileOpen && (
                   <div className="absolute right-0 top-full mt-2 w-60 md:w-64 max-w-[90vw] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -192,7 +191,7 @@ function HomeContent() {
                       <div className="flex items-center justify-between mb-3"><span className="text-zinc-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest">Wallet</span><Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-1 text-[9px] md:text-[10px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Settings</Link></div>
                       <div className="flex items-center gap-3">
                         {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover flex-shrink-0" /> : <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex-shrink-0"></div>}
-                        <div className="overflow-hidden"><p className="text-zinc-900 dark:text-white font-bold text-xs md:text-sm italic uppercase truncate">{walletAddress || nickname}</p></div>
+                        <div className="overflow-hidden"><p className="text-zinc-900 dark:text-white font-bold text-xs md:text-sm italic uppercase truncate">{nickname}</p></div>
                       </div>
                     </div>
                     <div className="p-2 flex flex-col gap-1">
@@ -253,7 +252,6 @@ function HomeContent() {
                   {user.avatar ? <img src={user.avatar} className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover shadow-sm shrink-0" alt="Avatar" /> : <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-tr ${user.color} shrink-0`}></div>}
                   <div className="flex flex-col">
                     <span className="font-bold text-[11px] md:text-xs text-zinc-900 dark:text-white group-hover:text-fuchsia-500 transition-colors truncate max-w-[80px] sm:max-w-[120px]">{user.name}</span>
-                    <span className="text-[8px] md:text-[9px] font-mono text-zinc-500 group-hover:text-fuchsia-400/70 transition-colors">{user.address}</span>
                   </div>
                 </div>
               </div>
