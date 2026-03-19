@@ -366,7 +366,7 @@ export default function ProfilePage() {
 
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-5 md:p-8 shadow-md">
           <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-5">History</h3>
-          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 scrollbar-hide">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {resolvedBetsList.length === 0 ? (
               <div className="text-center py-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-950/50">
                 <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">No history yet.</p>
