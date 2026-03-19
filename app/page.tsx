@@ -245,20 +245,21 @@ function HomeContent() {
           <p className="text-[9px] md:text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10 bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">Top 5 win monthly airdrops!</p>
         </div>
         <div className="flex flex-col p-2">
+          {/* TADY JE AKTUALIZOVANÝ LEADERBOARD S ODKAZEM NA PROFIL */}
           {dynamicLeaderboard.map((user: any) => (
-            <div key={user.id} className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+            <Link href={`/user/${encodeURIComponent(user.name)}`} key={user.id} className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors group cursor-pointer">
               <div className="flex items-center gap-3 md:gap-4">
                 <span className={`font-black italic text-base md:text-lg w-4 text-center ${user.rank === 1 ? 'text-yellow-500' : user.rank === 2 ? 'text-zinc-400' : user.rank === 3 ? 'text-amber-600' : 'text-zinc-300 dark:text-zinc-600'}`}>{user.rank}</span>
                 <div className="flex items-center gap-2 md:gap-3">
                   {user.avatar ? <img src={user.avatar} className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover shadow-sm shrink-0" alt="Avatar" /> : <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-tr ${user.color} shrink-0`}></div>}
                   <div className="flex flex-col">
-                    <span className="font-bold text-[11px] md:text-xs text-zinc-900 dark:text-white truncate max-w-[80px] sm:max-w-[120px]">{user.name}</span>
-                    <span className="text-[8px] md:text-[9px] font-mono text-zinc-500">{user.address}</span>
+                    <span className="font-bold text-[11px] md:text-xs text-zinc-900 dark:text-white group-hover:text-fuchsia-500 transition-colors truncate max-w-[80px] sm:max-w-[120px]">{user.name}</span>
+                    <span className="text-[8px] md:text-[9px] font-mono text-zinc-500 group-hover:text-fuchsia-400/70 transition-colors">{user.address}</span>
                   </div>
                 </div>
               </div>
               <span className="font-black font-mono text-xs md:text-sm text-zinc-900 dark:text-white shrink-0">{user.points.toLocaleString('en-US')}</span>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

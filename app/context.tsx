@@ -154,10 +154,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })));
       }
 
-      betSubscription = supabase.channel('realtime-bets')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
+      // OPRAVA: Přidali jsme poslouchání i na 'chat_messages', aby se komenty a liky syncovaly live!
+      betSubscription = supabase.channel('realtime-vybe')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, () => {
           fetchData(); 
-        }).subscribe();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
+          fetchData(); 
+        })
+        .subscribe();
     };
     
     fetchData();
@@ -195,19 +200,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (activeUserBetsForMarket.some(b => b.type === 'NO_VYBE')) finalBetType = 'NO_VYBE';
     }
     const tempMessage = { id: crypto.randomUUID(), marketId, parentId, text, user, avatar, betType: finalBetType, timestamp: new Date().toISOString(), color: 'text-fuchsia-500', likedBy: [] };
+    
+    // Optimistický update
     setChatMessages((prev: any) => [...prev, tempMessage]);
-    await supabase.from('chat_messages').insert([{ market_id: marketId, parent_id: parentId, user_name: user, avatar_url: avatar, text: text, bet_type: finalBetType, color: 'text-fuchsia-500' }]);
+    
+    // Odeslání do DB
+    await supabase.from('chat_messages').insert([{ market_id: marketId, parent_id: parentId, user_name: user, avatar_url: avatar, text: text, bet_type: finalBetType, color: 'text-fuchsia-500', liked_by: [] }]);
   };
 
-  const toggleLikeMessage = (messageId: string, userName: string) => {
+  // OPRAVA: Toggle Like nyní posílá data do Supabase
+  const toggleLikeMessage = async (messageId: string, userName: string) => {
     if (!userName) return;
+
+    const messageToLike = chatMessages.find(m => m.id === messageId);
+    if (!messageToLike) return;
+
+    const currentLikes = messageToLike.likedBy || [];
+    const newLikes = currentLikes.includes(userName)
+      ? currentLikes.filter((u: string) => u !== userName)
+      : [...currentLikes, userName];
+
+    // Optimistický update v UI (aby to bylo okamžité pro toho, kdo klikl)
     setChatMessages((prev: any) => prev.map((msg: any) => {
-      if (msg.id === messageId) {
-        const currentLikes = msg.likedBy || [];
-        return { ...msg, likedBy: currentLikes.includes(userName) ? currentLikes.filter((u: string) => u !== userName) : [...currentLikes, userName] };
-      }
+      if (msg.id === messageId) return { ...msg, likedBy: newLikes };
       return msg;
     }));
+
+    // Uložení liků do databáze (aby to viděli i ostatní v jiných oknech)
+    const { error } = await supabase
+      .from('chat_messages')
+      .update({ liked_by: newLikes })
+      .eq('id', messageId);
+
+    if (error) console.error("Error saving like:", error.message);
   };
 
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
@@ -281,7 +306,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // --- NOVÉ FUNKCE PRO ZÁCHRANU A ODPOVĚDI ---
   const claimReliefFund = async () => {
     setIsAuthLoading(true);
     const { data, error } = await supabase.rpc('claim_relief_fund', {
