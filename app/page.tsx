@@ -43,7 +43,6 @@ function HomeContent() {
   const [replyingTo, setReplyingTo] = useState<{ id: string, user: string } | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
   
-  // UNIVERZÁLNÍ SDÍLECÍ STATE
   const [shareData, setShareData] = useState<{title: string, text: string, url: string} | null>(null);
 
   const chatTopRef = useRef<HTMLDivElement>(null);
@@ -117,7 +116,6 @@ function HomeContent() {
     else placeBet(marketId, type, amountToBet);
   };
 
-  // UNIVERZÁLNÍ SDÍLECÍ FUNKCE S ODMĚNOU
   const openShareModal = (type: 'ASK' | 'FLEX', market: any) => {
     const url = `${window.location.origin}/?vybecard=${createSlug(market.title)}`;
     let text = "";
@@ -218,6 +216,10 @@ function HomeContent() {
                       </Link>
                       <Link href="/how-it-works" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">
                         How it Works
+                      </Link>
+                      {/* NOVÝ F.A.Q ODKAZ ZDE */}
+                      <Link href="/faq" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">
+                        F.A.Q.
                       </Link>
                       <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">
                         Rules & Policies
