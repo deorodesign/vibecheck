@@ -21,7 +21,7 @@ export default function RewardsPage() {
 
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter mb-4">Real Stakes.</h2>
-          <p className="text-zinc-500 font-medium max-w-xl mx-auto text-sm md:text-base">Trade with virtual USDC, prove your cultural intuition, and earn real money airdrops at the end of every season.</p>
+          <p className="text-zinc-500 font-medium max-w-xl mx-auto text-sm md:text-base">Trade with virtual USDC, prove your cultural intuition, and earn real money airdrops every 14 days.</p>
         </div>
 
         {/* PRIZE POOL CARD */}
@@ -30,12 +30,12 @@ export default function RewardsPage() {
           
           <div className="relative z-10">
             <span className="text-4xl md:text-5xl mb-4 block drop-shadow-lg">🏆</span>
-            <h3 className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400 mb-2">Monthly Prize Pool</h3>
+            <h3 className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400 mb-2">Season Prize Pool (14 Days)</h3>
             <div className="text-4xl md:text-6xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 mb-6 drop-shadow-sm">
-              250 USDC
+              150 USDC
             </div>
             <p className="text-sm md:text-base font-bold text-zinc-700 dark:text-zinc-300 max-w-md mx-auto leading-relaxed">
-              The Top 5 players on the Leaderboard at the end of the Season split the pool equally. <br/>
+              The Top 3 players on the Leaderboard at the end of the 14-day Season split the pool equally. <br/>
               <span className="text-fuchsia-500 font-black inline-block mt-3 text-lg md:text-xl border-b-2 border-fuchsia-500/30 pb-1">50 USDC EACH</span>
             </p>
           </div>
@@ -54,20 +54,20 @@ export default function RewardsPage() {
               </div>
             </div>
 
-            {/* NOVÝ BOD PRO SDÍLENÍ - VIZUÁLNĚ ODLÍŠENÝ */}
+            {/* EXPLICITNÍ BOD PRO SDÍLENÍ */}
             <div className="flex gap-4">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fuchsia-500 to-orange-500 flex items-center justify-center font-black text-white shrink-0 shadow-md">!</div>
               <div>
                 <h4 className="font-black text-sm md:text-base uppercase tracking-widest mb-1 text-zinc-900 dark:text-white">Share & Earn Daily Bonus</h4>
-                <p className="text-xs md:text-sm text-zinc-500 font-medium leading-relaxed">Boost your bankroll and rank! Hit the <strong className="text-zinc-700 dark:text-zinc-300">Share & Earn</strong> button on any market once a day to instantly receive <strong className="text-green-500">+50 USDC</strong> and <strong className="text-fuchsia-500">+50 Season XP</strong>.</p>
+                <p className="text-xs md:text-sm text-zinc-500 font-medium leading-relaxed">Boost your bankroll and rank! Hit the <strong className="text-zinc-700 dark:text-zinc-300">Share & Earn</strong> button and <strong className="text-fuchsia-500">actually post/send the link</strong> to your socials (X, Telegram, or WhatsApp) to instantly receive <strong className="text-green-500">+50 USDC</strong> and <strong className="text-fuchsia-500">+50 Season XP</strong>.</p>
               </div>
             </div>
 
             <div className="flex gap-4">
               <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center font-black text-fuchsia-500 shrink-0 border border-zinc-200 dark:border-white/5">2</div>
               <div>
-                <h4 className="font-black text-sm md:text-base uppercase tracking-widest mb-1 text-zinc-900 dark:text-white">Reach the Top 5</h4>
-                <p className="text-xs md:text-sm text-zinc-500 font-medium leading-relaxed">Check the Leaderboard on the main page. The season resets at the end of the month. If you are in the Top 5 when the clock strikes, you win.</p>
+                <h4 className="font-black text-sm md:text-base uppercase tracking-widest mb-1 text-zinc-900 dark:text-white">Reach the Podium (Top 3)</h4>
+                <p className="text-xs md:text-sm text-zinc-500 font-medium leading-relaxed">Check the Leaderboard on the main page. The season resets every 14 days. If you hold the 1st, 2nd, or 3rd spot when the clock strikes, you win.</p>
               </div>
             </div>
 
