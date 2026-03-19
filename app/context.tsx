@@ -154,7 +154,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })));
       }
 
-      // Realtime listener (Pokud ho někdy zapneš v Supabase)
       betSubscription = supabase.channel('realtime-bets')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
           fetchData(); 
@@ -227,7 +226,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUserXp(data.new_xp);
       setMyBets(prev => [...prev, { id: data.bet_id, marketId, type, amount, entryPrice, status: 'pending' }]);
       
-      // OPTIMISTICKÝ UPDATE GRAFU (Hned po sázce!)
       setMarketPrices((prev: any) => {
         const current = prev[marketId] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
         const updatedVybePool = current.vybePool + (type === 'VYBE' ? amount : 0);
@@ -264,7 +262,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setBalance(data.new_balance);
       setMyBets(prev => prev.map(b => b.id === betId ? { ...b, status: 'cashed_out', payout: cashOutValue } : b));
       
-      // OPTIMISTICKÝ UPDATE GRAFU (Odstranění peněz po Cash Outu!)
       setMarketPrices((prev: any) => {
         const current = prev[betToSell.marketId] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
         const updatedVybePool = Math.max(0, current.vybePool - (betToSell.type === 'VYBE' ? betToSell.amount : 0));
@@ -284,6 +281,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // --- NOVÉ FUNKCE PRO ZÁCHRANU A ODPOVĚDI ---
+  const claimReliefFund = async () => {
+    setIsAuthLoading(true);
+    const { data, error } = await supabase.rpc('claim_relief_fund', {
+      p_wallet_address: walletAddress
+    });
+
+    if (error) {
+      showToast(`Error: ${error.message}`, "error");
+    } else if (data && data.success) {
+      setBalance(data.new_balance);
+      showToast(`+50 USDC added to your Bankroll! Stay in the game.`, "success");
+    } else if (data && !data.success) {
+      showToast(data.message, "error");
+    }
+    setIsAuthLoading(false);
+  };
+
+  const claimShareReward = async () => {
+    if (!walletAddress) return;
+    const { data, error } = await supabase.rpc('claim_share_reward', {
+      p_wallet_address: walletAddress
+    });
+
+    if (error) {
+      console.error(error);
+    } else if (data && data.success) {
+      setBalance(data.new_balance);
+      setUserXp(data.new_xp);
+      showToast(data.message, "success");
+    } else if (data && !data.success) {
+      showToast(data.message, "info");
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       markets, setMarkets, isLoggedIn, setIsLoggedIn, isAuthLoading, setIsAuthLoading,
@@ -293,7 +325,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       selectedMarket, setSelectedMarket, avatarUrl, setAvatarUrl, nickname, setNickname,
       isDarkMode, toggleDarkMode, marketStatus, setMarketStatus, dynamicLeaderboard,
       showToast, isLoginModalOpen, setIsLoginModalOpen, connectWallet, handleLogout,
-      loginWithTwitter, loginWithDiscord, loginWithEmail, loginWithGoogle, placeBet, cashOutBet
+      loginWithTwitter, loginWithDiscord, loginWithEmail, loginWithGoogle, placeBet, cashOutBet,
+      claimReliefFund, claimShareReward
     }}>
       {children}
       <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">

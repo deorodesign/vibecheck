@@ -32,7 +32,7 @@ function HomeContent() {
     selectedMarket, setSelectedMarket, avatarUrl, nickname,
     isDarkMode, toggleDarkMode, marketStatus, dynamicLeaderboard,
     showToast, isLoginModalOpen, setIsLoginModalOpen,
-    loginWithTwitter, loginWithDiscord, loginWithEmail, loginWithGoogle
+    loginWithTwitter, loginWithDiscord, loginWithEmail, loginWithGoogle, claimShareReward
   } = useAppContext();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -138,7 +138,6 @@ function HomeContent() {
   const winningOutcome = selectedMarket ? marketStatus[selectedMarket.id] : null;
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
   
-  // OPRAVA B: Sečíst jen sázky, které NEBYLY prodány (pending)
   const marketBetTotal = selectedMarket ? myBets.filter((b: any) => b.marketId === selectedMarket.id && (!b.status || b.status === 'pending')).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
 
   const headerContent = (
@@ -324,7 +323,28 @@ function HomeContent() {
               <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-widest border border-white/10 z-20 shadow-lg">Vol: ${selectedMarket.volumeUsd || selectedMarket.volume_usd || 0}</div>
             </div>
             <div className="flex flex-col gap-5 -mt-16 md:-mt-20 relative z-10 px-0 md:px-8">
-              <h1 className="text-3xl md:text-4xl font-black leading-tight tracking-tight text-zinc-900 dark:text-white uppercase italic drop-shadow-lg px-4 md:px-0">{selectedMarket.title}</h1>
+              
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 px-4 md:px-0">
+                <h1 className="text-3xl md:text-4xl font-black leading-tight tracking-tight text-zinc-900 dark:text-white uppercase italic drop-shadow-lg flex-1">
+                  {selectedMarket.title}
+                </h1>
+                
+                <button 
+                  onClick={() => {
+                    if (isLoggedIn) claimShareReward(); 
+                    const cleanTitle = selectedMarket.title;
+                    const url = `${window.location.origin}/?vybecard=${createSlug(cleanTitle)}`;
+                    const tweetText = `What's the vybe on this? 🔮\n\n"${cleanTitle}"\n\nI'm checking the odds on @Vybecheck. Are you fading or following the crowd? 👀👇\n${url}`;
+                    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
+                  }}
+                  className="shrink-0 flex items-center justify-center gap-2 bg-black dark:bg-white text-white dark:text-black px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl group relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-fuchsia-500/20 to-orange-500/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
+                  <svg className="w-3.5 h-3.5 relative z-10" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.93H5.078z"/></svg>
+                  <span className="relative z-10">Share & Earn 50 USDC</span>
+                </button>
+              </div>
+
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[2rem] p-5 md:p-6 shadow-md mx-4 md:mx-0">
                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Current Vybe Check</h3>
                 <div className="relative h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center mb-6 border border-zinc-200 dark:border-white/5 shadow-inner">
