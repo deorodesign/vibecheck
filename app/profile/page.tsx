@@ -49,7 +49,6 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchWallet = async () => {
       if (walletAddress) {
-        // OPRAVENO: Tady byl ten překlep ze screenshotu
         const { data } = await supabase.from('users').select('payout_wallet').eq('wallet_address', walletAddress).single();
         if (data && (data as any).payout_wallet) setPayoutAddress((data as any).payout_wallet);
       }
@@ -258,23 +257,23 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2 relative z-10 text-center sm:text-left">
-            <div className="bg-zinc-50 dark:bg-white/5 p-3 rounded-xl sm:bg-transparent sm:p-0 sm:rounded-none">
-              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Volume Traded</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-4 w-full border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2 relative z-10 text-center sm:text-left">
+            <div>
+              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Volume Traded</p>
               <p className="text-sm sm:text-lg font-black font-mono">${totalVolume.toFixed(2)}</p>
             </div>
-            <div className="bg-zinc-50 dark:bg-white/5 p-3 rounded-xl sm:bg-transparent sm:p-0 sm:rounded-none">
-              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Active Bets</p>
+            <div>
+              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Active Bets</p>
               <p className="text-sm sm:text-lg font-black font-mono">{activeBetsList.length}</p>
             </div>
-            <div className="bg-zinc-50 dark:bg-white/5 p-3 rounded-xl sm:bg-transparent sm:p-0 sm:rounded-none">
-              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Net Return</p>
+            <div>
+              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Net Return</p>
               <p className={`text-sm sm:text-lg font-black font-mono ${netReturn > 0 ? 'text-green-500' : netReturn < 0 ? 'text-red-500' : 'text-zinc-400'}`}>
                 {netReturn > 0 ? '+' : ''}{netReturn.toFixed(2)}%
               </p>
             </div>
-            <div className="bg-zinc-50 dark:bg-white/5 p-3 rounded-xl sm:bg-transparent sm:p-0 sm:rounded-none">
-              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Win / Loss</p>
+            <div>
+              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Win / Loss</p>
               <p className="text-sm sm:text-lg font-black font-mono">
                 <span className="text-green-500">{wins}</span> <span className="text-zinc-300 dark:text-zinc-600">/</span> <span className="text-red-500">{losses}</span>
               </p>
