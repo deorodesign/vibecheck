@@ -1,285 +1,204 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { useAppContext } from '../../context';
 
-export default function UserProfile() {
+export default function PublicProfilePage() {
   const params = useParams();
-  const router = useRouter();
+  // TADY JE TA ZMĚNA: čteme params.id místo params.username
+  const usernameParam = decodeURIComponent(params.id as string);
   const { markets, marketPrices } = useAppContext();
-  
-  const [userProfile, setUserProfile] = useState<any>(null);
+
+  const [profileData, setProfileData] = useState<any>(null);
   const [userBets, setUserBets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'Positions' | 'Activity'>('Positions');
 
   useEffect(() => {
-    const fetchPublicProfile = async () => {
-      const decodedName = decodeURIComponent(params.id as string);
-      
-      const { data: userData, error: userError } = await supabase
+    const fetchUserAndBets = async () => {
+      // 1. Najdeme hráče podle přezdívky (ignorujeme velikost písmen)
+      const { data: users } = await supabase
         .from('users')
-        .select('wallet_address, nickname, avatar_url, xp_points, created_at')
-        .ilike('nickname', decodedName)
-        .limit(1)
-        .single();
+        .select('*')
+        .ilike('nickname', usernameParam)
+        .limit(1);
 
-      if (userData) {
-        setUserProfile(userData);
-        
-        const { data: betsData } = await supabase
+      if (users && users.length > 0) {
+        const targetUser = users[0];
+        setProfileData(targetUser);
+
+        // 2. Vytáhneme všechny jeho sázky
+        const { data: bets } = await supabase
           .from('bets')
           .select('*')
-          .eq('user_address', userData.wallet_address)
+          .eq('user_address', targetUser.wallet_address)
           .order('created_at', { ascending: false });
 
-        if (betsData) setUserBets(betsData);
+        if (bets) {
+          setUserBets(bets.map(b => ({ ...b, marketId: b.market_id, entryPrice: b.entry_price })));
+        }
       }
       setLoading(false);
     };
 
-    fetchPublicProfile();
-  }, [params.id]);
+    fetchUserAndBets();
+  }, [usernameParam]);
 
   if (loading) {
-    return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-black uppercase tracking-widest text-fuchsia-500 italic">Finding Vyber...</div>;
-  }
-
-  if (!userProfile) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center font-mono text-white p-6">
-        <h1 className="text-4xl font-black italic uppercase mb-4">404</h1>
-        <p className="text-zinc-500 uppercase tracking-widest mb-8 text-center text-xs">Vyber not found.</p>
-        <Link href="/" className="px-6 py-3 bg-white text-black rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-transform shadow-md">Return Home</Link>
+      <div className="min-h-screen bg-zinc-50 dark:bg-[#0e0e12] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  const safeMarkets = markets || [];
-  
-  // Metriky
-  const pendingBets = userBets.filter(b => b.status === 'pending' || !b.status);
-  const resolvedBets = userBets.filter(b => b.status === 'won' || b.status === 'lost');
-  
-  // Total Volume a Positions Value
-  const positionsValue = pendingBets.reduce((sum, b) => sum + Number(b.amount), 0);
-  const biggestWin = resolvedBets.reduce((max, b) => b.status === 'won' && Number(b.payout) > max ? Number(b.payout) : max, 0);
-  
-  // PnL Kalkulace pro hlavičku grafu
-  const totalInvestedInResolved = resolvedBets.reduce((sum, b) => sum + Number(b.amount), 0);
-  const totalPayout = resolvedBets.reduce((sum, b) => sum + (b.status === 'won' ? Number(b.payout) : 0), 0);
-  const netPnL = totalPayout - totalInvestedInResolved;
+  if (!profileData) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-[#0e0e12] flex flex-col items-center justify-center p-4">
+        <h1 className="text-2xl md:text-4xl font-black italic uppercase text-zinc-900 dark:text-white mb-4">Vyber Not Found</h1>
+        <p className="text-zinc-500 uppercase tracking-widest text-xs mb-8">This user doesn't exist or changed their name.</p>
+        <Link href="/" className="px-6 py-3 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-black font-black uppercase tracking-widest text-xs">Back to Markets</Link>
+      </div>
+    );
+  }
 
-  const joinYear = new Date(userProfile.created_at || Date.now()).getFullYear();
+  // --- STATISTIKY ---
+  const enrichedBets = userBets.map((bet: any) => {
+    const marketDetails = markets.find((m: any) => m.id === bet.marketId);
+    return { ...bet, markets: marketDetails || { title: 'Unknown Market', image_url: '' } };
+  });
 
-  // Falešný graf na základě PnL
-  const generateChartPoints = () => {
-    let currentY = 50; 
-    const points = [[0, 100], [0, currentY]];
-    const stepX = 100 / Math.max(resolvedBets.length, 5);
-    
-    [...resolvedBets].reverse().forEach((bet, i) => {
-      if (bet.status === 'won') currentY = Math.max(10, currentY - 15); 
-      else currentY = Math.min(90, currentY + 10); 
-      points.push([(i + 1) * stepX, currentY]);
-    });
-    
-    points.push([100, currentY]);
-    points.push([100, 100]); 
-    return points.map(p => `${p[0]},${p[1]}`).join(' ');
-  };
+  const activeBetsList = enrichedBets.filter((b: any) => b.status === 'pending' || !b.status);
+  const resolvedBetsList = enrichedBets.filter((b: any) => b.status === 'won' || b.status === 'lost' || b.status === 'cashed_out');
 
-  const displayBets = activeTab === 'Positions' ? pendingBets : userBets;
-
-  const createSlug = (title: string) => title.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+  const totalVolume = enrichedBets.reduce((sum: number, b: any) => sum + Number(b.amount), 0);
+  const wins = resolvedBetsList.filter((b: any) => b.status === 'won' || (b.status === 'cashed_out' && b.payout > b.amount)).length;
+  const losses = resolvedBetsList.filter((b: any) => b.status === 'lost' || (b.status === 'cashed_out' && b.payout <= b.amount)).length;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-fuchsia-500/30">
-      
-      <header className="w-full flex items-center justify-between p-6 md:px-10 border-b border-white/5">
-        <Link href="/" className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 uppercase tracking-tighter italic">
-          Vybecheck
-        </Link>
-        <Link href="/" className="text-xs font-bold text-zinc-500 hover:text-white transition-colors flex items-center gap-2">
-          ← BACK TO MARKETS
-        </Link>
-      </header>
-
-      <main className="max-w-6xl mx-auto p-4 md:p-10 space-y-6">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#0a0a0a] text-zinc-900 dark:text-white font-mono transition-colors duration-500 p-4 md:p-10">
+      <div className="max-w-3xl mx-auto space-y-6 md:space-y-8 mt-2 md:mt-0">
         
-        {/* HORNÍ KARTY (Profil + Graf) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <header className="w-full flex items-center justify-between mb-4 md:mb-8">
+          <Link href="/" className="flex items-center gap-2 md:gap-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors group">
+            <div className="p-1.5 md:p-2 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 group-hover:border-zinc-400 dark:group-hover:border-zinc-600 transition-colors shadow-sm">
+              <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            </div>
+            <span className="font-black text-[9px] md:text-xs uppercase tracking-widest">Back</span>
+          </Link>
+          <h1 className="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 uppercase tracking-tighter cursor-default italic">
+            Vyber Profile
+          </h1>
+        </header>
+
+        {/* HLAVNÍ KARTA HRÁČE */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-fuchsia-500/5 to-transparent rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
           
-          {/* Karta Profilu */}
-          <div className="bg-[#18181b] border border-white/5 rounded-2xl p-6 md:p-8 shadow-xl flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-8">
-              <div className="flex items-center gap-5">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex items-center justify-center text-3xl font-black text-white shrink-0">
-                  {userProfile.avatar_url ? <img src={userProfile.avatar_url} alt="" className="w-full h-full object-cover rounded-full" /> : userProfile.nickname.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h1 className="text-2xl font-black">{userProfile.nickname}</h1>
-                  <div className="flex items-center gap-2 mt-1 text-sm text-zinc-400">
-                    <span>Joined {joinYear}</span>
-                    <span>•</span>
-                    
-                    {/* XP SYSTEM A TOOLTIP */}
-                    <div className="relative group cursor-help flex items-center gap-1">
-                      <span className="text-fuchsia-500 font-bold">{userProfile.xp_points || 0} XP</span>
-                      <svg className="w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      
-                      <div className="absolute top-full left-0 mt-2 w-64 p-4 bg-[#0a0a0a] border border-zinc-800 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                        <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 border-b border-zinc-800 pb-2">How XP Works</h4>
-                        <ul className="text-xs text-zinc-300 space-y-2">
-                          <li className="flex items-start gap-2"><span className="text-fuchsia-500">▪</span><span><strong>+1 XP</strong> for every 1 USDC traded.</span></li>
-                          <li className="flex items-start gap-2"><span className="text-green-500">▪</span><span><strong>+10 XP</strong> for every 1 USDC of net profit.</span></li>
-                        </ul>
-                        <p className="text-[10px] text-fuchsia-400 mt-3 font-bold italic">Smart trading beats big spending.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <button className="w-10 h-10 rounded-full border border-white/10 hover:bg-white/5 flex items-center justify-center text-zinc-400 transition-colors">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-              </button>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 md:gap-6 text-center sm:text-left relative z-30">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-fuchsia-500 to-orange-500 flex items-center justify-center text-3xl sm:text-4xl font-black shadow-lg text-white border-4 border-white dark:border-[#0a0a0a] overflow-hidden shrink-0">
+              {profileData.avatar_url ? <img src={profileData.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : (profileData.nickname ? profileData.nickname.charAt(0).toUpperCase() : 'V')}
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <p className="text-2xl font-bold">${positionsValue.toFixed(2)}</p>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Positions Value</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-500">${biggestWin.toFixed(2)}</p>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Biggest Win</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{pendingBets.length}</p>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Predictions</p>
+            <div className="flex-1 w-full mt-2 sm:mt-0 flex flex-col items-center sm:items-start justify-center">
+              <h2 className="text-xl sm:text-3xl font-black uppercase tracking-widest truncate max-w-[250px] sm:max-w-full">
+                {profileData.nickname || 'ANONYMOUS VYBER'}
+              </h2>
+              
+              <div className="mt-3 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <p className="text-[11px] sm:text-sm font-black text-fuchsia-500 uppercase tracking-widest bg-fuchsia-500/10 border border-fuchsia-500/20 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                  Season XP: <span className="font-mono">{profileData.xp_points || 0}</span>
+                </p>
+                <p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest bg-zinc-100 dark:bg-white/5 px-3 py-1.5 rounded-lg">
+                  Joined: {new Date(profileData.created_at).toLocaleDateString()}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Karta Grafu (PnL) */}
-          <div className="bg-[#18181b] border border-white/5 rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden flex flex-col justify-between h-full min-h-[240px]">
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-                  <span className={netPnL >= 0 ? "text-green-500" : "text-fuchsia-500"}>{netPnL >= 0 ? "▲" : "▼"}</span> PROFIT/LOSS
-                </p>
-                <h2 className="text-4xl font-bold mt-2 font-sans">{netPnL >= 0 ? "+" : ""}${netPnL.toFixed(2)}</h2>
-                <p className="text-xs text-zinc-500 mt-1">Past Month</p>
-              </div>
-              <div className="flex gap-3 text-[10px] font-bold text-zinc-500">
-                <span className="hover:text-white cursor-pointer transition-colors">1D</span>
-                <span className="hover:text-white cursor-pointer transition-colors">1W</span>
-                <span className="text-fuchsia-500 bg-fuchsia-500/10 px-2 py-0.5 rounded cursor-pointer">1M</span>
-                <span className="hover:text-white cursor-pointer transition-colors">ALL</span>
-              </div>
+          <div className="grid grid-cols-3 gap-4 w-full border-t border-zinc-100 dark:border-zinc-800 pt-5 md:pt-6 mt-5 md:mt-6 relative z-10 text-center sm:text-left">
+            <div>
+              <p className="text-[8px] md:text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Volume Traded</p>
+              <p className="text-xs sm:text-lg font-black font-mono">${totalVolume.toFixed(2)}</p>
             </div>
-
-            {/* SVG Graf */}
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute bottom-0 left-0 w-full h-32 opacity-80">
-              <defs>
-                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={netPnL >= 0 ? "#22c55e" : "#d946ef"} stopOpacity="0.3" />
-                  <stop offset="100%" stopColor={netPnL >= 0 ? "#22c55e" : "#d946ef"} stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <polygon points={generateChartPoints()} fill="url(#chartGradient)" />
-              <polyline points={generateChartPoints().replace('0,100 ', '').replace(' 100,100', '')} fill="none" stroke={netPnL >= 0 ? "#22c55e" : "#d946ef"} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-            </svg>
+            <div>
+              <p className="text-[8px] md:text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Active Positions</p>
+              <p className="text-xs sm:text-lg font-black font-mono">{activeBetsList.length}</p>
+            </div>
+            <div>
+              <p className="text-[8px] md:text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Win / Loss</p>
+              <p className="text-xs sm:text-lg font-black font-mono">
+                <span className="text-green-500">{wins}</span> <span className="text-zinc-300 dark:text-zinc-600">/</span> <span className="text-red-500">{losses}</span>
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* TABULKA POZIC / AKTIVITY */}
-        <div className="bg-[#18181b] border border-white/5 rounded-2xl overflow-hidden shadow-xl mt-8">
-          <div className="flex justify-between items-center p-4 border-b border-white/5">
-            <div className="flex gap-6 px-2">
-              <button onClick={() => setActiveTab('Positions')} className={`text-sm font-bold pb-4 -mb-4 transition-colors ${activeTab === 'Positions' ? 'text-white border-b-2 border-white' : 'text-zinc-500 hover:text-zinc-300'}`}>Positions</button>
-              <button onClick={() => setActiveTab('Activity')} className={`text-sm font-bold pb-4 -mb-4 transition-colors ${activeTab === 'Activity' ? 'text-white border-b-2 border-white' : 'text-zinc-500 hover:text-zinc-300'}`}>Activity</button>
-            </div>
-            <div className="relative">
-              <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <input type="text" placeholder="Search positions" className="bg-[#0a0a0a] border border-white/10 rounded-full pl-9 pr-4 py-1.5 text-xs text-white outline-none focus:border-white/30 transition-colors w-48" />
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            {displayBets.length === 0 ? (
-              <div className="p-16 text-center text-zinc-500 text-sm font-bold uppercase tracking-widest">No {activeTab.toLowerCase()} found.</div>
+        {/* AKTIVNÍ POZICE */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-md">
+          <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-4 md:mb-5">Active Positions</h3>
+          <div className="space-y-3">
+            {activeBetsList.length === 0 ? (
+              <div className="text-center py-6 md:py-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-[1rem] md:rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-950/50">
+                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">No active positions right now.</p>
+              </div>
             ) : (
-              <div className="min-w-[600px]">
-                {/* Hlavička tabulky */}
-                <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                  <div className="col-span-6">Market</div>
-                  <div className="col-span-2 text-right">Avg</div>
-                  <div className="col-span-2 text-right">Current</div>
-                  <div className="col-span-2 text-right">Value</div>
-                </div>
-
-                {/* Řádky tabulky */}
-                {displayBets.map((bet: any, i: number) => {
-                  const market = safeMarkets.find((m: any) => m.id === bet.market_id || m.id === bet.marketId);
-                  const entryPrice = bet.entryPrice || bet.entry_price || 50;
-                  
-                  // Získání aktuální ceny z marketPrices kontextu
-                  const currentPriceObj = marketPrices[market?.id];
-                  const currentPriceRaw = currentPriceObj ? (bet.type === 'VYBE' ? currentPriceObj.vibe : currentPriceObj.noVibe) : 0.5;
-                  const currentPrice = Math.round(currentPriceRaw * 100);
-
-                  const shares = (Number(bet.amount) / (entryPrice / 100)).toFixed(1);
-                  const currentValue = (Number(shares) * (currentPrice / 100));
-                  const profitLoss = currentValue - Number(bet.amount);
-                  const profitLossPercent = ((profitLoss / Number(bet.amount)) * 100).toFixed(1);
-
-                  return (
-                    <div key={bet.id || i} onClick={() => market && router.push(`/?vybecard=${createSlug(market.title)}`)} className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 hover:bg-white/5 transition-colors items-center cursor-pointer">
-                      
-                      <div className="col-span-6 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-zinc-800 flex-shrink-0 overflow-hidden">
-                          {market?.imageUrl && <img src={market.imageUrl} alt="" className="w-full h-full object-cover" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold line-clamp-1">{market?.title || 'Unknown Market'}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[10px] font-black px-1.5 rounded ${bet.type === 'VYBE' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
-                              {bet.type === 'VYBE' ? 'Yes' : 'No'} {entryPrice.toFixed(0)}¢
-                            </span>
-                            <span className="text-[10px] text-zinc-500 font-mono">{shares} shares</span>
-                            {activeTab === 'Activity' && bet.status && bet.status !== 'pending' && (
-                              <span className={`text-[9px] uppercase tracking-widest font-black ml-2 ${bet.status === 'won' ? 'text-green-500' : 'text-red-500'}`}>({bet.status})</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="col-span-2 text-right font-mono text-sm">{entryPrice.toFixed(0)}¢</div>
-                      <div className="col-span-2 text-right font-mono text-sm">{currentPrice.toFixed(0)}¢</div>
-                      
-                      <div className="col-span-2 text-right">
-                        <p className="text-sm font-bold font-mono">${currentValue.toFixed(2)}</p>
-                        {activeTab === 'Positions' && (
-                           <p className={`text-[10px] font-bold font-mono mt-0.5 ${profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                             {profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)} ({profitLoss >= 0 ? '+' : ''}{profitLossPercent}%)
-                           </p>
-                        )}
-                        {activeTab === 'Activity' && bet.status === 'won' && (
-                          <p className="text-[10px] font-bold font-mono mt-0.5 text-green-500">Payout: +${Number(bet.payout).toFixed(2)}</p>
-                        )}
+              activeBetsList.map((bet: any) => {
+                return (
+                  <Link href={`/?vybecard=${bet.markets?.id}`} key={bet.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 md:p-4 rounded-xl md:rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors gap-3">
+                    <div className="flex items-center gap-3">
+                      {(bet.markets?.image_url || bet.markets?.imageUrl) ? (
+                        <img src={bet.markets?.image_url || bet.markets?.imageUrl} alt="" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover border border-zinc-200 dark:border-zinc-800 shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-zinc-800 shrink-0"></div>
+                      )}
+                      <div>
+                        <p className="font-bold text-[11px] sm:text-sm line-clamp-1">{bet.markets?.title || 'Unknown Market'}</p>
+                        <p className="text-[8px] sm:text-[9px] font-black text-zinc-500 uppercase tracking-widest mt-1">Holding: <span className={bet.type === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{bet.type}</span></p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                    
+                    <div className="text-left sm:text-right border-t sm:border-t-0 border-zinc-200 dark:border-zinc-800 pt-2 sm:pt-0 mt-1 sm:mt-0">
+                      <p className="font-black text-[10px] sm:text-sm font-mono text-zinc-500">Staked: {bet.amount} USDC</p>
+                    </div>
+                  </Link>
+                );
+              })
             )}
           </div>
         </div>
 
-      </main>
+        {/* HISTORIE (ZAVŘENÉ POZICE) */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-md">
+          <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-4 md:mb-5">Past Trades</h3>
+          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            {resolvedBetsList.length === 0 ? (
+              <div className="text-center py-6 md:py-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-[1rem] md:rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-950/50">
+                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">No completed trades yet.</p>
+              </div>
+            ) : (
+              resolvedBetsList.map((bet: any) => (
+                <div key={bet.id} className="flex justify-between items-center p-3 md:p-4 rounded-xl md:rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 opacity-80 hover:opacity-100 transition-opacity">
+                  <div className="pr-2">
+                    <p className="font-bold text-[10px] sm:text-sm text-zinc-700 dark:text-zinc-300 line-clamp-1">{bet.markets?.title || 'Unknown Market'}</p>
+                    <p className="text-[7px] sm:text-[9px] font-black text-zinc-500 uppercase tracking-widest mt-1">
+                      {bet.type} | <span className={bet.status === 'won' ? 'text-green-500' : bet.status === 'cashed_out' ? 'text-blue-500' : 'text-red-500'}>{bet.status === 'cashed_out' ? 'SOLD' : bet.status}</span>
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-black text-[9px] sm:text-xs text-zinc-500 font-mono">{bet.amount} USDC</p>
+                    <p className={`text-[8px] sm:text-[10px] font-black font-mono tracking-widest mt-1 ${bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? 'text-green-500' : 'text-red-500'}`}>
+                      {bet.status === 'won' || (bet.status === 'cashed_out' && bet.payout > bet.amount) ? '+' : ''}{(bet.payout || 0).toFixed(2)} USDC
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
