@@ -54,6 +54,15 @@ export default function RewardsPage() {
               </div>
             </div>
 
+            {/* NOVÝ BOD PRO SDÍLENÍ - VIZUÁLNĚ ODLÍŠENÝ */}
+            <div className="flex gap-4">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fuchsia-500 to-orange-500 flex items-center justify-center font-black text-white shrink-0 shadow-md">!</div>
+              <div>
+                <h4 className="font-black text-sm md:text-base uppercase tracking-widest mb-1 text-zinc-900 dark:text-white">Share & Earn Daily Bonus</h4>
+                <p className="text-xs md:text-sm text-zinc-500 font-medium leading-relaxed">Boost your bankroll and rank! Hit the <strong className="text-zinc-700 dark:text-zinc-300">Share & Earn</strong> button on any market once a day to instantly receive <strong className="text-green-500">+50 USDC</strong> and <strong className="text-fuchsia-500">+50 Season XP</strong>.</p>
+              </div>
+            </div>
+
             <div className="flex gap-4">
               <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center font-black text-fuchsia-500 shrink-0 border border-zinc-200 dark:border-white/5">2</div>
               <div>
