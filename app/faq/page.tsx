@@ -16,7 +16,7 @@ export default function FaqPage() {
     },
     {
       question: "How do I win real money (Airdrops)?",
-      answer: "By being right! Winning trades earn you Season XP. At the end of every month (Season), the top 5 players on the Leaderboard receive a real USDC airdrop directly to their crypto wallet."
+      answer: "By being right! Winning trades earn you Season XP. At the end of every 14 days (Season), the top 3 players on the Leaderboard share a real USDC airdrop pool sent directly to their crypto wallets."
     },
     {
       question: "How do I earn Season XP?",
