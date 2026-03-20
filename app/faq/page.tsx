@@ -15,7 +15,7 @@ export default function FaqPage() {
       answer: "No. All trades on Vybecheck use virtual USDC (play money) to keep the platform fun, legal, and accessible globally. You cannot deposit real money."
     },
     {
-      question: "How do I winwin real money (Airdrops)?",
+      question: "How do I win real money (Airdrops)?",
       answer: "By being right! Winning trades earn you Season XP. At the end of every 14 days (Season), the top 3 players on the Leaderboard share a real USDC airdrop pool sent directly to their crypto wallets."
     },
     {
