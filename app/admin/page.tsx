@@ -58,7 +58,6 @@ export default function AdminPanel() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isEndingSeason, setIsEndingSeason] = useState(false);
   
-  // Změněna výchozí kategorie
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState('Internet Drama');
   const [newImageUrl, setNewImageUrl] = useState('');
@@ -74,26 +73,13 @@ export default function AdminPanel() {
   useEffect(() => {
     const verifyAdminSafely = async () => {
       if (isAuthLoading) return;
-      
-      if (!isLoggedIn) {
-        setLoading(false);
-        return;
-      }
+      if (!isLoggedIn) { setLoading(false); return; }
 
       try {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) { setLoading(false); return; }
 
-        if (authError || !user) {
-          setLoading(false);
-          return;
-        }
-
-        const { data: profile } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
+        const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
         if (profile && profile.role === 'ADMIN') {
           setIsAdminVerified(true);
           fetchMarkets(); 
@@ -106,39 +92,25 @@ export default function AdminPanel() {
         setLoading(false);
       }
     };
-
     verifyAdminSafely();
   }, [isAuthLoading, isLoggedIn]);
 
   const fetchMarkets = async () => {
-    const { data: marketsData } = await supabase
-      .from('markets')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    const { data: betsData } = await supabase
-      .from('bets')
-      .select('market_id, amount, status, payout');
+    const { data: marketsData } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
+    const { data: betsData } = await supabase.from('bets').select('market_id, amount, status, payout');
 
     if (marketsData) {
       setMarkets(marketsData);
-      
       const stats: any = {};
-      marketsData.forEach(m => {
-        stats[m.id] = { totalVolume: 0, cashedOutVolume: 0, activeVolume: 0, betCount: 0 };
-      });
+      marketsData.forEach(m => { stats[m.id] = { totalVolume: 0, cashedOutVolume: 0, activeVolume: 0, betCount: 0 }; });
 
       if (betsData) {
         betsData.forEach(bet => {
           if (stats[bet.market_id]) {
             stats[bet.market_id].betCount += 1;
             stats[bet.market_id].totalVolume += Number(bet.amount);
-            
-            if (bet.status === 'cashed_out') {
-              stats[bet.market_id].cashedOutVolume += Number(bet.payout || 0);
-            } else {
-              stats[bet.market_id].activeVolume += Number(bet.amount);
-            }
+            if (bet.status === 'cashed_out') stats[bet.market_id].cashedOutVolume += Number(bet.payout || 0);
+            else stats[bet.market_id].activeVolume += Number(bet.amount);
           }
         });
       }
@@ -192,9 +164,7 @@ export default function AdminPanel() {
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
       setCroppedImageBlob(croppedImage);
       setImageSrc(null);
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const saveMarket = async (e: React.FormEvent) => {
@@ -207,10 +177,7 @@ export default function AdminPanel() {
     if (croppedImageBlob) {
       try {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
-        const { error: uploadError, data } = await supabase.storage
-          .from('markets')
-          .upload(`public/${fileName}`, croppedImageBlob, { contentType: 'image/jpeg' });
-
+        const { error: uploadError, data } = await supabase.storage.from('markets').upload(`public/${fileName}`, croppedImageBlob, { contentType: 'image/jpeg' });
         if (uploadError) throw uploadError;
         if (data) {
           const { data: publicUrlData } = supabase.storage.from('markets').getPublicUrl(`public/${fileName}`);
@@ -235,22 +202,12 @@ export default function AdminPanel() {
 
     if (editingId) {
       const { error } = await supabase.from('markets').update(marketData).eq('id', editingId).select();
-      if (error) {
-        showToast("Database error: " + error.message, "error");
-      } else {
-        showToast("Market updated successfully!", "success");
-        cancelEdit();
-        fetchMarkets();
-      }
+      if (error) showToast("Database error: " + error.message, "error");
+      else { showToast("Market updated successfully!", "success"); cancelEdit(); fetchMarkets(); }
     } else {
       const { error } = await supabase.from('markets').insert([marketData]).select();
-      if (error) {
-        showToast("Database rejected it: " + error.message, "error");
-      } else {
-        showToast("Market deployed successfully!", "success");
-        cancelEdit();
-        fetchMarkets();
-      }
+      if (error) showToast("Database rejected it: " + error.message, "error");
+      else { showToast("Market deployed successfully!", "success"); cancelEdit(); fetchMarkets(); }
     }
     setUploading(false);
   };
@@ -258,76 +215,43 @@ export default function AdminPanel() {
   const resolveMarket = async (marketId: number, winningOutcome: 'VYBE' | 'NO_VYBE') => {
     if (!window.confirm(`Are you sure you want to resolve this market as ${winningOutcome}?`)) return;
     try {
-      const { data, error } = await supabase.rpc('resolve_market_secure', {
-        p_market_id: marketId,
-        p_winning_outcome: winningOutcome
-      });
-      
+      const { data, error } = await supabase.rpc('resolve_market_secure', { p_market_id: marketId, p_winning_outcome: winningOutcome });
       if (error) throw error;
-      showToast(`Market resolved! Payouts & XP accurately distributed.`, "success");
+      showToast(`Market resolved!`, "success");
       fetchMarkets();
-    } catch (error: any) {
-      showToast("Error resolving the market: " + error.message, "error");
-    }
+    } catch (error: any) { showToast("Error resolving the market: " + error.message, "error"); }
   };
 
   const deleteMarket = async (marketId: number) => {
-    const confirmDelete = window.confirm(
-      "DANGER: Are you absolutely sure you want to delete this market? This will also delete all bets and chat messages associated with it and cannot be undone!"
-    );
-    if (!confirmDelete) return;
+    if (!window.confirm("DANGER: Are you absolutely sure you want to delete this market?")) return;
     try {
-      // 1. Smazat všechny sázky
       await supabase.from('bets').delete().eq('market_id', marketId);
-      // 2. Smazat všechny zprávy v chatu
       await supabase.from('chat_messages').delete().eq('market_id', marketId);
-      // 3. Nakonec smazat samotný trh
       const { error } = await supabase.from('markets').delete().eq('id', marketId);
-      
       if (error) throw error;
       showToast("Market deleted successfully.", "success");
       fetchMarkets();
-    } catch (error: any) {
-      showToast("Error deleting market: " + error.message, "error");
-    }
+    } catch (error: any) { showToast("Error deleting market: " + error.message, "error"); }
   };
 
   const handleEndSeason = async () => {
     const confirmReset = window.prompt("WARNING: This will archive top players and RESET ALL XP TO 0. Type 'RESET' to confirm.");
     if (confirmReset !== 'RESET') return;
-
     setIsEndingSeason(true);
     const { data, error } = await supabase.rpc('end_season_and_reset');
-    
-    if (error) {
-      showToast(`Error ending season: ${error.message}`, "error");
-    } else if (data && data.success) {
-      showToast(data.message, "success");
-      fetchArchives();
-    }
+    if (error) showToast(`Error ending season: ${error.message}`, "error");
+    else if (data && data.success) { showToast(data.message, "success"); fetchArchives(); }
     setIsEndingSeason(false);
   };
 
   if (isAuthLoading || (loading && !isAdminVerified)) {
-    return <div className="min-h-screen bg-zinc-950 text-zinc-500 p-10 font-mono uppercase text-center py-32 flex flex-col items-center justify-center gap-4">
-      <div className="w-8 h-8 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>
-      Verifying Admin Access...
-    </div>;
+    return <div className="min-h-screen bg-zinc-950 text-zinc-500 p-10 font-mono uppercase text-center py-32 flex flex-col items-center justify-center gap-4"><div className="w-8 h-8 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin"></div>Verifying Admin Access...</div>;
   }
 
   if (!isAdminVerified) {
     return (
       <div className="min-h-screen bg-[#0e0e12] flex flex-col items-center justify-center text-white p-4 font-sans">
-        <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2rem] text-center max-w-md shadow-2xl animate-in zoom-in-95 fade-in duration-300">
-          <span className="text-4xl mb-4 block">🛑</span>
-          <h1 className="text-2xl font-black uppercase tracking-widest text-red-500 mb-2">Access Denied</h1>
-          <p className="text-zinc-400 text-sm font-medium mb-8 leading-relaxed">
-            You do not have administrator privileges to view this page. Please log in with an authorized admin account.
-          </p>
-          <Link href="/" className="bg-white text-black px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-zinc-200 transition-all active:scale-95 shadow-md">
-            Return to Vybecheck
-          </Link>
-        </div>
+        <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2rem] text-center max-w-md shadow-2xl"><span className="text-4xl mb-4 block">🛑</span><h1 className="text-2xl font-black uppercase tracking-widest text-red-500 mb-2">Access Denied</h1><Link href="/" className="bg-white text-black px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-zinc-200 transition-all shadow-md">Return to Vybecheck</Link></div>
       </div>
     );
   }
@@ -351,55 +275,9 @@ export default function AdminPanel() {
       
       <div className="max-w-4xl mx-auto space-y-10">
         <header className="flex justify-between items-end">
-          <div>
-            <h1 className="text-4xl font-black text-fuchsia-500 mb-2 uppercase tracking-tighter">Vybecheck Admin</h1>
-            <p className="text-zinc-400 uppercase text-sm tracking-widest">Platform Owner Control Panel</p>
-          </div>
-          <div className="text-right">
-             <p className="text-[10px] text-green-500 uppercase tracking-widest font-bold">Admin Verified ✓</p>
-             <p className="text-xs text-zinc-500">{walletAddress || "Authenticated"}</p>
-          </div>
+          <div><h1 className="text-4xl font-black text-fuchsia-500 mb-2 uppercase tracking-tighter">Vybecheck Admin</h1><p className="text-zinc-400 uppercase text-sm tracking-widest">Platform Owner Control Panel</p></div>
+          <div className="text-right"><p className="text-[10px] text-green-500 uppercase tracking-widest font-bold">Admin Verified ✓</p><p className="text-xs text-zinc-500">{walletAddress}</p></div>
         </header>
-
-        <section className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h2 className="text-xl font-black uppercase italic tracking-widest text-white mb-2">Season Management</h2>
-              <p className="text-xs text-zinc-400">Archive current leaderboard to history and reset all XP to zero. (User balances are kept intact).</p>
-            </div>
-            <button 
-              onClick={handleEndSeason} 
-              disabled={isEndingSeason}
-              className="w-full md:w-auto px-8 py-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-xl font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-md disabled:opacity-50"
-            >
-              {isEndingSeason ? 'Processing...' : '⚠️ End Season & Reset XP'}
-            </button>
-          </div>
-
-          {archives.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-zinc-800">
-              <h3 className="text-sm font-black uppercase tracking-widest text-zinc-500 mb-4">Past Season Winners</h3>
-              <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                {archives.map(arch => (
-                  <div key={arch.id} className="p-4 bg-zinc-950 rounded-xl border border-zinc-800/50">
-                    <p className="text-xs text-fuchsia-500 font-bold mb-3">Season Ended: {new Date(arch.season_date).toLocaleDateString()}</p>
-                    <div className="space-y-2">
-                      {arch.top_players.map((p: any, i: number) => (
-                        <div key={i} className="flex justify-between items-center text-xs">
-                          <span className="text-zinc-300"><strong className="text-white mr-2">#{i+1}</strong> {p.nickname}</span>
-                          <div className="text-right">
-                            <span className="text-fuchsia-400 font-mono mr-4">{p.xp_points} XP</span>
-                            <span className="text-zinc-600 font-mono text-[9px]">{p.payout_wallet || p.wallet_address}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
 
         <section className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8">
           <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest">{editingId ? 'Edit Market' : 'Deploy New Market'}</h2>
@@ -424,7 +302,6 @@ export default function AdminPanel() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Category</label>
-                {/* ZMĚNĚNO: Možnosti přesně odpovídají tvým novým kategoriím */}
                 <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 appearance-none">
                   <option value="Internet Drama">Internet Drama</option>
                   <option value="The Boring Stuff">The Boring Stuff</option>
@@ -444,9 +321,7 @@ export default function AdminPanel() {
             </div>
             
             <div className="flex gap-4">
-              <button disabled={uploading} type="submit" className={`flex-1 bg-gradient-to-r from-fuchsia-600 to-orange-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] shadow-lg transition-transform ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.01]'}`}>
-                {uploading ? 'Processing...' : (editingId ? 'Save Changes' : 'Deploy to Web')}
-              </button>
+              <button disabled={uploading} type="submit" className={`flex-1 bg-gradient-to-r from-fuchsia-600 to-orange-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] shadow-lg transition-transform ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.01]'}`}>{uploading ? 'Processing...' : (editingId ? 'Save Changes' : 'Deploy to Web')}</button>
               {editingId && <button type="button" onClick={cancelEdit} className="px-8 bg-zinc-800 text-white font-black rounded-2xl uppercase tracking-widest hover:bg-zinc-700">Cancel</button>}
             </div>
           </form>
@@ -469,78 +344,33 @@ export default function AdminPanel() {
                   <button onClick={() => deleteMarket(market.id)} className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-[10px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-4 gap-2 mb-6 p-4 bg-zinc-950 rounded-2xl border border-zinc-800/50">
-                <div>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Total Vol.</p>
-                  <p className="font-mono text-sm">${marketStats[market.id]?.totalVolume?.toFixed(2) || '0.00'}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Cashed Out</p>
-                  <p className="font-mono text-sm text-blue-500">${marketStats[market.id]?.cashedOutVolume?.toFixed(2) || '0.00'}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Active Pool</p>
-                  <p className="font-mono text-sm text-fuchsia-500">${marketStats[market.id]?.activeVolume?.toFixed(2) || '0.00'}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Total Bets</p>
-                  <p className="font-mono text-sm text-zinc-300">{marketStats[market.id]?.betCount || 0}</p>
-                </div>
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <button onClick={() => resolveMarket(market.id, 'VYBE')} className="bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">WINNER: VYBE</button>
                 <button onClick={() => resolveMarket(market.id, 'NO_VYBE')} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">WINNER: NO VYBE</button>
               </div>
             </div>
           ))}
-          {activeMarkets.length === 0 && <p className="text-zinc-600 font-bold uppercase tracking-widest text-[10px] text-center">No active markets</p>}
         </section>
-
+        
         <section className="space-y-4 pt-10 border-t border-zinc-800">
           <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-zinc-600">Resolved Markets Archive</h2>
           {resolvedMarkets.map((market) => (
-            <div key={market.id} className="p-5 rounded-[1.5rem] border border-zinc-800/50 bg-zinc-900/30 opacity-80 hover:opacity-100 transition-opacity flex flex-col gap-4">
+            <div key={market.id} className="p-5 rounded-[1.5rem] border border-zinc-800/50 bg-zinc-900/30 opacity-80 flex flex-col gap-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover object-top grayscale" />}
                   <div>
                     <h2 className="text-sm font-bold text-white line-clamp-1">{market.title}</h2>
-                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">
-                      Won: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span>
-                    </p>
+                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Won: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span></p>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => handleEdit(market)} className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Edit</button>
                   <button onClick={() => deleteMarket(market.id)} className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500/70 hover:text-red-500 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-4 gap-2 pt-4 border-t border-zinc-800/50">
-                <div>
-                  <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Total Vol.</p>
-                  <p className="font-mono text-xs text-zinc-300">${marketStats[market.id]?.totalVolume?.toFixed(2) || '0.00'}</p>
-                </div>
-                <div>
-                  <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Cashed Out</p>
-                  <p className="font-mono text-xs text-blue-500/70">${marketStats[market.id]?.cashedOutVolume?.toFixed(2) || '0.00'}</p>
-                </div>
-                <div>
-                  <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Final Pool</p>
-                  <p className="font-mono text-xs text-fuchsia-500/70">${marketStats[market.id]?.activeVolume?.toFixed(2) || '0.00'}</p>
-                </div>
-                <div>
-                  <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Bets</p>
-                  <p className="font-mono text-xs text-zinc-500">{marketStats[market.id]?.betCount || 0}</p>
                 </div>
               </div>
             </div>
           ))}
-          {resolvedMarkets.length === 0 && <p className="text-zinc-600 font-bold uppercase tracking-widest text-[10px] text-center">No resolved markets</p>}
         </section>
-
       </div>
     </div>
   );

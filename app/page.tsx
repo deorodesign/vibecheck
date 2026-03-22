@@ -182,7 +182,6 @@ function HomeContent() {
   let filteredMarkets = markets;
   
   if (activeCategory === 'On Fire') {
-    // Filtr On Fire
     filteredMarkets = [...markets].sort((a: any, b: any) => {
       const aPrices = marketPrices[a.id] || { vybePool: 0, noVybePool: 0 };
       const bPrices = marketPrices[b.id] || { vybePool: 0, noVybePool: 0 };
@@ -191,7 +190,6 @@ function HomeContent() {
       return bTotal - aTotal;
     });
   } else if (activeCategory !== 'The Feed') {
-    // Specifické kategorie - ošetření mezer (trim) a velkých písmen (toLowerCase)
     filteredMarkets = markets.filter((m: any) => {
       if (!m.category) return false;
       return m.category.trim().toLowerCase() === activeCategory.trim().toLowerCase();
@@ -199,7 +197,7 @@ function HomeContent() {
   }
   
   const sortedMarkets = [...filteredMarkets].sort((a: any, b: any) => {
-    if (activeCategory === 'On Fire') return 0; // U On Fire už máme seřazeno
+    if (activeCategory === 'On Fire') return 0; 
     const aResolved = !!marketStatus[a.id];
     const bResolved = !!marketStatus[b.id];
     
@@ -412,7 +410,7 @@ function HomeContent() {
                 <h3 className="text-[9px] md:text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 md:mb-4">Current Vybe Check</h3>
                 <div className="relative h-10 md:h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center mb-5 md:mb-6 border border-zinc-200 dark:border-white/5 shadow-inner">
                   <div className="h-full bg-green-500 flex items-center px-3 md:px-4 justify-start transition-all duration-500 ease-out shadow-[0_0_20px_rgba(34,197,94,0.6)]" style={{ width: `${(currentPrices?.vibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-xs md:text-sm z-10">{((currentPrices?.vibe || 0.5) * 100).toFixed(0)}%</span></div>
-                  <div className="h-full bg-red-500 flex items-center px-3 md:px-4 justify-end transition-all duration-500 ease-out shadow-[0_0_20px_rgba(239,68,68,0.6)]" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-xs md:text-sm z-10">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span></div>
+                  <div className="h-full bg-red-50 flex items-center px-3 md:px-4 justify-end transition-all duration-500 ease-out shadow-[0_0_20px_rgba(239,68,68,0.6)]" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-xs md:text-sm z-10">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span></div>
                 </div>
                 {!isResolved && (
                   <div className="mb-5 md:mb-6 p-3 md:p-4 bg-zinc-50 dark:bg-white/5 rounded-xl md:rounded-2xl border border-zinc-100 dark:border-white/5">
