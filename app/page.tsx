@@ -178,30 +178,34 @@ function HomeContent() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  // OPRAVENÁ LOGIKA:
+  // NEPRŮSTŘELNÁ LOGIKA FILTROVÁNÍ:
   let filteredMarkets = markets;
-  if (activeCategory !== 'The Feed' && activeCategory !== 'On Fire') {
-    filteredMarkets = markets.filter((m: any) => m.category === activeCategory);
-  }
   
-  const sortedMarkets = [...filteredMarkets].sort((a: any, b: any) => {
-    const aResolved = !!marketStatus[a.id];
-    const bResolved = !!marketStatus[b.id];
-    
-    // Pravidlo 1: Vyhodnocené vždy dolů
-    if (aResolved && !bResolved) return 1;
-    if (!aResolved && bResolved) return -1;
-
-    // Pravidlo 2: Pokud jsou oba aktivní (nebo oba vyhodnocené) a jsme v On Fire, seřaď podle objemu
-    if (activeCategory === 'On Fire') {
+  if (activeCategory === 'On Fire') {
+    // Filtr On Fire
+    filteredMarkets = [...markets].sort((a: any, b: any) => {
       const aPrices = marketPrices[a.id] || { vybePool: 0, noVybePool: 0 };
       const bPrices = marketPrices[b.id] || { vybePool: 0, noVybePool: 0 };
       const aTotal = (Number(a.volumeUsd) || 0) + (aPrices.vybePool || 0) + (aPrices.noVybePool || 0);
       const bTotal = (Number(b.volumeUsd) || 0) + (bPrices.vybePool || 0) + (bPrices.noVybePool || 0);
       return bTotal - aTotal;
-    }
+    });
+  } else if (activeCategory !== 'The Feed') {
+    // Specifické kategorie - ošetření mezer (trim) a velkých písmen (toLowerCase)
+    filteredMarkets = markets.filter((m: any) => {
+      if (!m.category) return false;
+      return m.category.trim().toLowerCase() === activeCategory.trim().toLowerCase();
+    });
+  }
+  
+  const sortedMarkets = [...filteredMarkets].sort((a: any, b: any) => {
+    if (activeCategory === 'On Fire') return 0; // U On Fire už máme seřazeno
+    const aResolved = !!marketStatus[a.id];
+    const bResolved = !!marketStatus[b.id];
     
-    // Standardní řazení
+    // Vyhodnocené VŽDY dolů
+    if (aResolved && !bResolved) return 1;
+    if (!aResolved && bResolved) return -1;
     return 0;
   });
 
