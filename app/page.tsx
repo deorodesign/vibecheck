@@ -207,9 +207,9 @@ function HomeContent() {
                     <div className="p-2 border-t border-zinc-100 dark:border-white/5 flex flex-col gap-1">
                       <span className="px-3 pt-1 pb-2 text-[9px] font-black uppercase tracking-widest text-zinc-400">Community</span>
                       <a href="https://discord.gg/wVAWCNZJ" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors">
-                        👾 Join Discord / TG
+                        👾 Join Discord
                       </a>
-                      <a href="#" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl transition-colors">
+                      <a href="https://x.com/vybecheck_xyz" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl transition-colors">
                         🐦 Follow on X
                       </a>
                       <a href="mailto:hello@vybecheck.xyz" className="flex items-center gap-2 px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:text-white dark:hover:bg-white/10 rounded-xl transition-colors">
