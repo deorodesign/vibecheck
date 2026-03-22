@@ -45,6 +45,9 @@ function HomeContent() {
   const [visibleCount, setVisibleCount] = useState(10);
   const [shareData, setShareData] = useState<{title: string, text: string, url: string} | null>(null);
   const [isFetchingTimeout, setIsFetchingTimeout] = useState(false);
+  
+  // NOVÉ: Zámek proti spam-clicku při sázení
+  const [isBetting, setIsBetting] = useState(false);
 
   const chatTopRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -113,8 +116,11 @@ function HomeContent() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProfileOpen]);
 
-  const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
+  // OPRAVENÁ FUNKCE SÁZENÍ SE ZÁMKEM PROTI SPAM CLICKU
+  const handleVote = async (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
     e.stopPropagation();
+    if (isBetting) return; // Pokud už sází, nedělej nic
+
     const amountToBet = parseFloat(betAmount);
     
     if (!isLoggedIn) {
@@ -124,7 +130,9 @@ function HomeContent() {
     } else if (amountToBet > balance) {
       showToast("Insufficient balance!", "error");
     } else {
-      placeBet(marketId, type, amountToBet);
+      setIsBetting(true); // Zamkneme tlačítka
+      
+      await placeBet(marketId, type, amountToBet);
       
       if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
         window.navigator.vibrate(50);
@@ -133,19 +141,16 @@ function HomeContent() {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const x = (rect.left + rect.width / 2) / window.innerWidth;
       const y = (rect.top + rect.height / 2) / window.innerHeight;
-
       const colors = type === 'VYBE' ? ['#22c55e', '#16a34a', '#4ade80'] : ['#ef4444', '#dc2626', '#f87171'];
 
       confetti({
-        particleCount: 60,
-        spread: 60,
-        angle: 90,
-        startVelocity: 35,
-        origin: { x, y },
-        colors: colors,
-        zIndex: 100,
-        disableForReducedMotion: true
+        particleCount: 60, spread: 60, angle: 90, startVelocity: 35, origin: { x, y }, colors: colors, zIndex: 100, disableForReducedMotion: true
       });
+
+      // Odemkneme tlačítka po 500ms, aby se stihla zapsat nová cena z databáze
+      setTimeout(() => {
+        setIsBetting(false);
+      }, 500);
     }
   };
 
@@ -178,10 +183,9 @@ function HomeContent() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  // OPRAVENÁ LOGIKA FILTROVÁNÍ A ŘAZENÍ
+  // OPRAVENÁ LOGIKA ŘAZENÍ - VYHODNOCENÉ JDOU VŽDYCKY DOLŮ
   let filteredMarkets = markets;
   
-  // 1. Zafiltrování
   if (activeCategory !== 'The Feed' && activeCategory !== 'On Fire') {
     filteredMarkets = markets.filter((m: any) => {
       if (!m.category) return false;
@@ -189,17 +193,16 @@ function HomeContent() {
     });
   }
   
-  // 2. Finální seřazení
   const sortedMarkets = [...filteredMarkets].sort((a: any, b: any) => {
     const aResolved = !!marketStatus[a.id];
     const bResolved = !!marketStatus[b.id];
     
-    // Pravidlo 1: Vyhodnocené VŽDY dolů (platí pro VŠECHNY kategorie)
+    // ZLATÉ PRAVIDLO 1: Vyhodnocené karty jdou VŽDY úplně dolů, bez ohledu na kategorii
     if (aResolved && !bResolved) return 1;
     if (!aResolved && bResolved) return -1;
 
-    // Pravidlo 2: Pokud jsou oba stejného stavu (aktivní/vyhodnocené) a jsme v On Fire, řadíme podle objemu
-    if (activeCategory === 'On Fire') {
+    // PRAVIDLO 2: Pokud jsou obě karty aktivní a jsme v On Fire, srovnáme je podle peněz
+    if (activeCategory === 'On Fire' && !aResolved && !bResolved) {
       const aPrices = marketPrices[a.id] || { vybePool: 0, noVybePool: 0 };
       const bPrices = marketPrices[b.id] || { vybePool: 0, noVybePool: 0 };
       const aTotal = (Number(a.volumeUsd) || 0) + (aPrices.vybePool || 0) + (aPrices.noVybePool || 0);
@@ -207,7 +210,7 @@ function HomeContent() {
       return bTotal - aTotal;
     }
     
-    // Jinak necháme výchozí pořadí
+    // Jinak necháme výchozí (dle data vložení do DB)
     return 0;
   });
 
@@ -431,10 +434,10 @@ function HomeContent() {
                   ) : (
                     <div className="flex flex-col gap-3">
                       <div className="grid grid-cols-2 gap-3 md:gap-4 relative">
-                        <button onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className="relative overflow-hidden p-4 md:p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500/20 font-black text-lg md:text-2xl uppercase italic text-green-600 dark:text-green-400 shadow-sm active:scale-95 transition-all">
+                        <button disabled={isBetting} onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className={`relative overflow-hidden p-4 md:p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 font-black text-lg md:text-2xl uppercase italic text-green-600 dark:text-green-400 shadow-sm transition-all ${isBetting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-500/20 active:scale-95'}`}>
                           VYBE
                         </button>
-                        <button onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className="relative overflow-hidden p-4 md:p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500/20 font-black text-lg md:text-2xl uppercase italic text-red-600 dark:text-red-400 shadow-sm active:scale-95 transition-all">
+                        <button disabled={isBetting} onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className={`relative overflow-hidden p-4 md:p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 font-black text-lg md:text-2xl uppercase italic text-red-600 dark:text-red-400 shadow-sm transition-all ${isBetting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-100 dark:hover:bg-red-500/20 active:scale-95'}`}>
                           NO VYBE
                         </button>
                       </div>
