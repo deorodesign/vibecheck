@@ -63,18 +63,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSelectedMarket(null);
   }, []);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      handleSupabaseSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      handleSupabaseSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const fetchUserBets = useCallback(async (address: string) => {
     setMyBets([]); 
     const { data, error } = await supabase.from('bets').select('*').eq('user_address', address);
@@ -106,6 +94,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     setIsAuthLoading(false);
   }, [resetAppStaleState, fetchUserBets]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSupabaseSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSupabaseSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [handleSupabaseSession]);
 
   const fetchData = useCallback(async () => {
     const { data: marketsData } = await supabase.from('markets').select('*').order('created_at', { ascending: false });
@@ -171,28 +171,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (archiveData) {
       setLatestArchive(archiveData);
     }
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData && sessionData.session && sessionData.session.user && sessionData.session.user.email) {
-      const { data: betsData } = await supabase.from('bets').select('*').eq('user_address', sessionData.session.user.email);
-      if (betsData) {
-        setMyBets(betsData.map(b => ({ ...b, marketId: b.market_id, entryPrice: b.entry_price })));
-      }
-    }
   }, []);
 
+  // CHIRURGICKÉ REALTIME PŘIPOJENÍ
   useEffect(() => {
-    let betSubscription: any = null;
+    fetchData(); // Úvodní načtení všeho
 
-    fetchData();
+    console.log("Zapínám živé připojení...");
+    const channel = supabase.channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
+          console.log('🔄 Změna sázek, přepočítávám kurz...');
+          fetchData(); // Zde dává smysl přepočítat peníze
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+          console.log('💬 Nová live zpráva:', payload.new);
+          // Okamžitě přihodíme zprávu do pole, nebudeme čekat na stahování celé databáze!
+          const newMsg = payload.new as any;
+          
+          setChatMessages((prev) => {
+            // Bezpečnostní kontrola: pokud tam zpráva už je (protože jsi ji právě poslal ty), nepřidávej ji podruhé
+            if (prev.some(m => m.id === newMsg.id || (m.text === newMsg.text && m.user === newMsg.user_name))) {
+              return prev;
+            }
+            
+            const msgObj = {
+              id: newMsg.id,
+              marketId: newMsg.market_id,
+              parentId: newMsg.parent_id || null,
+              text: newMsg.text,
+              user: newMsg.user_name,
+              avatar: newMsg.avatar_url || '',
+              betType: newMsg.bet_type,
+              timestamp: newMsg.created_at,
+              color: newMsg.color || 'text-fuchsia-500',
+              likedBy: newMsg.liked_by || []
+            };
+            return [...prev, msgObj];
+          });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'season_archives' }, () => {
+          fetchData();
+      })
+      .subscribe((status) => {
+          console.log('📡 Status realtime připojení:', status);
+      });
 
-    betSubscription = supabase.channel('realtime-vybe')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'season_archives' }, () => fetchData()) 
-      .subscribe();
-
-    return () => { if (betSubscription) supabase.removeChannel(betSubscription); };
+    return () => { supabase.removeChannel(channel); };
   }, [fetchData]);
 
   useEffect(() => {
@@ -203,7 +227,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const topPlayers = latestArchive.top_players || [];
         const index = topPlayers.findIndex((p: any) => p.wallet_address === walletAddress);
         
-        // ZMĚNA ZDE: Upozorní jen hráče v Top 3
         if (index !== -1 && index < 3) {
           setIsTop3Winner(true);
           setPlayerRank(index + 1);
@@ -253,10 +276,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (activeUserBetsForMarket.some(b => b.type === 'VYBE')) finalBetType = 'VYBE';
       else if (activeUserBetsForMarket.some(b => b.type === 'NO_VYBE')) finalBetType = 'NO_VYBE';
     }
-    const tempMessage = { id: crypto.randomUUID(), marketId, parentId, text, user, avatar, betType: finalBetType, timestamp: new Date().toISOString(), color: 'text-fuchsia-500', likedBy: [] };
     
+    // Tvá zpráva se ti ukáže na obrazovce HNED (optimistický update)
+    const tempId = crypto.randomUUID();
+    const tempMessage = { id: tempId, marketId, parentId, text, user, avatar, betType: finalBetType, timestamp: new Date().toISOString(), color: 'text-fuchsia-500', likedBy: [] };
     setChatMessages((prev: any) => [...prev, tempMessage]);
-    await supabase.from('chat_messages').insert([{ market_id: marketId, parent_id: parentId, user_name: user, avatar_url: avatar, text: text, bet_type: finalBetType, color: 'text-fuchsia-500', liked_by: [] }]);
+    
+    // Uložení do Supabase - to následně vyšle upozornění ostatním online hráčům
+    await supabase.from('chat_messages').insert([{ id: tempId, market_id: marketId, parent_id: parentId, user_name: user, avatar_url: avatar, text: text, bet_type: finalBetType, color: 'text-fuchsia-500', liked_by: [] }]);
   };
 
   const toggleLikeMessage = async (messageId: string, userName: string) => {
