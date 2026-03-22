@@ -58,8 +58,9 @@ export default function AdminPanel() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isEndingSeason, setIsEndingSeason] = useState(false);
   
+  // Změněna výchozí kategorie
   const [newTitle, setNewTitle] = useState('');
-  const [newCategory, setNewCategory] = useState('Pop Culture');
+  const [newCategory, setNewCategory] = useState('Internet Drama');
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newRules, setNewRules] = useState('');
   const [fakeVolume, setFakeVolume] = useState('0');
@@ -154,7 +155,7 @@ export default function AdminPanel() {
   const handleEdit = (market: any) => {
     setEditingId(market.id);
     setNewTitle(market.title);
-    setNewCategory(market.category || 'Pop Culture');
+    setNewCategory(market.category || 'Internet Drama');
     setNewImageUrl(market.image_url || market.imageUrl || '');
     setNewRules(market.rules || market.resolution_source || '');
     setFakeVolume(market.volume_usd?.toString() || '0');
@@ -270,7 +271,6 @@ export default function AdminPanel() {
     }
   };
 
-  // OPRAVENÁ FUNKCE MAZÁNÍ (Maže sázky i chat!)
   const deleteMarket = async (marketId: number) => {
     const confirmDelete = window.confirm(
       "DANGER: Are you absolutely sure you want to delete this market? This will also delete all bets and chat messages associated with it and cannot be undone!"
@@ -424,8 +424,12 @@ export default function AdminPanel() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Category</label>
+                {/* ZMĚNĚNO: Možnosti přesně odpovídají tvým novým kategoriím */}
                 <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 appearance-none">
-                  <option>Pop Culture</option><option>Gaming</option><option>Crypto</option><option>Sports</option><option>Trending</option>
+                  <option value="Internet Drama">Internet Drama</option>
+                  <option value="The Boring Stuff">The Boring Stuff</option>
+                  <option value="Degen Moves">Degen Moves</option>
+                  <option value="Pure Vybe">Pure Vybe</option>
                 </select>
               </div>
               <div>

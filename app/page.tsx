@@ -36,7 +36,6 @@ function HomeContent() {
     loginWithTwitter, loginWithDiscord, loginWithEmail, loginWithGoogle, claimShareReward
   } = useAppContext();
 
-  // Výchozí kategorie je nyní 'The Feed' místo 'All'
   const [activeCategory, setActiveCategory] = useState('The Feed');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [betAmount, setBetAmount] = useState<string>("10");
@@ -114,7 +113,6 @@ function HomeContent() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProfileOpen]);
 
-  // VYLEPŠENÁ FUNKCE SÁZENÍ S EFEKTY TLAČÍTEK
   const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
     e.stopPropagation();
     const amountToBet = parseFloat(betAmount);
@@ -126,28 +124,24 @@ function HomeContent() {
     } else if (amountToBet > balance) {
       showToast("Insufficient balance!", "error");
     } else {
-      // 1. Odeslání sázky
       placeBet(marketId, type, amountToBet);
       
-      // 2. Haptic Feedback (Vibrace na mobilu)
       if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
         window.navigator.vibrate(50);
       }
 
-      // 3. Konfety střílející PŘÍMO z tlačítka NAHORU
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      // Výpočet středu tlačítka (v procentech obrazovky, jak to knihovna vyžaduje)
       const x = (rect.left + rect.width / 2) / window.innerWidth;
       const y = (rect.top + rect.height / 2) / window.innerHeight;
 
       const colors = type === 'VYBE' ? ['#22c55e', '#16a34a', '#4ade80'] : ['#ef4444', '#dc2626', '#f87171'];
 
       confetti({
-        particleCount: 60, // Počet konfet
-        spread: 60,        // Šířka rozptylu
-        angle: 90,         // 90 stupňů = přímo nahoru
-        startVelocity: 35, // Síla výstřelu
-        origin: { x, y },  // Z bodu kliknutí
+        particleCount: 60,
+        spread: 60,
+        angle: 90,
+        startVelocity: 35,
+        origin: { x, y },
         colors: colors,
         zIndex: 100,
         disableForReducedMotion: true
@@ -184,11 +178,22 @@ function HomeContent() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
+  // OPRAVENÁ LOGIKA PRO GLOBÁLNÍ OBJEM A ŘAZENÍ
   let filteredMarkets = markets;
-  if (activeCategory === 'On Fire') filteredMarkets = [...markets].sort((a: any, b: any) => b.volumeUsd - a.volumeUsd);
-  else if (activeCategory !== 'The Feed') filteredMarkets = markets.filter((m: any) => m.category === activeCategory);
+  if (activeCategory === 'On Fire') {
+    filteredMarkets = [...markets].sort((a: any, b: any) => {
+      const aPrices = marketPrices[a.id] || { vybePool: 0, noVybePool: 0 };
+      const bPrices = marketPrices[b.id] || { vybePool: 0, noVybePool: 0 };
+      const aTotal = (Number(a.volumeUsd) || 0) + (aPrices.vybePool || 0) + (aPrices.noVybePool || 0);
+      const bTotal = (Number(b.volumeUsd) || 0) + (bPrices.vybePool || 0) + (bPrices.noVybePool || 0);
+      return bTotal - aTotal;
+    });
+  } else if (activeCategory !== 'The Feed') {
+    filteredMarkets = markets.filter((m: any) => m.category === activeCategory);
+  }
   
   const sortedMarkets = [...filteredMarkets].sort((a: any, b: any) => {
+    if (activeCategory === 'On Fire') return 0; 
     const aResolved = !!marketStatus[a.id];
     const bResolved = !!marketStatus[b.id];
     if (aResolved === bResolved) return 0;
@@ -280,7 +285,7 @@ function HomeContent() {
               <img src={m.imageUrl || m.image_url} alt={m.title} className="w-10 h-10 md:w-12 md:h-12 rounded-xl object-cover object-top shadow-sm group-hover:scale-105 transition-transform shrink-0" />
               <div className="flex-1">
                 <p className="text-[11px] md:text-xs font-bold text-zinc-900 dark:text-white line-clamp-2 leading-tight group-hover:text-fuchsia-500 transition-colors">{m.title}</p>
-                <p className="text-[9px] md:text-[10px] text-zinc-500 font-mono mt-1">${m.volumeUsd || m.volume_usd || 0}</p>
+                <p className="text-[9px] md:text-[10px] text-zinc-500 font-mono mt-1">${(Number(m.volumeUsd || m.volume_usd || 0) + (marketPrices[m.id]?.vybePool || 0) + (marketPrices[m.id]?.noVybePool || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}</p>
               </div>
             </div>
           ))}
@@ -375,7 +380,7 @@ function HomeContent() {
             <div className="w-full aspect-video rounded-[1.5rem] md:rounded-[2rem] overflow-hidden relative shadow-xl border border-zinc-200 dark:border-white/5">
               <img src={selectedMarket.imageUrl || selectedMarket.image_url} alt={selectedMarket.title} className={`absolute inset-0 w-full h-full object-cover object-top ${isResolved ? 'grayscale' : ''}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 via-zinc-50/40 dark:from-[#0e0e12] dark:via-[#0e0e12]/40 to-transparent"></div>
-              <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-3 md:py-1.5 rounded-full text-[9px] md:text-[10px] font-mono font-bold tracking-widest border border-white/10 z-20 shadow-lg">Vol: ${selectedMarket.volumeUsd || selectedMarket.volume_usd || 0}</div>
+              <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-3 md:py-1.5 rounded-full text-[9px] md:text-[10px] font-mono font-bold tracking-widest border border-white/10 z-20 shadow-lg">Vol: ${(Number(selectedMarket.volumeUsd || selectedMarket.volume_usd || 0) + (marketPrices[selectedMarket.id]?.vybePool || 0) + (marketPrices[selectedMarket.id]?.noVybePool || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}</div>
             </div>
             <div className="flex flex-col gap-4 md:gap-5 -mt-12 md:-mt-20 relative z-10 px-1 md:px-8">
               
@@ -389,7 +394,7 @@ function HomeContent() {
                   className="shrink-0 w-fit self-start sm:self-auto flex items-center justify-center gap-2 bg-black dark:bg-white text-white dark:text-black px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl group relative overflow-hidden"
                 >
                   <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-fuchsia-500/20 to-orange-500/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
-                  <svg className="w-3.5 h-3.5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                  <svg className="w-3.5 h-3.5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 105.368-2.684z" /></svg>
                   <span className="relative z-10">Share & Earn <span className="hidden sm:inline">50 USDC</span></span>
                 </button>
               </div>
@@ -509,7 +514,7 @@ function HomeContent() {
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-6 lg:gap-8 py-6 md:py-8 px-3 sm:px-4">
           <div className="w-full lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-start">
             {sortedMarkets.map((market: any) => {
-              const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5 };
+              const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
               const isRes = !!marketStatus[market.id];
               const userBetType = getUserBetStatus(nickname, market.id);
 
@@ -518,11 +523,11 @@ function HomeContent() {
                   <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
                     <img src={market.imageUrl || market.image_url} alt="" className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isRes ? 'grayscale' : 'group-hover:scale-105'}`} />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 dark:from-[#18181b] dark:via-[#18181b]/10 to-transparent z-10" />
-                    <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-2.5 md:py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${market.volumeUsd || market.volume_usd || 0}</div>
+                    <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-2.5 md:py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${(Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}</div>
                     
                     {!isRes && (
                        <button onClick={(e) => { e.stopPropagation(); openShareModal('ASK', market); }} className="absolute bottom-4 right-4 z-30 px-3 py-2 bg-black/60 hover:bg-black/90 text-white rounded-lg text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-lg flex items-center gap-1.5 transition-all active:scale-95">
-                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 105.368-2.684z" /></svg>
                          Share & Earn
                        </button>
                     )}
