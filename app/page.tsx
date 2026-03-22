@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext, CATEGORIES } from './context';
+import confetti from 'canvas-confetti';
 
 const createSlug = (title: string) => {
   return title.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');     
@@ -35,7 +36,8 @@ function HomeContent() {
     loginWithTwitter, loginWithDiscord, loginWithEmail, loginWithGoogle, claimShareReward
   } = useAppContext();
 
-  const [activeCategory, setActiveCategory] = useState('All');
+  // Výchozí kategorie je nyní 'The Feed' místo 'All'
+  const [activeCategory, setActiveCategory] = useState('The Feed');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [betAmount, setBetAmount] = useState<string>("10");
   const [chatInput, setChatInput] = useState("");
@@ -112,13 +114,45 @@ function HomeContent() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProfileOpen]);
 
+  // VYLEPŠENÁ FUNKCE SÁZENÍ S EFEKTY TLAČÍTEK
   const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
     e.stopPropagation();
     const amountToBet = parseFloat(betAmount);
-    if (!isLoggedIn) setIsLoginModalOpen(true);
-    else if (isNaN(amountToBet) || amountToBet <= 0) showToast("Please enter a valid amount.", "error");
-    else if (amountToBet > balance) showToast("Insufficient balance!", "error");
-    else placeBet(marketId, type, amountToBet);
+    
+    if (!isLoggedIn) {
+      setIsLoginModalOpen(true);
+    } else if (isNaN(amountToBet) || amountToBet <= 0) {
+      showToast("Please enter a valid amount.", "error");
+    } else if (amountToBet > balance) {
+      showToast("Insufficient balance!", "error");
+    } else {
+      // 1. Odeslání sázky
+      placeBet(marketId, type, amountToBet);
+      
+      // 2. Haptic Feedback (Vibrace na mobilu)
+      if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+
+      // 3. Konfety střílející PŘÍMO z tlačítka NAHORU
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      // Výpočet středu tlačítka (v procentech obrazovky, jak to knihovna vyžaduje)
+      const x = (rect.left + rect.width / 2) / window.innerWidth;
+      const y = (rect.top + rect.height / 2) / window.innerHeight;
+
+      const colors = type === 'VYBE' ? ['#22c55e', '#16a34a', '#4ade80'] : ['#ef4444', '#dc2626', '#f87171'];
+
+      confetti({
+        particleCount: 60, // Počet konfet
+        spread: 60,        // Šířka rozptylu
+        angle: 90,         // 90 stupňů = přímo nahoru
+        startVelocity: 35, // Síla výstřelu
+        origin: { x, y },  // Z bodu kliknutí
+        colors: colors,
+        zIndex: 100,
+        disableForReducedMotion: true
+      });
+    }
   };
 
   const openShareModal = (type: 'ASK' | 'FLEX', market: any) => {
@@ -151,8 +185,8 @@ function HomeContent() {
   };
 
   let filteredMarkets = markets;
-  if (activeCategory === 'Trending') filteredMarkets = [...markets].sort((a: any, b: any) => b.volumeUsd - a.volumeUsd);
-  else if (activeCategory !== 'All') filteredMarkets = markets.filter((m: any) => m.category === activeCategory);
+  if (activeCategory === 'On Fire') filteredMarkets = [...markets].sort((a: any, b: any) => b.volumeUsd - a.volumeUsd);
+  else if (activeCategory !== 'The Feed') filteredMarkets = markets.filter((m: any) => m.category === activeCategory);
   
   const sortedMarkets = [...filteredMarkets].sort((a: any, b: any) => {
     const aResolved = !!marketStatus[a.id];
@@ -203,7 +237,6 @@ function HomeContent() {
                       <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
                     </div>
                     
-                    {/* NOVÁ SEKCE: COMMUNITY & SUPPORT */}
                     <div className="p-2 border-t border-zinc-100 dark:border-white/5 flex flex-col gap-1">
                       <span className="px-3 pt-1 pb-2 text-[9px] font-black uppercase tracking-widest text-zinc-400">Community</span>
                       <a href="https://discord.gg/wVAWCNZJ" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors">
@@ -320,7 +353,7 @@ function HomeContent() {
   );
 
   return (
-    <main className="flex min-h-screen flex-col items-center font-sans bg-zinc-50 dark:bg-[#0e0e12] transition-colors duration-500 relative">
+    <main className="flex min-h-screen flex-col items-center font-sans bg-zinc-50 dark:bg-[#0e0e12] transition-colors duration-500 relative overflow-hidden">
       {headerContent}
       
       {markets.length === 0 ? (
@@ -381,9 +414,13 @@ function HomeContent() {
                     <div className="w-full text-center p-5 md:p-6 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex flex-col gap-2"><h4 className="font-black italic uppercase text-zinc-900 dark:text-white text-lg md:text-xl">Market Resolved</h4><p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p></div>
                   ) : (
                     <div className="flex flex-col gap-3">
-                      <div className="grid grid-cols-2 gap-3 md:gap-4">
-                        <button onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className="p-4 md:p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500 font-black text-lg md:text-2xl uppercase italic text-green-600 dark:text-green-400 shadow-sm active:scale-95 transition-all">VYBE</button>
-                        <button onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className="p-4 md:p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500 font-black text-lg md:text-2xl uppercase italic text-red-600 dark:text-red-400 shadow-sm active:scale-95 transition-all">NO VYBE</button>
+                      <div className="grid grid-cols-2 gap-3 md:gap-4 relative">
+                        <button onClick={(e) => handleVote(e, selectedMarket.id, 'VYBE')} className="relative overflow-hidden p-4 md:p-5 rounded-2xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500/20 font-black text-lg md:text-2xl uppercase italic text-green-600 dark:text-green-400 shadow-sm active:scale-95 transition-all">
+                          VYBE
+                        </button>
+                        <button onClick={(e) => handleVote(e, selectedMarket.id, 'NO_VYBE')} className="relative overflow-hidden p-4 md:p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500/20 font-black text-lg md:text-2xl uppercase italic text-red-600 dark:text-red-400 shadow-sm active:scale-95 transition-all">
+                          NO VYBE
+                        </button>
                       </div>
                       <p className="text-center text-[8px] md:text-[9px] text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed px-2 md:px-4">
                         By trading, you agree to the <Link href="/rules" className="underline hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Rules & Policies</Link>. All trades use <strong>virtual USDC</strong> for entertainment. Winning trades yield virtual profits and <strong>Season XP</strong> for the monthly leaderboard.

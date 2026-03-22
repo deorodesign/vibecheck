@@ -4,7 +4,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from './lib/supabase';
 import Link from 'next/link';
 
-export const CATEGORIES = ['All', 'Trending', 'Pop Culture', 'Gaming', 'Sports', 'Tech & Politics'];
+// NOVÉ KATEGORIE
+export const CATEGORIES = ['The Feed', 'On Fire', 'Internet Drama', 'The Boring Stuff', 'Degen Moves', 'Pure Vybe'];
 
 const AppContext = createContext<any>(null);
 
