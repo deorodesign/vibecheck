@@ -46,7 +46,6 @@ function HomeContent() {
   const [shareData, setShareData] = useState<{title: string, text: string, url: string} | null>(null);
   const [isFetchingTimeout, setIsFetchingTimeout] = useState(false);
   
-  // NOVÉ: Zámek proti spam-clicku při sázení
   const [isBetting, setIsBetting] = useState(false);
 
   const chatTopRef = useRef<HTMLDivElement>(null);
@@ -116,42 +115,50 @@ function HomeContent() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProfileOpen]);
 
-  // OPRAVENÁ FUNKCE SÁZENÍ SE ZÁMKEM PROTI SPAM CLICKU
-  const handleVote = async (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
+  // OPRAVENÁ FUNKCE - KONFETY OKAMŽITĚ, SÁZKA NA POZADÍ
+  const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
     e.stopPropagation();
-    if (isBetting) return; // Pokud už sází, nedělej nic
+    if (isBetting) return; 
 
     const amountToBet = parseFloat(betAmount);
     
     if (!isLoggedIn) {
       setIsLoginModalOpen(true);
-    } else if (isNaN(amountToBet) || amountToBet <= 0) {
+      return;
+    } 
+    if (isNaN(amountToBet) || amountToBet <= 0) {
       showToast("Please enter a valid amount.", "error");
-    } else if (amountToBet > balance) {
+      return;
+    } 
+    if (amountToBet > balance) {
       showToast("Insufficient balance!", "error");
-    } else {
-      setIsBetting(true); // Zamkneme tlačítka
-      
-      await placeBet(marketId, type, amountToBet);
-      
-      if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
-        window.navigator.vibrate(50);
-      }
-
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const x = (rect.left + rect.width / 2) / window.innerWidth;
-      const y = (rect.top + rect.height / 2) / window.innerHeight;
-      const colors = type === 'VYBE' ? ['#22c55e', '#16a34a', '#4ade80'] : ['#ef4444', '#dc2626', '#f87171'];
-
-      confetti({
-        particleCount: 60, spread: 60, angle: 90, startVelocity: 35, origin: { x, y }, colors: colors, zIndex: 100, disableForReducedMotion: true
-      });
-
-      // Odemkneme tlačítka po 500ms, aby se stihla zapsat nová cena z databáze
-      setTimeout(() => {
-        setIsBetting(false);
-      }, 500);
+      return;
     }
+
+    // 1. ZAMKNOUT TLAČÍTKA
+    setIsBetting(true);
+    
+    // 2. VIZUÁLNÍ EFEKTY BLESKOVĚ
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = (rect.left + rect.width / 2) / window.innerWidth;
+    const y = (rect.top + rect.height / 2) / window.innerHeight;
+    const colors = type === 'VYBE' ? ['#22c55e', '#16a34a', '#4ade80'] : ['#ef4444', '#dc2626', '#f87171'];
+
+    confetti({
+      particleCount: 60, spread: 60, angle: 90, startVelocity: 35, origin: { x, y }, colors: colors, zIndex: 100, disableForReducedMotion: true
+    });
+
+    if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
+
+    // 3. POSLAT SÁZKU DO DATABÁZE NA POZADÍ
+    placeBet(marketId, type, amountToBet);
+
+    // 4. BEZPEČNĚ ODEMKNOUT ZA ZLOMEK VTEŘINY
+    setTimeout(() => {
+      setIsBetting(false);
+    }, 800);
   };
 
   const openShareModal = (type: 'ASK' | 'FLEX', market: any) => {
@@ -183,7 +190,6 @@ function HomeContent() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  // OPRAVENÁ LOGIKA ŘAZENÍ - VYHODNOCENÉ JDOU VŽDYCKY DOLŮ
   let filteredMarkets = markets;
   
   if (activeCategory !== 'The Feed' && activeCategory !== 'On Fire') {
@@ -197,11 +203,9 @@ function HomeContent() {
     const aResolved = !!marketStatus[a.id];
     const bResolved = !!marketStatus[b.id];
     
-    // ZLATÉ PRAVIDLO 1: Vyhodnocené karty jdou VŽDY úplně dolů, bez ohledu na kategorii
     if (aResolved && !bResolved) return 1;
     if (!aResolved && bResolved) return -1;
 
-    // PRAVIDLO 2: Pokud jsou obě karty aktivní a jsme v On Fire, srovnáme je podle peněz
     if (activeCategory === 'On Fire' && !aResolved && !bResolved) {
       const aPrices = marketPrices[a.id] || { vybePool: 0, noVybePool: 0 };
       const bPrices = marketPrices[b.id] || { vybePool: 0, noVybePool: 0 };
@@ -210,7 +214,6 @@ function HomeContent() {
       return bTotal - aTotal;
     }
     
-    // Jinak necháme výchozí (dle data vložení do DB)
     return 0;
   });
 
