@@ -178,26 +178,31 @@ function HomeContent() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  // OPRAVENÁ LOGIKA PRO GLOBÁLNÍ OBJEM A ŘAZENÍ
+  // OPRAVENÁ LOGIKA:
   let filteredMarkets = markets;
-  if (activeCategory === 'On Fire') {
-    filteredMarkets = [...markets].sort((a: any, b: any) => {
+  if (activeCategory !== 'The Feed' && activeCategory !== 'On Fire') {
+    filteredMarkets = markets.filter((m: any) => m.category === activeCategory);
+  }
+  
+  const sortedMarkets = [...filteredMarkets].sort((a: any, b: any) => {
+    const aResolved = !!marketStatus[a.id];
+    const bResolved = !!marketStatus[b.id];
+    
+    // Pravidlo 1: Vyhodnocené vždy dolů
+    if (aResolved && !bResolved) return 1;
+    if (!aResolved && bResolved) return -1;
+
+    // Pravidlo 2: Pokud jsou oba aktivní (nebo oba vyhodnocené) a jsme v On Fire, seřaď podle objemu
+    if (activeCategory === 'On Fire') {
       const aPrices = marketPrices[a.id] || { vybePool: 0, noVybePool: 0 };
       const bPrices = marketPrices[b.id] || { vybePool: 0, noVybePool: 0 };
       const aTotal = (Number(a.volumeUsd) || 0) + (aPrices.vybePool || 0) + (aPrices.noVybePool || 0);
       const bTotal = (Number(b.volumeUsd) || 0) + (bPrices.vybePool || 0) + (bPrices.noVybePool || 0);
       return bTotal - aTotal;
-    });
-  } else if (activeCategory !== 'The Feed') {
-    filteredMarkets = markets.filter((m: any) => m.category === activeCategory);
-  }
-  
-  const sortedMarkets = [...filteredMarkets].sort((a: any, b: any) => {
-    if (activeCategory === 'On Fire') return 0; 
-    const aResolved = !!marketStatus[a.id];
-    const bResolved = !!marketStatus[b.id];
-    if (aResolved === bResolved) return 0;
-    return aResolved ? 1 : -1;
+    }
+    
+    // Standardní řazení
+    return 0;
   });
 
   const isResolved = selectedMarket ? !!marketStatus[selectedMarket.id] : false;
@@ -394,7 +399,7 @@ function HomeContent() {
                   className="shrink-0 w-fit self-start sm:self-auto flex items-center justify-center gap-2 bg-black dark:bg-white text-white dark:text-black px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl group relative overflow-hidden"
                 >
                   <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-fuchsia-500/20 to-orange-500/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
-                  <svg className="w-3.5 h-3.5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 105.368-2.684z" /></svg>
+                  <svg className="w-3.5 h-3.5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
                   <span className="relative z-10">Share & Earn <span className="hidden sm:inline">50 USDC</span></span>
                 </button>
               </div>
