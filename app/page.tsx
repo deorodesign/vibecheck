@@ -178,32 +178,36 @@ function HomeContent() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  // NEPRŮSTŘELNÁ LOGIKA FILTROVÁNÍ:
+  // OPRAVENÁ LOGIKA FILTROVÁNÍ A ŘAZENÍ
   let filteredMarkets = markets;
   
-  if (activeCategory === 'On Fire') {
-    filteredMarkets = [...markets].sort((a: any, b: any) => {
-      const aPrices = marketPrices[a.id] || { vybePool: 0, noVybePool: 0 };
-      const bPrices = marketPrices[b.id] || { vybePool: 0, noVybePool: 0 };
-      const aTotal = (Number(a.volumeUsd) || 0) + (aPrices.vybePool || 0) + (aPrices.noVybePool || 0);
-      const bTotal = (Number(b.volumeUsd) || 0) + (bPrices.vybePool || 0) + (bPrices.noVybePool || 0);
-      return bTotal - aTotal;
-    });
-  } else if (activeCategory !== 'The Feed') {
+  // 1. Zafiltrování
+  if (activeCategory !== 'The Feed' && activeCategory !== 'On Fire') {
     filteredMarkets = markets.filter((m: any) => {
       if (!m.category) return false;
       return m.category.trim().toLowerCase() === activeCategory.trim().toLowerCase();
     });
   }
   
+  // 2. Finální seřazení
   const sortedMarkets = [...filteredMarkets].sort((a: any, b: any) => {
-    if (activeCategory === 'On Fire') return 0; 
     const aResolved = !!marketStatus[a.id];
     const bResolved = !!marketStatus[b.id];
     
-    // Vyhodnocené VŽDY dolů
+    // Pravidlo 1: Vyhodnocené VŽDY dolů (platí pro VŠECHNY kategorie)
     if (aResolved && !bResolved) return 1;
     if (!aResolved && bResolved) return -1;
+
+    // Pravidlo 2: Pokud jsou oba stejného stavu (aktivní/vyhodnocené) a jsme v On Fire, řadíme podle objemu
+    if (activeCategory === 'On Fire') {
+      const aPrices = marketPrices[a.id] || { vybePool: 0, noVybePool: 0 };
+      const bPrices = marketPrices[b.id] || { vybePool: 0, noVybePool: 0 };
+      const aTotal = (Number(a.volumeUsd) || 0) + (aPrices.vybePool || 0) + (aPrices.noVybePool || 0);
+      const bTotal = (Number(b.volumeUsd) || 0) + (bPrices.vybePool || 0) + (bPrices.noVybePool || 0);
+      return bTotal - aTotal;
+    }
+    
+    // Jinak necháme výchozí pořadí
     return 0;
   });
 
@@ -401,7 +405,7 @@ function HomeContent() {
                   className="shrink-0 w-fit self-start sm:self-auto flex items-center justify-center gap-2 bg-black dark:bg-white text-white dark:text-black px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl group relative overflow-hidden"
                 >
                   <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-fuchsia-500/20 to-orange-500/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
-                  <svg className="w-3.5 h-3.5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                  <svg className="w-3.5 h-3.5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 105.368-2.684z" /></svg>
                   <span className="relative z-10">Share & Earn <span className="hidden sm:inline">50 USDC</span></span>
                 </button>
               </div>
@@ -410,7 +414,7 @@ function HomeContent() {
                 <h3 className="text-[9px] md:text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 md:mb-4">Current Vybe Check</h3>
                 <div className="relative h-10 md:h-12 bg-zinc-100 dark:bg-black/50 rounded-2xl overflow-hidden flex items-center mb-5 md:mb-6 border border-zinc-200 dark:border-white/5 shadow-inner">
                   <div className="h-full bg-green-500 flex items-center px-3 md:px-4 justify-start transition-all duration-500 ease-out shadow-[0_0_20px_rgba(34,197,94,0.6)]" style={{ width: `${(currentPrices?.vibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-xs md:text-sm z-10">{((currentPrices?.vibe || 0.5) * 100).toFixed(0)}%</span></div>
-                  <div className="h-full bg-red-50 flex items-center px-3 md:px-4 justify-end transition-all duration-500 ease-out shadow-[0_0_20px_rgba(239,68,68,0.6)]" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-xs md:text-sm z-10">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span></div>
+                  <div className="h-full bg-red-500 flex items-center px-3 md:px-4 justify-end transition-all duration-500 ease-out shadow-[0_0_20px_rgba(239,68,68,0.6)]" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-xs md:text-sm z-10">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span></div>
                 </div>
                 {!isResolved && (
                   <div className="mb-5 md:mb-6 p-3 md:p-4 bg-zinc-50 dark:bg-white/5 rounded-xl md:rounded-2xl border border-zinc-100 dark:border-white/5">
