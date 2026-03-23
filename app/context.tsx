@@ -172,45 +172,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // OPRAVENÉ REALTIME PŘIPOJENÍ - Prevence TIMED_OUT chyby
+  // TVRDÝ RESTART A CHIRURGICKÉ REALTIME PŘIPOJENÍ
   useEffect(() => {
     let isMounted = true;
     let channel: any;
 
     fetchData(); // Úvodní načtení dat
 
+    // Bezpečnostní opatření: Smažeme všechny staré kanály, aby se nehádaly
+    supabase.removeAllChannels();
+
     // Nasadíme mikro-zpoždění (50ms), aby se prohlížeč neusvačil 
     // a nezabil nám WebSocket handshake ještě před jeho dokončením.
     const initRealtime = setTimeout(() => {
-      console.log("Zapínám živé připojení (V2)...");
+      console.log("Zapínám živé připojení (V3 - FULL)...");
       
-      channel = supabase.channel('vybecheck-live-v2')
+      channel = supabase.channel('vybecheck-live-v3')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
-            console.log('🔄 Změna sázek z DB:', payload);
+            console.log('🔄 Změna sázek z DB!', payload);
             if(isMounted) fetchData();
         })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
-            console.log('💬 Zpráva z DB:', payload.new);
-            if(isMounted) {
-               const newMsg = payload.new as any;
-               setChatMessages((prev: any) => {
-                 if (prev.some((m: any) => m.id === newMsg.id || (m.text === newMsg.text && m.user === newMsg.user_name))) {
-                   return prev;
-                 }
-                 return [...prev, {
-                   id: newMsg.id,
-                   marketId: newMsg.market_id,
-                   parentId: newMsg.parent_id || null,
-                   text: newMsg.text,
-                   user: newMsg.user_name,
-                   avatar: newMsg.avatar_url || '',
-                   betType: newMsg.bet_type,
-                   timestamp: newMsg.created_at,
-                   color: newMsg.color || 'text-fuchsia-500',
-                   likedBy: newMsg.liked_by || []
-                 }];
-               });
-            }
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, (payload) => {
+            console.log('💬 Zpráva z DB!', payload);
+            if(isMounted) fetchData(); // Pro jistotu teď po jakékoliv zprávě stáhneme čerstvý chat, ať vyloučíme chybu v poli
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'season_archives' }, () => {
             if(isMounted) fetchData();

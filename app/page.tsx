@@ -61,8 +61,6 @@ function HomeContent() {
     return () => clearTimeout(timer);
   }, []);
 
-  // OPRAVA CHYBY S GRAFEM: Tento useEffect zaručuje, že se graf a karta
-  // ihned překreslí (načtou nové hodnoty), když se v databázi změní trh.
   useEffect(() => {
     if (markets.length === 0) return;
     if (vybecardParam) {
@@ -460,7 +458,7 @@ function HomeContent() {
                   {replyingTo && (<div className="flex items-center justify-between bg-fuchsia-500/10 px-3 py-1.5 rounded-t-lg border-x border-t border-fuchsia-500/20 text-[8px] md:text-[9px] font-medium text-fuchsia-500 mb-[-1px]"><span>Replying to <strong>@{replyingTo.user}</strong></span><button onClick={() => setReplyingTo(null)} className="font-bold hover:text-fuchsia-700">✕</button></div>)}
                   <div className="relative flex items-center"><input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendChat()} placeholder={isLoggedIn ? (replyingTo ? "Write a reply..." : "Share your vybe...") : "Log in to chat..."} className={`w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 px-3 md:px-4 py-2.5 md:py-3 text-[10px] md:text-xs outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white ${replyingTo ? 'rounded-b-xl rounded-tr-xl' : 'rounded-xl'}`} /><button onClick={handleSendChat} className="absolute right-2 p-2 text-zinc-400 hover:text-fuchsia-500 transition-colors"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg></button></div>
                 </div>
-                <div className="p-4 md:p-5 flex flex-col gap-5 md:gap-6 max-h-[500px] md:max-h-[600px] overflow-y-auto scrollbar-hide">
+                <div className="p-4 md:p-5 flex flex-col gap-5 md:gap-6 max-h-[500px] md:max-h-[600px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {visibleMessages.length === 0 ? <p className="text-center text-zinc-400 py-8 md:py-10 italic text-[10px] md:text-[11px]">Be the first to share your thoughts!</p> : 
                     visibleMessages.map((msg: any) => {
                       const userBadge = getUserBetStatus(msg.user, selectedMarket.id);
