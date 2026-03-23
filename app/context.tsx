@@ -172,55 +172,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // TVRDÝ RESTART A CHIRURGICKÉ REALTIME PŘIPOJENÍ
+  // OPRAVENÉ REALTIME PŘIPOJENÍ - Prevence TIMED_OUT chyby
   useEffect(() => {
     let isMounted = true;
-    fetchData(); // Úvodní načtení
+    let channel: any;
 
-    // Bezpečnostní opatření: Smažeme všechny staré kanály, aby se nehádaly
-    supabase.removeAllChannels();
+    fetchData(); // Úvodní načtení dat
 
-    console.log("Zapínám živé připojení...");
-    const channel = supabase.channel('vybecheck-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
-          console.log('🔄 Změna sázek z DB:', payload);
-          if(isMounted) fetchData();
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
-          console.log('💬 Zpráva z DB:', payload.new);
-          if(isMounted) {
-             const newMsg = payload.new as any;
-             setChatMessages((prev) => {
-               // Zabránění duplikacím
-               if (prev.some(m => m.id === newMsg.id || (m.text === newMsg.text && m.user === newMsg.user_name))) {
-                 return prev;
-               }
-               return [...prev, {
-                 id: newMsg.id,
-                 marketId: newMsg.market_id,
-                 parentId: newMsg.parent_id || null,
-                 text: newMsg.text,
-                 user: newMsg.user_name,
-                 avatar: newMsg.avatar_url || '',
-                 betType: newMsg.bet_type,
-                 timestamp: newMsg.created_at,
-                 color: newMsg.color || 'text-fuchsia-500',
-                 likedBy: newMsg.liked_by || []
-               }];
-             });
-          }
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'season_archives' }, () => {
-          if(isMounted) fetchData();
-      })
-      .subscribe((status, err) => {
-          console.log('📡 Realtime status:', status);
-          if(err) console.error('Realtime chyba:', err);
-      });
+    // Nasadíme mikro-zpoždění (50ms), aby se prohlížeč neusvačil 
+    // a nezabil nám WebSocket handshake ještě před jeho dokončením.
+    const initRealtime = setTimeout(() => {
+      console.log("Zapínám živé připojení (V2)...");
+      
+      channel = supabase.channel('vybecheck-live-v2')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
+            console.log('🔄 Změna sázek z DB:', payload);
+            if(isMounted) fetchData();
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+            console.log('💬 Zpráva z DB:', payload.new);
+            if(isMounted) {
+               const newMsg = payload.new as any;
+               setChatMessages((prev: any) => {
+                 if (prev.some((m: any) => m.id === newMsg.id || (m.text === newMsg.text && m.user === newMsg.user_name))) {
+                   return prev;
+                 }
+                 return [...prev, {
+                   id: newMsg.id,
+                   marketId: newMsg.market_id,
+                   parentId: newMsg.parent_id || null,
+                   text: newMsg.text,
+                   user: newMsg.user_name,
+                   avatar: newMsg.avatar_url || '',
+                   betType: newMsg.bet_type,
+                   timestamp: newMsg.created_at,
+                   color: newMsg.color || 'text-fuchsia-500',
+                   likedBy: newMsg.liked_by || []
+                 }];
+               });
+            }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'season_archives' }, () => {
+            if(isMounted) fetchData();
+        })
+        .subscribe((status, err) => {
+            console.log('📡 Realtime status:', status);
+            if(err) console.error('Realtime chyba:', err);
+        });
+    }, 50);
 
     return () => { 
       isMounted = false;
-      supabase.removeChannel(channel); 
+      clearTimeout(initRealtime);
+      if (channel) supabase.removeChannel(channel); 
     };
   }, [fetchData]);
 
@@ -282,12 +286,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (activeUserBetsForMarket.some(b => b.type === 'NO_VYBE')) finalBetType = 'NO_VYBE';
     }
     
-    // Optimistický update (ty to vidíš hned)
     const tempId = crypto.randomUUID();
     const tempMessage = { id: tempId, marketId, parentId, text, user, avatar, betType: finalBetType, timestamp: new Date().toISOString(), color: 'text-fuchsia-500', likedBy: [] };
     setChatMessages((prev: any) => [...prev, tempMessage]);
     
-    // Odeslání do DB
     await supabase.from('chat_messages').insert([{ id: tempId, market_id: marketId, parent_id: parentId, user_name: user, avatar_url: avatar, text: text, bet_type: finalBetType, color: 'text-fuchsia-500', liked_by: [] }]);
   };
 
@@ -385,7 +387,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       {children}
       {showSeasonModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-500">
-           {/* ... Zbytek sezónního modalu zůstává beze změny ... */}
            <div className={`relative w-full max-w-md p-8 md:p-10 rounded-[2rem] shadow-2xl flex flex-col items-center text-center bg-white dark:bg-[#18181b]`}>
              <button onClick={closeSeasonModal} className="w-full py-4 bg-black text-white dark:bg-white dark:text-black font-black uppercase tracking-widest rounded-xl">Let's Go</button>
            </div>
