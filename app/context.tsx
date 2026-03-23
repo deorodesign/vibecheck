@@ -172,7 +172,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // TVRDÝ RESTART A CHIRURGICKÉ REALTIME PŘIPOJENÍ
+  // TVRDÝ RESTART A V4 SUPER-RADAR
   useEffect(() => {
     let isMounted = true;
     let channel: any;
@@ -182,22 +182,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Bezpečnostní opatření: Smažeme všechny staré kanály, aby se nehádaly
     supabase.removeAllChannels();
 
-    // Nasadíme mikro-zpoždění (50ms), aby se prohlížeč neusvačil 
-    // a nezabil nám WebSocket handshake ještě před jeho dokončením.
+    // Nasadíme mikro-zpoždění (50ms), aby se prohlížeč neusvačil
     const initRealtime = setTimeout(() => {
-      console.log("Zapínám živé připojení (V3 - FULL)...");
+      console.log("Zapínám SUPER-RADAR (V4)...");
       
-      channel = supabase.channel('vybecheck-live-v3')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
-            console.log('🔄 Změna sázek z DB!', payload);
-            if(isMounted) fetchData();
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, (payload) => {
-            console.log('💬 Zpráva z DB!', payload);
-            if(isMounted) fetchData(); // Pro jistotu teď po jakékoliv zprávě stáhneme čerstvý chat, ať vyloučíme chybu v poli
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'season_archives' }, () => {
-            if(isMounted) fetchData();
+      channel = supabase.channel('vybecheck-live-v4')
+        // TENTO ŘÁDEK TEĎ POSLOUCHÁ ÚPLNĚ VŠECHNY TABULKY V DATABÁZI:
+        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+            console.log('🚨 DB HLÁSÍ ZMĚNU:', payload);
+            
+            if(isMounted) {
+              fetchData(); // Okamžitě stahujeme nová data pro graf i chat
+            }
         })
         .subscribe((status, err) => {
             console.log('📡 Realtime status:', status);
