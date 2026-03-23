@@ -53,6 +53,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
+  // OPRAVA CHYBY: Odstraněno setSelectedMarket(null), takže tě to už nevyhodí z karty!
   const resetAppStaleState = useCallback(() => {
     setWalletAddress('');
     setNickname('');
@@ -60,7 +61,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUserXp(0);
     setAvatarUrl('');
     setMyBets([]); 
-    setSelectedMarket(null);
   }, []);
 
   const fetchUserBets = useCallback(async (address: string) => {
@@ -181,15 +181,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const channel = supabase.channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
           console.log('🔄 Změna sázek, přepočítávám kurz...');
-          fetchData(); // Zde dává smysl přepočítat peníze
+          fetchData(); // Přepočítání kurzu a objemu peněz
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
           console.log('💬 Nová live zpráva:', payload.new);
-          // Okamžitě přihodíme zprávu do pole, nebudeme čekat na stahování celé databáze!
           const newMsg = payload.new as any;
           
           setChatMessages((prev) => {
-            // Bezpečnostní kontrola: pokud tam zpráva už je (protože jsi ji právě poslal ty), nepřidávej ji podruhé
             if (prev.some(m => m.id === newMsg.id || (m.text === newMsg.text && m.user === newMsg.user_name))) {
               return prev;
             }

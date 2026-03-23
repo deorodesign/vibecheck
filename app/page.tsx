@@ -61,12 +61,18 @@ function HomeContent() {
     return () => clearTimeout(timer);
   }, []);
 
+  // OPRAVA CHYBY S GRAFEM: Tento useEffect zaručuje, že se graf a karta
+  // ihned překreslí (načtou nové hodnoty), když se v databázi změní trh.
   useEffect(() => {
     if (markets.length === 0) return;
     if (vybecardParam) {
       let targetMarket = markets.find((m: any) => m.id.toString() === vybecardParam) || markets.find((m: any) => createSlug(m.title) === vybecardParam);
-      if (targetMarket && targetMarket.id !== selectedMarket?.id) setSelectedMarket(targetMarket);
-    } else if (selectedMarket) {
+      if (targetMarket) {
+        setSelectedMarket(targetMarket);
+      } else {
+        setSelectedMarket(null);
+      }
+    } else {
       setSelectedMarket(null);
     }
   }, [vybecardParam, markets]);
@@ -115,7 +121,6 @@ function HomeContent() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProfileOpen]);
 
-  // OPRAVENÁ FUNKCE - KONFETY OKAMŽITĚ, SÁZKA NA POZADÍ
   const handleVote = (e: React.MouseEvent, marketId: number, type: 'VYBE' | 'NO_VYBE') => {
     e.stopPropagation();
     if (isBetting) return; 
@@ -135,10 +140,8 @@ function HomeContent() {
       return;
     }
 
-    // 1. ZAMKNOUT TLAČÍTKA
     setIsBetting(true);
     
-    // 2. VIZUÁLNÍ EFEKTY BLESKOVĚ
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = (rect.left + rect.width / 2) / window.innerWidth;
     const y = (rect.top + rect.height / 2) / window.innerHeight;
@@ -152,10 +155,8 @@ function HomeContent() {
       window.navigator.vibrate(50);
     }
 
-    // 3. POSLAT SÁZKU DO DATABÁZE NA POZADÍ
     placeBet(marketId, type, amountToBet);
 
-    // 4. BEZPEČNĚ ODEMKNOUT ZA ZLOMEK VTEŘINY
     setTimeout(() => {
       setIsBetting(false);
     }, 800);
