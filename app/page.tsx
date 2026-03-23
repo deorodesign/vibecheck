@@ -374,7 +374,7 @@ function HomeContent() {
   );
 
   return (
-    <main className="flex min-h-screen flex-col items-center font-sans bg-zinc-50 dark:bg-[#0e0e12] transition-colors duration-500 relative overflow-hidden">
+    <main className="flex min-h-screen flex-col items-center font-sans bg-zinc-50 dark:bg-[#0e0e12] transition-colors duration-500 relative">
       {headerContent}
       
       {markets.length === 0 ? (
