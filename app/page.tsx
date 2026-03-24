@@ -45,7 +45,6 @@ function HomeContent() {
   const [visibleCount, setVisibleCount] = useState(10);
   const [shareData, setShareData] = useState<{title: string, text: string, url: string} | null>(null);
   const [isFetchingTimeout, setIsFetchingTimeout] = useState(false);
-  
   const [isBetting, setIsBetting] = useState(false);
 
   const chatTopRef = useRef<HTMLDivElement>(null);
@@ -221,6 +220,7 @@ function HomeContent() {
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
   const marketBetTotal = selectedMarket ? myBets.filter((b: any) => b.marketId === selectedMarket.id && (!b.status || b.status === 'pending')).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
 
+  // UI KOMPONENTY
   const headerContent = (
     <div className="sticky top-0 z-50 w-full flex flex-col items-center px-4 md:px-8 pt-6 pb-4 bg-zinc-50/90 dark:bg-[#0e0e12]/90 backdrop-blur-xl border-b border-zinc-200 dark:border-white/5 transition-colors duration-500">
       <div className="w-full max-w-7xl flex justify-between items-center mb-6">
@@ -378,18 +378,23 @@ function HomeContent() {
       {headerContent}
       
       {markets.length === 0 ? (
-        !isFetchingTimeout ? (
-          <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-50">
-            <div className="w-10 h-10 md:w-12 md:h-12 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-zinc-500">Loading Vybecards...</p>
+        <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-6 lg:gap-8 py-6 md:py-8 px-3 sm:px-4">
+          <div className="w-full lg:flex-1 flex flex-col items-center justify-center py-20 md:py-32 opacity-70 animate-in fade-in duration-700 bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm">
+            {!isFetchingTimeout ? (
+              <>
+                <div className="w-10 h-10 md:w-12 md:h-12 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-zinc-500">Loading Vybecards...</p>
+              </>
+            ) : (
+              <>
+                <span className="text-5xl md:text-6xl mb-6">👨‍🍳</span>
+                <p className="font-black text-lg md:text-xl uppercase italic tracking-widest text-zinc-400">Admin is cooking...</p>
+                <p className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-zinc-600 mt-3 border border-zinc-200 dark:border-white/10 px-4 py-2 rounded-full">No active markets right now.</p>
+              </>
+            )}
           </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center py-32 opacity-70 animate-in fade-in duration-700">
-            <span className="text-5xl md:text-6xl mb-6">👨‍🍳</span>
-            <p className="font-black text-lg md:text-xl uppercase italic tracking-widest text-zinc-400">Admin is cooking...</p>
-            <p className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-zinc-600 mt-3 border border-zinc-200 dark:border-white/10 px-4 py-2 rounded-full">No active markets right now.</p>
-          </div>
-        )
+          {rightSidebar}
+        </div>
       ) : selectedMarket ? (
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-6 lg:gap-8 py-4 md:py-6 px-3 sm:px-4 animate-in slide-in-from-bottom-8 duration-500">
           <div className="w-full lg:flex-1 flex flex-col gap-5 md:gap-6">

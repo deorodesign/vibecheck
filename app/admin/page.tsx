@@ -329,47 +329,79 @@ export default function AdminPanel() {
 
         <section className="space-y-4">
           <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-white">Active Markets</h2>
-          {activeMarkets.map((market) => (
-            <div key={market.id} className="p-6 rounded-[2rem] border border-zinc-800 bg-zinc-900 relative group">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-4">
-                  {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover object-top border border-zinc-800" />}
-                  <div>
-                    <h2 className="text-lg font-bold text-white leading-tight">{market.title}</h2>
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">ID: {market.id} | {market.category}</p>
+          <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {activeMarkets.map((market) => (
+              <div key={market.id} className="p-6 rounded-[2rem] border border-zinc-800 bg-zinc-900 relative group shrink-0">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-4">
+                    {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover object-top border border-zinc-800" />}
+                    <div>
+                      <h2 className="text-lg font-bold text-white leading-tight">{market.title}</h2>
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">ID: {market.id} | {market.category}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEdit(market)} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] uppercase tracking-widest rounded-full font-black transition-colors">Edit</button>
+                    <button onClick={() => deleteMarket(market.id)} className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-[10px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => handleEdit(market)} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] uppercase tracking-widest rounded-full font-black transition-colors">Edit</button>
-                  <button onClick={() => deleteMarket(market.id)} className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-[10px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
+                <div className="grid grid-cols-2 gap-4">
+                  <button onClick={() => resolveMarket(market.id, 'VYBE')} className="bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">WINNER: VYBE</button>
+                  <button onClick={() => resolveMarket(market.id, 'NO_VYBE')} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">WINNER: NO VYBE</button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => resolveMarket(market.id, 'VYBE')} className="bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">WINNER: VYBE</button>
-                <button onClick={() => resolveMarket(market.id, 'NO_VYBE')} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-4 rounded-2xl font-black uppercase tracking-widest transition-all text-xs">WINNER: NO VYBE</button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4 pt-10 border-t border-zinc-800">
+          <div className="flex justify-between items-end mb-6">
+             <h2 className="text-xl font-black uppercase italic tracking-widest text-zinc-600">Past Season Winners</h2>
+             <button onClick={handleEndSeason} disabled={isEndingSeason} className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-[10px] uppercase tracking-widest rounded-full font-black transition-colors">
+               {isEndingSeason ? 'Processing...' : 'Force End Season'}
+             </button>
+          </div>
+          <div className="flex flex-col gap-4 max-h-[300px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {archives.length === 0 ? (
+               <p className="text-xs text-zinc-600 italic px-2">No archived seasons yet.</p>
+            ) : (
+              archives.map((arch) => (
+                <div key={arch.id} className="p-5 rounded-[1.5rem] border border-zinc-800/50 bg-zinc-900/50 flex flex-col gap-3">
+                  <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Season Ended: {new Date(arch.season_date).toLocaleDateString()}</p>
+                  <div className="flex flex-col gap-2">
+                    {arch.top_players?.map((p: any, i: number) => (
+                       <div key={i} className="flex justify-between items-center bg-black/30 p-2 rounded-lg">
+                          <span className="text-xs font-bold text-white"><span className="text-fuchsia-500 mr-2">#{i+1}</span>{p.nickname}</span>
+                          <span className="text-[10px] text-zinc-500 font-mono">{p.xp_points} XP</span>
+                       </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </section>
         
         <section className="space-y-4 pt-10 border-t border-zinc-800">
           <h2 className="text-xl font-black mb-6 uppercase italic tracking-widest text-zinc-600">Resolved Markets Archive</h2>
-          {resolvedMarkets.map((market) => (
-            <div key={market.id} className="p-5 rounded-[1.5rem] border border-zinc-800/50 bg-zinc-900/30 opacity-80 flex flex-col gap-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover object-top grayscale" />}
-                  <div>
-                    <h2 className="text-sm font-bold text-white line-clamp-1">{market.title}</h2>
-                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Won: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span></p>
+          <div className="flex flex-col gap-4 max-h-[400px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {resolvedMarkets.map((market) => (
+              <div key={market.id} className="p-5 rounded-[1.5rem] border border-zinc-800/50 bg-zinc-900/30 opacity-80 flex flex-col gap-4 shrink-0">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    {(market.image_url || market.imageUrl) && <img src={market.image_url || market.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover object-top grayscale" />}
+                    <div>
+                      <h2 className="text-sm font-bold text-white line-clamp-1">{market.title}</h2>
+                      <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Won: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span></p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => deleteMarket(market.id)} className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500/70 hover:text-red-500 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => deleteMarket(market.id)} className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500/70 hover:text-red-500 text-[9px] uppercase tracking-widest rounded-full font-black transition-colors">Del</button>
-                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </section>
       </div>
     </div>
