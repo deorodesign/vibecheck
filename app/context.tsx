@@ -147,7 +147,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setChatMessages(chatData.map(c => ({ id: c.id, marketId: c.market_id, parentId: c.parent_id || null, text: c.text, user: c.user_name, avatar: c.avatar_url || '', betType: c.bet_type, timestamp: c.created_at, color: c.color || 'text-fuchsia-500', likedBy: c.liked_by || [] })));
     }
 
-    const { data: usersData } = await supabase.from('users').select('*').order('xp_points', { ascending: false }).limit(10);
+    // ZDE JE OPRAVA: .gt('xp_points', 0) vyfiltruje lidi s nulou
+    const { data: usersData } = await supabase.from('users').select('*').gt('xp_points', 0).order('xp_points', { ascending: false }).limit(10);
     if (usersData) {
       const colors = ['from-yellow-400 to-yellow-600', 'from-zinc-300 to-zinc-500', 'from-orange-400 to-orange-600', 'from-blue-400 to-blue-600', 'from-green-400 to-green-600'];
       setDynamicLeaderboard(usersData.map((u, i) => {

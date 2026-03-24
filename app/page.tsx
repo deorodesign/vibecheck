@@ -45,6 +45,7 @@ function HomeContent() {
   const [visibleCount, setVisibleCount] = useState(10);
   const [shareData, setShareData] = useState<{title: string, text: string, url: string} | null>(null);
   const [isFetchingTimeout, setIsFetchingTimeout] = useState(false);
+  
   const [isBetting, setIsBetting] = useState(false);
 
   const chatTopRef = useRef<HTMLDivElement>(null);
@@ -220,7 +221,6 @@ function HomeContent() {
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
   const marketBetTotal = selectedMarket ? myBets.filter((b: any) => b.marketId === selectedMarket.id && (!b.status || b.status === 'pending')).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
 
-  // UI KOMPONENTY
   const headerContent = (
     <div className="sticky top-0 z-50 w-full flex flex-col items-center px-4 md:px-8 pt-6 pb-4 bg-zinc-50/90 dark:bg-[#0e0e12]/90 backdrop-blur-xl border-b border-zinc-200 dark:border-white/5 transition-colors duration-500">
       <div className="w-full max-w-7xl flex justify-between items-center mb-6">
@@ -313,20 +313,28 @@ function HomeContent() {
           <p className="text-[9px] md:text-[10px] text-fuchsia-600 dark:text-fuchsia-400 uppercase font-bold mt-2 relative z-10 bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">Top 3 win airdrops every 14 days!</p>
         </div>
         <div className="flex flex-col p-2">
-          {dynamicLeaderboard.map((user: any) => (
-            <Link href={`/user/${encodeURIComponent(user.name)}`} key={user.id} className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors group cursor-pointer">
-              <div className="flex items-center gap-3 md:gap-4">
-                <span className={`font-black italic text-base md:text-lg w-4 text-center ${user.rank === 1 ? 'text-yellow-500' : user.rank === 2 ? 'text-zinc-400' : user.rank === 3 ? 'text-amber-600' : 'text-zinc-300 dark:text-zinc-600'}`}>{user.rank}</span>
-                <div className="flex items-center gap-2 md:gap-3">
-                  {user.avatar ? <img src={user.avatar} className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover shadow-sm shrink-0" alt="Avatar" /> : <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-tr ${user.color} shrink-0`}></div>}
-                  <div className="flex flex-col">
-                    <span className="font-bold text-[11px] md:text-xs text-zinc-900 dark:text-white group-hover:text-fuchsia-500 transition-colors truncate max-w-[80px] sm:max-w-[120px]">{user.name}</span>
+          {dynamicLeaderboard.length === 0 ? (
+            <div className="py-8 px-4 text-center flex flex-col items-center justify-center opacity-70">
+              <span className="text-2xl mb-2">🏆</span>
+              <p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest italic">No ranked Vybers yet.</p>
+              <p className="text-[9px] text-fuchsia-500/80 font-black uppercase mt-1">Be the first!</p>
+            </div>
+          ) : (
+            dynamicLeaderboard.map((user: any) => (
+              <Link href={`/user/${encodeURIComponent(user.name)}`} key={user.id} className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors group cursor-pointer">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <span className={`font-black italic text-base md:text-lg w-4 text-center ${user.rank === 1 ? 'text-yellow-500' : user.rank === 2 ? 'text-zinc-400' : user.rank === 3 ? 'text-amber-600' : 'text-zinc-300 dark:text-zinc-600'}`}>{user.rank}</span>
+                  <div className="flex items-center gap-2 md:gap-3">
+                    {user.avatar ? <img src={user.avatar} className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover shadow-sm shrink-0" alt="Avatar" /> : <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-tr ${user.color} shrink-0`}></div>}
+                    <div className="flex flex-col">
+                      <span className="font-bold text-[11px] md:text-xs text-zinc-900 dark:text-white group-hover:text-fuchsia-500 transition-colors truncate max-w-[80px] sm:max-w-[120px]">{user.name}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <span className="font-black font-mono text-xs md:text-sm text-zinc-900 dark:text-white shrink-0">{user.points.toLocaleString('en-US')}</span>
-            </Link>
-          ))}
+                <span className="font-black font-mono text-xs md:text-sm text-zinc-900 dark:text-white shrink-0">{user.points.toLocaleString('en-US')}</span>
+              </Link>
+            ))
+          )}
         </div>
       </div>
     </div>
