@@ -47,6 +47,8 @@ function HomeContent() {
   const [isFetchingTimeout, setIsFetchingTimeout] = useState(false);
   
   const [isBetting, setIsBetting] = useState(false);
+  // PŘIDÁNO: State pro ovládání zobrazení nového modalu pro Relief Fund
+  const [showFundModal, setShowFundModal] = useState(false);
 
   const chatTopRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -136,11 +138,11 @@ function HomeContent() {
       return;
     } 
     
-    // NEPRŮSTŘELNÁ KONTROLA ZŮSTATKU
+    // PŘIDÁNO: Zobrazení nového krásného Modalu místo Alertu
     if (amountToBet > safeBalance) {
-      showToast("Not enough USDC! Go to your profile to claim your Relief Fund.", "error");
-      alert("Not enough USDC! Go to your profile to claim your Relief Fund.");
-      return; // Zastaví funkci, takže se konfety ani sázka neodeslaly
+      showToast("Not enough USDC!", "error");
+      setShowFundModal(true); 
+      return; 
     }
 
     setIsBetting(true);
@@ -375,6 +377,31 @@ function HomeContent() {
     </div>
   );
 
+  // PŘIDÁNO: Krásný Modal pro Relief Fund
+  const fundModalContent = showFundModal && (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setShowFundModal(false)}>
+      <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+        <div className="text-center mb-2">
+          <div className="w-16 h-16 bg-gradient-to-tr from-fuchsia-500/20 to-orange-500/20 text-fuchsia-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-fuchsia-500/30">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-1">Out of USDC?</h2>
+          <p className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-widest leading-relaxed mt-2">
+            Your bankroll is empty. But don't worry, the community has your back.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 mt-2">
+          <Link href="/profile" onClick={() => setShowFundModal(false)} className="flex items-center justify-center w-full py-3.5 rounded-xl bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white hover:opacity-90 font-black uppercase tracking-widest text-[11px] md:text-sm shadow-md active:scale-95 transition-all">
+            Claim Relief Fund (+50)
+          </Link>
+          <button onClick={() => setShowFundModal(false)} className="py-3 rounded-xl bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white font-bold uppercase tracking-widest text-[10px] md:text-xs transition-colors w-full">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   const shareModalContent = shareData && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm" onClick={() => setShareData(null)}>
       <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col gap-5 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
@@ -459,7 +486,12 @@ function HomeContent() {
                       </div>
                     )}
 
-                    <div className="flex gap-2"><input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2.5 md:px-3 md:py-3 font-mono font-bold text-xs md:text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white" /><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 10).toString())} className="shrink-0 px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[9px] md:text-[10px] font-bold hover:bg-zinc-300 transition-colors">+10</button><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 50).toString())} className="shrink-0 px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[9px] md:text-[10px] font-bold hover:bg-zinc-300 transition-colors">+50</button></div>
+                    <div className="flex gap-2">
+                      {/* OPRAVA: Třídy pro odstranění šipek u inputu */}
+                      <input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2.5 md:px-3 md:py-3 font-mono font-bold text-xs md:text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]" />
+                      <button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 10).toString())} className="shrink-0 px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[9px] md:text-[10px] font-bold hover:bg-zinc-300 transition-colors">+10</button>
+                      <button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 50).toString())} className="shrink-0 px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[9px] md:text-[10px] font-bold hover:bg-zinc-300 transition-colors">+50</button>
+                    </div>
                   </div>
                 )}
                 <div className="flex flex-col gap-4">
@@ -569,7 +601,6 @@ function HomeContent() {
               const isRes = !!marketStatus[market.id];
               const userBetType = getUserBetStatus(nickname, market.id);
 
-              // OPRAVA: Výpočet pro štítek First Movera na hlavní mřížce
               const marketVol = Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0);
               const estimatedBets = market.total_bets || Math.floor(marketVol / 10);
 
@@ -579,7 +610,6 @@ function HomeContent() {
                     <img src={market.imageUrl || market.image_url} alt="" className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isRes ? 'grayscale' : 'group-hover:scale-105'}`} />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 dark:from-[#18181b] dark:via-[#18181b]/10 to-transparent z-10" />
                     
-                    {/* Zobrazení First Mover štítku přes obrázek */}
                     {estimatedBets < 5 && !isRes && (
                       <div className="absolute top-3 left-3 md:top-4 md:left-4 bg-orange-500 text-white px-2 py-1 rounded-md text-[8px] md:text-[9px] font-black uppercase tracking-widest shadow-lg z-20 flex items-center gap-1 animate-pulse">
                         🔥 2X XP ({estimatedBets}/5)
@@ -618,6 +648,7 @@ function HomeContent() {
       )}
       {loginModalContent}
       {shareModalContent}
+      {fundModalContent}
     </main>
   );
 }
