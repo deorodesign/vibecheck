@@ -133,8 +133,9 @@ function HomeContent() {
       showToast("Please enter a valid amount.", "error");
       return;
     } 
+    // OPRAVA: Zde je napojení na Relief Fund
     if (amountToBet > balance) {
-      showToast("Insufficient balance!", "error");
+      showToast("Not enough USDC! Go to your profile to claim your Relief Fund.", "error");
       return;
     }
 
@@ -220,6 +221,14 @@ function HomeContent() {
   const winningOutcome = selectedMarket ? marketStatus[selectedMarket.id] : null;
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
   const marketBetTotal = selectedMarket ? myBets.filter((b: any) => b.marketId === selectedMarket.id && (!b.status || b.status === 'pending')).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
+
+  // Odhad počtu sázek pro detail trhu
+  let selectedMarketVol = 0;
+  let estimatedDetailBets = 0;
+  if (selectedMarket) {
+    selectedMarketVol = Number(selectedMarket.volumeUsd || selectedMarket.volume_usd || 0) + (currentPrices?.vybePool || 0) + (currentPrices?.noVybePool || 0);
+    estimatedDetailBets = selectedMarket.total_bets || Math.floor(selectedMarketVol / 10);
+  }
 
   const headerContent = (
     <div className="sticky top-0 z-50 w-full flex flex-col items-center px-4 md:px-8 pt-6 pb-4 bg-zinc-50/90 dark:bg-[#0e0e12]/90 backdrop-blur-xl border-b border-zinc-200 dark:border-white/5 transition-colors duration-500">
@@ -437,6 +446,15 @@ function HomeContent() {
                 {!isResolved && (
                   <div className="mb-5 md:mb-6 p-3 md:p-4 bg-zinc-50 dark:bg-white/5 rounded-xl md:rounded-2xl border border-zinc-100 dark:border-white/5">
                     <div className="flex justify-between items-center mb-2 md:mb-3"><label className="text-[9px] md:text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount to Bet (USDC)</label><span className="text-[9px] md:text-[10px] font-bold text-zinc-500">Bal: {balance.toFixed(2)}</span></div>
+                    
+                    {/* OPRAVA: Vizuální štítek First Mover u detailu sázky */}
+                    {estimatedDetailBets < 5 && (
+                      <div className="mb-3 flex items-center justify-between px-3 md:px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500/10 to-fuchsia-500/10 border border-orange-500/20 text-orange-500 dark:text-orange-400 shadow-sm animate-pulse">
+                        <span className="font-black text-[10px] md:text-xs uppercase tracking-widest flex items-center gap-2">🔥 First Mover Bonus</span>
+                        <span className="font-bold text-[10px] md:text-xs bg-orange-500 text-white px-2 py-0.5 rounded shadow-sm">{estimatedDetailBets}/5 Claimed (2X XP)</span>
+                      </div>
+                    )}
+
                     <div className="flex gap-2"><input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2.5 md:px-3 md:py-3 font-mono font-bold text-xs md:text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white" /><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 10).toString())} className="shrink-0 px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[9px] md:text-[10px] font-bold hover:bg-zinc-300 transition-colors">+10</button><button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 50).toString())} className="shrink-0 px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[9px] md:text-[10px] font-bold hover:bg-zinc-300 transition-colors">+50</button></div>
                   </div>
                 )}
@@ -547,11 +565,23 @@ function HomeContent() {
               const isRes = !!marketStatus[market.id];
               const userBetType = getUserBetStatus(nickname, market.id);
 
+              // OPRAVA: Výpočet pro štítek First Movera na hlavní mřížce
+              const marketVol = Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0);
+              const estimatedBets = market.total_bets || Math.floor(marketVol / 10);
+
               return (
                 <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isRes ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
                   <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
                     <img src={market.imageUrl || market.image_url} alt="" className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isRes ? 'grayscale' : 'group-hover:scale-105'}`} />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 dark:from-[#18181b] dark:via-[#18181b]/10 to-transparent z-10" />
+                    
+                    {/* Zobrazení First Mover štítku přes obrázek */}
+                    {estimatedBets < 5 && !isRes && (
+                      <div className="absolute top-3 left-3 md:top-4 md:left-4 bg-orange-500 text-white px-2 py-1 rounded-md text-[8px] md:text-[9px] font-black uppercase tracking-widest shadow-lg z-20 flex items-center gap-1 animate-pulse">
+                        🔥 2X XP ({estimatedBets}/5)
+                      </div>
+                    )}
+                    
                     <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-2.5 md:py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${(Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}</div>
                     
                     {!isRes && (
