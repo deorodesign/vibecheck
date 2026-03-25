@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] })
 // TADY JE NASTAVENÍ PRO SOCIÁLNÍ SÍTĚ A VYHLEDÁVAČE
 export const metadata: Metadata = {
   title: 'Vybecheck | The Cultural Prediction Market',
-  description: 'Predict culture, trade virtual USDC, and win real airdrops. Are you following the vybe or fading it?',
+  description: 'Stop betting on boring charts. We bet on culture. Predict events, trade virtual USDC, and win real airdrops.',
   metadataBase: new URL('https://vybecheck.xyz'), // Tvoje reálná doména
   openGraph: {
     title: 'Vybecheck | Predict the Culture',
@@ -18,8 +18,7 @@ export const metadata: Metadata = {
     siteName: 'Vybecheck',
     images: [
       {
-        // Až budeš mít vlastní reklamní banner (ideálně 1200x630px), nahraď tento link:
-        url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&h=630&auto=format&fit=crop', 
+        url: '/og-image.jpg', // Odkazuje na obrázek ve složce public/
         width: 1200,
         height: 630,
         alt: 'Vybecheck Trading Platform',
@@ -32,7 +31,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Vybecheck | Predict the Culture',
     description: 'Are you following the vybe or fading it? Trade virtual USDC and win real airdrops.',
-    images: ['https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&h=630&auto=format&fit=crop'],
+    creator: '@vybecheck_xyz',
+    images: ['/og-image.jpg'], // Odkazuje na obrázek ve složce public/
   },
 }
 
