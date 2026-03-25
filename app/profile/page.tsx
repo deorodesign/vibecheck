@@ -261,7 +261,7 @@ export default function ProfilePage() {
                         <li className="flex items-start gap-2"><span className="text-fuchsia-500 mt-0.5 font-bold">▪</span><span><strong>+1 XP</strong> for every 1 USDC traded.</span></li>
                         <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5 font-bold">▪</span><span><strong>+10 XP</strong> for every 1 USDC of net profit.</span></li>
                       </ul>
-                      <p className="text-[10px] text-fuchsia-400 mt-3 font-bold italic">Top 5 players win monthly airdrops.</p>
+                      <p className="text-[10px] text-fuchsia-400 mt-3 font-bold italic">Top 3 players win monthly airdrops.</p>
                     </div>
                   )}
                 </div>
@@ -297,7 +297,7 @@ export default function ProfilePage() {
           <div className="mb-5">
             <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-2">Payout Wallet</h3>
             <p className="text-[9px] sm:text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-relaxed max-w-xl">
-              Add your Solana or EVM address to receive monthly USDC airdrops if you make it to the top 5 on the leaderboard.
+              Add your Solana or EVM address to receive monthly USDC airdrops if you make it to the top 3 on the leaderboard.
             </p>
           </div>
 
@@ -433,8 +433,8 @@ export default function ProfilePage() {
               To keep the platform accessible, fun, and globally compliant, we use <strong>virtual USDC</strong>. You can't deposit real money, and you can't buy your way to the top. Your most valuable asset here is your <strong className="text-fuchsia-500">Season XP</strong>.
             </p>
             <p>
-              <strong className="text-zinc-900 dark:text-white uppercase text-[10px] tracking-widest block mb-1">3. The Top 5 Take It All</strong>
-              Every winning trade earns you XP. At the end of the season, the top 5 players on the leaderboard are rewarded with real-world airdrops directly to their payout wallets. Play smart, trade well, and prove you have the best vybe.
+              <strong className="text-zinc-900 dark:text-white uppercase text-[10px] tracking-widest block mb-1">3. The Top 3 Take It All</strong>
+              Every winning trade earns you XP. At the end of the season, the top 3 players on the leaderboard are rewarded with real-world airdrops directly to their payout wallets. Play smart, trade well, and prove you have the best vybe.
             </p>
           </div>
         </div>
