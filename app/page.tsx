@@ -123,7 +123,9 @@ function HomeContent() {
     e.stopPropagation();
     if (isBetting) return; 
 
+    // Ošetření datových typů pro kontrolu zůstatku
     const amountToBet = parseFloat(betAmount);
+    const safeBalance = Number(balance) || 0; 
     
     if (!isLoggedIn) {
       setIsLoginModalOpen(true);
@@ -133,10 +135,12 @@ function HomeContent() {
       showToast("Please enter a valid amount.", "error");
       return;
     } 
-    // OPRAVA: Zde je napojení na Relief Fund
-    if (amountToBet > balance) {
+    
+    // NEPRŮSTŘELNÁ KONTROLA ZŮSTATKU
+    if (amountToBet > safeBalance) {
       showToast("Not enough USDC! Go to your profile to claim your Relief Fund.", "error");
-      return;
+      alert("Not enough USDC! Go to your profile to claim your Relief Fund.");
+      return; // Zastaví funkci, takže se konfety ani sázka neodeslaly
     }
 
     setIsBetting(true);
