@@ -2,15 +2,14 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AppProvider } from './context'
-import { Analytics } from '@vercel/analytics/react' // TADY IMPORTUJEME ANALYTIKU
+import { Analytics } from '@vercel/analytics/react'
 
 const inter = Inter({ subsets: ['latin'] })
 
-// TADY JE NASTAVENÍ PRO SOCIÁLNÍ SÍTĚ A VYHLEDÁVAČE
 export const metadata: Metadata = {
   title: 'Vybecheck | The Cultural Prediction Market',
   description: 'Stop betting on boring charts. We bet on culture. Predict events, trade virtual USDC, and win real airdrops.',
-  metadataBase: new URL('https://vybecheck.xyz'), // Tvoje reálná doména
+  metadataBase: new URL('https://vybecheck.xyz'),
   openGraph: {
     title: 'Vybecheck | Predict the Culture',
     description: 'Trade on pop culture, gaming, and crypto events. Play smart, level up your Season XP, and win real monthly airdrops.',
@@ -18,7 +17,7 @@ export const metadata: Metadata = {
     siteName: 'Vybecheck',
     images: [
       {
-        url: '/og-image.jpg', // Odkazuje na obrázek ve složce public/
+        url: 'https://vybecheck.xyz/og-image.jpg', // OPRAVENO NA ABSOLUTNÍ ADRESU
         width: 1200,
         height: 630,
         alt: 'Vybecheck Trading Platform',
@@ -32,7 +31,7 @@ export const metadata: Metadata = {
     title: 'Vybecheck | Predict the Culture',
     description: 'Are you following the vybe or fading it? Trade virtual USDC and win real airdrops.',
     creator: '@vybecheck_xyz',
-    images: ['/og-image.jpg'], // Odkazuje na obrázek ve složce public/
+    images: ['https://vybecheck.xyz/og-image.jpg'], // OPRAVENO NA ABSOLUTNÍ ADRESU
   },
 }
 
@@ -47,7 +46,6 @@ export default function RootLayout({
         <AppProvider>
           {children}
         </AppProvider>
-        {/* TADY SE SPUSTÍ SLEDOVÁNÍ NÁVŠTĚVNOSTI */}
         <Analytics />
       </body>
     </html>
