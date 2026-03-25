@@ -147,7 +147,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setChatMessages(chatData.map(c => ({ id: c.id, marketId: c.market_id, parentId: c.parent_id || null, text: c.text, user: c.user_name, avatar: c.avatar_url || '', betType: c.bet_type, timestamp: c.created_at, color: c.color || 'text-fuchsia-500', likedBy: c.liked_by || [] })));
     }
 
-    // ZDE JE OPRAVA: .gt('xp_points', 0) vyfiltruje lidi s nulou
     const { data: usersData } = await supabase.from('users').select('*').gt('xp_points', 0).order('xp_points', { ascending: false }).limit(10);
     if (usersData) {
       const colors = ['from-yellow-400 to-yellow-600', 'from-zinc-300 to-zinc-500', 'from-orange-400 to-orange-600', 'from-blue-400 to-blue-600', 'from-green-400 to-green-600'];
@@ -173,33 +172,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // TVRDÝ RESTART A V4 SUPER-RADAR
   useEffect(() => {
     let isMounted = true;
     let channel: any;
 
-    fetchData(); // Úvodní načtení dat
+    fetchData();
 
-    // Bezpečnostní opatření: Smažeme všechny staré kanály, aby se nehádaly
     supabase.removeAllChannels();
 
-    // Nasadíme mikro-zpoždění (50ms), aby se prohlížeč neusvačil
     const initRealtime = setTimeout(() => {
       console.log("Zapínám SUPER-RADAR (V4)...");
       
       channel = supabase.channel('vybecheck-live-v4')
-        // TENTO ŘÁDEK TEĎ POSLOUCHÁ ÚPLNĚ VŠECHNY TABULKY V DATABÁZI:
         .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-            console.log('🚨 DB HLÁSÍ ZMĚNU:', payload);
-            
             if(isMounted) {
-              fetchData(); // Okamžitě stahujeme nová data pro graf i chat
+              fetchData();
             }
         })
-        .subscribe((status, err) => {
-            console.log('📡 Realtime status:', status);
-            if(err) console.error('Realtime chyba:', err);
-        });
+        .subscribe();
     }, 50);
 
     return () => { 
@@ -276,36 +266,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleLikeMessage = async (messageId: string, userName: string) => {
     if (!userName) return;
-
     const messageToLike = chatMessages.find(m => m.id === messageId);
     if (!messageToLike) return;
-
     const currentLikes = messageToLike.likedBy || [];
-    const newLikes = currentLikes.includes(userName)
-      ? currentLikes.filter((u: string) => u !== userName)
-      : [...currentLikes, userName];
-
-    setChatMessages((prev: any) => prev.map((msg: any) => {
-      if (msg.id === messageId) return { ...msg, likedBy: newLikes };
-      return msg;
-    }));
-
-    const { error } = await supabase.from('chat_messages').update({ liked_by: newLikes }).eq('id', messageId);
-    if (error) console.error("Error saving like:", error.message);
+    const newLikes = currentLikes.includes(userName) ? currentLikes.filter((u: string) => u !== userName) : [...currentLikes, userName];
+    setChatMessages((prev: any) => prev.map((msg: any) => msg.id === messageId ? { ...msg, likedBy: newLikes } : msg));
+    await supabase.from('chat_messages').update({ liked_by: newLikes }).eq('id', messageId);
   };
 
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     if (balance < amount) return showToast("Insufficient balance!", "error");
     const currentPriceRaw = marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5;
     const entryPrice = currentPriceRaw * 100;
-
     const { data, error } = await supabase.rpc('place_bet_secure', {
       p_market_id: marketId, p_user_address: walletAddress, p_user_name: nickname, p_bet_type: type, p_amount: amount, p_entry_price: entryPrice
     });
-
-    if (error) { 
-      showToast(`Transaction failed: ${error.message}`, "error");
-    } else if (data && data.success) {
+    if (error) { showToast(`Transaction failed: ${error.message}`, "error"); } 
+    else if (data && data.success) {
       setBalance(data.new_balance);
       setUserXp(data.new_xp);
       setMyBets(prev => [...prev, { id: data.bet_id, marketId, type, amount, entryPrice, status: 'pending' }]);
@@ -317,41 +294,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const cashOutBet = async (betId: number, currentPriceRaw: number) => {
     const betToSell = myBets.find(b => b.id === betId);
     if (!betToSell) return;
-
     const shares = betToSell.amount / (betToSell.entryPrice / 100);
     const cashOutValue = shares * (currentPriceRaw / 100);
-
     const { data, error } = await supabase.rpc('cash_out_bet', {
       p_bet_id: betId, p_user_address: walletAddress, p_cash_out_value: cashOutValue
     });
-
-    if (error) {
-      showToast(`Cash out failed: ${error.message}`, "error");
-    } else if (data && data.success) {
+    if (error) { showToast(`Cash out failed: ${error.message}`, "error"); } 
+    else if (data && data.success) {
       setBalance(data.new_balance);
       setMyBets(prev => prev.map(b => b.id === betId ? { ...b, status: 'cashed_out', payout: cashOutValue } : b));
       fetchData();
-      const profit = cashOutValue - betToSell.amount;
-      const profitText = profit >= 0 ? `+${profit.toFixed(2)}` : `${profit.toFixed(2)}`;
-      showToast(`Cashed out for ${cashOutValue.toFixed(2)} USDC (${profitText})`, "success");
+      showToast(`Cashed out for ${cashOutValue.toFixed(2)} USDC`, "success");
     }
   };
 
-  const claimReliefFund = async () => {
-    setIsAuthLoading(true);
-    const { data, error } = await supabase.rpc('claim_relief_fund', { p_wallet_address: walletAddress });
-    if (error) showToast(`Error: ${error.message}`, "error");
-    else if (data && data.success) { setBalance(data.new_balance); showToast(`+50 USDC added to your Bankroll! Stay in the game.`, "success"); } 
-    else if (data && !data.success) showToast(data.message, "error");
-    setIsAuthLoading(false);
-  };
+  // --- OPRAVENÁ FUNKCE CLAIM RELIEF FUND ---
+  const claimReliefFund = useCallback(async () => {
+    if (!isLoggedIn || !walletAddress) {
+      showToast("Please log in to claim funds!", "info");
+      return;
+    }
+
+    try {
+      // Používáme isAuthLoading jen lokálně, aby nezmizel celý web
+      setIsAuthLoading(true); 
+      
+      const { data, error } = await supabase.rpc('claim_relief_fund', { 
+        p_wallet_address: walletAddress 
+      });
+
+      if (error) {
+        showToast(`Database error: ${error.message}`, "error");
+      } else if (data) {
+        if (data.success) {
+          setBalance(data.new_balance);
+          showToast(`+50 USDC added to your Bankroll! Stay in the game.`, "success");
+          await fetchData(); // Refresh leaderboards a dat
+        } else {
+          showToast(data.message || "Relief Fund currently unavailable.", "error");
+        }
+      }
+    } catch (err: any) {
+      showToast("Something went wrong. Try again later.", "error");
+      console.error("Claim error:", err);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }, [isLoggedIn, walletAddress, fetchData, showToast]);
 
   const claimShareReward = async () => {
     if (!walletAddress) return;
     const { data, error } = await supabase.rpc('claim_share_reward', { p_wallet_address: walletAddress });
     if (error) console.error(error);
     else if (data && data.success) { setBalance(data.new_balance); setUserXp(data.new_xp); showToast(data.message, "success"); } 
-    else if (data && !data.success) showToast(data.message, "info");
   };
 
   return (
@@ -367,7 +362,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }}>
       {children}
       {showSeasonModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-md">
            <div className={`relative w-full max-w-md p-8 md:p-10 rounded-[2rem] shadow-2xl flex flex-col items-center text-center bg-white dark:bg-[#18181b]`}>
              <button onClick={closeSeasonModal} className="w-full py-4 bg-black text-white dark:bg-white dark:text-black font-black uppercase tracking-widest rounded-xl">Let's Go</button>
            </div>
