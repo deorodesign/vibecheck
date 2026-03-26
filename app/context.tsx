@@ -166,7 +166,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
     }
 
-    const { data: archiveData } = await supabase.from('season_archives').select('*').order('season_date', { ascending: false }).limit(1).single();
+    // OPRAVA TADY: Změněno .single() na .maybeSingle()
+    const { data: archiveData } = await supabase.from('season_archives').select('*').order('season_date', { ascending: false }).limit(1).maybeSingle();
     if (archiveData) {
       setLatestArchive(archiveData);
     }
@@ -308,7 +309,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // --- OPRAVENÁ FUNKCE CLAIM RELIEF FUND ---
   const claimReliefFund = useCallback(async () => {
     if (!isLoggedIn || !walletAddress) {
       showToast("Please log in to claim funds!", "info");
@@ -316,7 +316,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Používáme isAuthLoading jen lokálně, aby nezmizel celý web
       setIsAuthLoading(true); 
       
       const { data, error } = await supabase.rpc('claim_relief_fund', { 
@@ -329,7 +328,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (data.success) {
           setBalance(data.new_balance);
           showToast(`+50 USDC added to your Bankroll! Stay in the game.`, "success");
-          await fetchData(); // Refresh leaderboards a dat
+          await fetchData(); 
         } else {
           showToast(data.message || "Relief Fund currently unavailable.", "error");
         }
