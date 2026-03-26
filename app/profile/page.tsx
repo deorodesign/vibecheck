@@ -39,7 +39,7 @@ export default function ProfilePage() {
   const [savingAvatar, setSavingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showXpRules, setShowXpRules] = useState(false);
-  const [showClaimTooltip, setShowClaimTooltip] = useState(false); // NOVÝ STAV PRO TOOLTIP
+  const [showClaimTooltip, setShowClaimTooltip] = useState(false);
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -239,7 +239,6 @@ export default function ProfilePage() {
                     Bankroll: <span className="text-green-500 font-mono">{safeBalance.toFixed(2)} USDC</span>
                   </p>
                   
-                  {/* UPRAVENÉ TLAČÍTKO CLAIM - JE VIDĚT VŽDY A MÁ HOVER TOOLTIP */}
                   <div className="relative w-full sm:w-auto flex justify-center" onMouseEnter={() => setShowClaimTooltip(true)} onMouseLeave={() => setShowClaimTooltip(false)}>
                     <button 
                       onClick={claimReliefFund}
@@ -250,7 +249,7 @@ export default function ProfilePage() {
                     {showClaimTooltip && (
                       <div className="absolute top-full left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:right-0 mt-2 w-48 p-3 bg-zinc-900 dark:bg-black border border-zinc-700 dark:border-zinc-800 rounded-xl shadow-2xl z-50 animate-in fade-in zoom-in-95 text-center">
                         <p className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest">Relief Fund Rules</p>
-                        <p className="text-[10px] text-zinc-300 mt-1">Claim is available only once per day (0:00 - 23:59 UTC).</p>
+                        <p className="text-[10px] text-zinc-300 mt-1">Claim is available once every 24 hours.</p>
                       </div>
                     )}
                   </div>
