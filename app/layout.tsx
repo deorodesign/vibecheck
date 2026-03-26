@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     siteName: 'Vybecheck',
     images: [
       {
-        url: 'https://vybecheck.xyz/og-image.jpg?v=vitezstvi', // PŘIDÁN CACHE-BUST
+        url: 'https://vybecheck.xyz/og-image-v2.jpg', // TVRDÁ ZMĚNA NÁZVU SOUBORU
         width: 1200,
         height: 630,
         alt: 'Vybecheck Trading Platform',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     title: 'Vybecheck | Predict the Culture',
     description: 'Are you following the vybe or fading it? Trade virtual USDC and win real airdrops.',
     creator: '@vybecheck_xyz',
-    images: ['https://vybecheck.xyz/og-image.jpg?v=vitezstvi'], // PŘIDÁN CACHE-BUST
+    images: ['https://vybecheck.xyz/og-image-v2.jpg'], // TVRDÁ ZMĚNA NÁZVU SOUBORU
   },
 }
 
