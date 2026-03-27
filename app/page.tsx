@@ -47,7 +47,6 @@ function HomeContent() {
   const [isFetchingTimeout, setIsFetchingTimeout] = useState(false);
   
   const [isBetting, setIsBetting] = useState(false);
-  // PŘIDÁNO: State pro ovládání zobrazení nového modalu pro Relief Fund
   const [showFundModal, setShowFundModal] = useState(false);
 
   const chatTopRef = useRef<HTMLDivElement>(null);
@@ -125,7 +124,6 @@ function HomeContent() {
     e.stopPropagation();
     if (isBetting) return; 
 
-    // Ošetření datových typů pro kontrolu zůstatku
     const amountToBet = parseFloat(betAmount);
     const safeBalance = Number(balance) || 0; 
     
@@ -138,7 +136,6 @@ function HomeContent() {
       return;
     } 
     
-    // PŘIDÁNO: Zobrazení nového krásného Modalu místo Alertu
     if (amountToBet > safeBalance) {
       showToast("Not enough USDC!", "error");
       setShowFundModal(true); 
@@ -228,7 +225,6 @@ function HomeContent() {
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
   const marketBetTotal = selectedMarket ? myBets.filter((b: any) => b.marketId === selectedMarket.id && (!b.status || b.status === 'pending')).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
 
-  // Odhad počtu sázek pro detail trhu
   let selectedMarketVol = 0;
   let estimatedDetailBets = 0;
   if (selectedMarket) {
@@ -377,7 +373,6 @@ function HomeContent() {
     </div>
   );
 
-  // PŘIDÁNO: Krásný Modal pro Relief Fund
   const fundModalContent = showFundModal && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setShowFundModal(false)}>
       <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
@@ -478,7 +473,6 @@ function HomeContent() {
                   <div className="mb-5 md:mb-6 p-3 md:p-4 bg-zinc-50 dark:bg-white/5 rounded-xl md:rounded-2xl border border-zinc-100 dark:border-white/5">
                     <div className="flex justify-between items-center mb-2 md:mb-3"><label className="text-[9px] md:text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount to Bet (USDC)</label><span className="text-[9px] md:text-[10px] font-bold text-zinc-500">Bal: {balance.toFixed(2)}</span></div>
                     
-                    {/* OPRAVA: Vizuální štítek First Mover u detailu sázky */}
                     {estimatedDetailBets < 5 && (
                       <div className="mb-3 flex items-center justify-between px-3 md:px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500/10 to-fuchsia-500/10 border border-orange-500/20 text-orange-500 dark:text-orange-400 shadow-sm animate-pulse">
                         <span className="font-black text-[10px] md:text-xs uppercase tracking-widest flex items-center gap-2">🔥 First Mover Bonus</span>
@@ -487,7 +481,6 @@ function HomeContent() {
                     )}
 
                     <div className="flex gap-2">
-                      {/* OPRAVA: Třídy pro odstranění šipek u inputu */}
                       <input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} className="flex-1 min-w-0 bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2.5 md:px-3 md:py-3 font-mono font-bold text-xs md:text-sm focus:outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]" />
                       <button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 10).toString())} className="shrink-0 px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[9px] md:text-[10px] font-bold hover:bg-zinc-300 transition-colors">+10</button>
                       <button onClick={() => setBetAmount(prev => ((parseFloat(prev) || 0) + 50).toString())} className="shrink-0 px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-zinc-200 dark:bg-white/10 text-[9px] md:text-[10px] font-bold hover:bg-zinc-300 transition-colors">+50</button>
@@ -595,7 +588,8 @@ function HomeContent() {
         </div>
       ) : (
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-6 lg:gap-8 py-6 md:py-8 px-3 sm:px-4">
-          <div className="w-full lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-start">
+          {/* OPRAVA ZDE: grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 a zmenšený gap na 4 */}
+          <div className="w-full lg:flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 items-start">
             {sortedMarkets.map((market: any) => {
               const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
               const isRes = !!marketStatus[market.id];
@@ -619,25 +613,26 @@ function HomeContent() {
                     <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-2.5 md:py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${(Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}</div>
                     
                     {!isRes && (
-                       <button onClick={(e) => { e.stopPropagation(); openShareModal('ASK', market); }} className="absolute bottom-4 right-4 z-30 px-3 py-2 bg-black/60 hover:bg-black/90 text-white rounded-lg text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-lg flex items-center gap-1.5 transition-all active:scale-95">
+                       <button onClick={(e) => { e.stopPropagation(); openShareModal('ASK', market); }} className="absolute bottom-4 right-4 z-30 px-3 py-2 bg-black/60 hover:bg-black/90 text-white rounded-lg text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-lg flex items-center gap-1.5 transition-all active:scale-95 opacity-0 group-hover:opacity-100">
                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 105.368-2.684z" /></svg>
-                         Share & Earn
+                         Share
                        </button>
                     )}
                   </div>
 
-                  <div className="p-5 md:p-6 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
-                    <div className="flex justify-between items-start mb-3 md:mb-4 h-10 md:h-12 gap-2">
-                        <h2 className="text-base md:text-lg font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-2">{market.title}</h2>
+                  <div className="p-4 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
+                    <div className="flex justify-between items-start mb-3 h-10 gap-2">
+                        {/* OPRAVA ZDE: text-sm md:text-base pro menší nadpis na kartě */}
+                        <h2 className="text-sm md:text-base font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-2">{market.title}</h2>
                         {userBetType && <span className="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-[6px] md:text-[7px] font-black text-green-500 uppercase italic tracking-widest shrink-0 mt-0.5">{userBetType}</span>}
                     </div>
 
-                    <div className="mb-4 md:mb-5 p-3 rounded-2xl bg-zinc-50 dark:bg-black/30 border border-zinc-100 dark:border-white/5 shadow-inner">
-                      <div className="flex justify-between items-center mb-2 px-1"><span className="text-[10px] md:text-xs font-black text-green-500 uppercase italic">{(prices.vibe * 100).toFixed(0)}% Vybe</span><span className="text-[10px] md:text-xs font-black text-red-500 uppercase italic">{(prices.noVibe * 100).toFixed(0)}% No Vybe</span></div>
-                      <div className="relative h-2 md:h-2.5 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${prices.vibe * 100}%` }} /><div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${prices.noVibe * 100}%` }} /></div>
+                    <div className="mb-4 p-2.5 rounded-2xl bg-zinc-50 dark:bg-black/30 border border-zinc-100 dark:border-white/5 shadow-inner">
+                      <div className="flex justify-between items-center mb-1.5 px-1"><span className="text-[9px] md:text-[10px] font-black text-green-500 uppercase italic">{(prices.vibe * 100).toFixed(0)}% Vybe</span><span className="text-[9px] md:text-[10px] font-black text-red-500 uppercase italic">{(prices.noVibe * 100).toFixed(0)}% No Vybe</span></div>
+                      <div className="relative h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${prices.vibe * 100}%` }} /><div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${prices.noVibe * 100}%` }} /></div>
                     </div>
                     
-                    <div className="mt-auto flex flex-col gap-2">{isRes ? <div className="w-full text-center py-2.5 md:py-3 rounded-xl bg-zinc-100 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5"><p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]}</span></p></div> : <div className="grid grid-cols-2 gap-2"><div className="p-2.5 md:p-3 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-[10px] md:text-xs text-center transition-colors">Vybe</div><div className="p-2.5 md:p-3 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-[10px] md:text-xs text-center transition-colors">No Vybe</div></div>}</div>
+                    <div className="mt-auto flex flex-col gap-2">{isRes ? <div className="w-full text-center py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5"><p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]}</span></p></div> : <div className="grid grid-cols-2 gap-2"><div className="p-2 md:p-2.5 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-[9px] md:text-[10px] text-center transition-colors">Vybe</div><div className="p-2 md:p-2.5 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-[9px] md:text-[10px] text-center transition-colors">No Vybe</div></div>}</div>
                   </div>
                 </div>
               );
