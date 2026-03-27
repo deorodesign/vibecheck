@@ -76,6 +76,13 @@ function HomeContent() {
     }
   }, [vybecardParam, markets]);
 
+  // RESET SÁZKY PŘI ZMĚNĚ KARTY
+  useEffect(() => {
+    if (selectedMarket) {
+      setBetAmount("10");
+    }
+  }, [selectedMarket?.id]);
+
   const openMarket = (market: any) => {
     setSelectedMarket(market);
     setVisibleCount(10);
@@ -229,7 +236,8 @@ function HomeContent() {
   let estimatedDetailBets = 0;
   if (selectedMarket) {
     selectedMarketVol = Number(selectedMarket.volumeUsd || selectedMarket.volume_usd || 0) + (currentPrices?.vybePool || 0) + (currentPrices?.noVybePool || 0);
-    estimatedDetailBets = selectedMarket.total_bets || Math.floor(selectedMarketVol / 10);
+    // Úprava výpočtu pro Turbo XP detail
+    estimatedDetailBets = selectedMarket.total_bets !== undefined ? selectedMarket.total_bets : (selectedMarketVol > 0 ? 1 : 0);
   }
 
   const headerContent = (
@@ -595,7 +603,7 @@ function HomeContent() {
               const userBetType = getUserBetStatus(nickname, market.id);
 
               const marketVol = Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0);
-              const estimatedBets = market.total_bets || Math.floor(marketVol / 10);
+              const estimatedBets = market.total_bets !== undefined ? market.total_bets : (marketVol > 0 ? 1 : 0);
 
               return (
                 <div key={market.id} onClick={() => openMarket(market)} className={`h-full w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isRes ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
