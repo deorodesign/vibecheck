@@ -588,7 +588,6 @@ function HomeContent() {
         </div>
       ) : (
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-6 lg:gap-8 py-6 md:py-8 px-3 sm:px-4">
-          {/* OPRAVA ZDE: přidáno items-stretch místo items-start */}
           <div className="w-full lg:flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 items-stretch">
             {sortedMarkets.map((market: any) => {
               const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
@@ -599,7 +598,7 @@ function HomeContent() {
               const estimatedBets = market.total_bets || Math.floor(marketVol / 10);
 
               return (
-                <div key={market.id} onClick={() => openMarket(market)} className={`w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isRes ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
+                <div key={market.id} onClick={() => openMarket(market)} className={`h-full w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isRes ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
                   <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
                     <img src={market.imageUrl || market.image_url} alt="" className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isRes ? 'grayscale' : 'group-hover:scale-105'}`} />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 dark:from-[#18181b] dark:via-[#18181b]/10 to-transparent z-10" />
@@ -621,7 +620,6 @@ function HomeContent() {
                   </div>
 
                   <div className="p-4 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
-                    {/* OPRAVA ZDE: line-clamp-3 a title tag pro tooltip */}
                     <div className="flex justify-between items-start mb-3 gap-2">
                         <h2 className="text-sm md:text-base font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-3 w-full pr-1" title={market.title}>{market.title}</h2>
                         {userBetType && <span className="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-[6px] md:text-[7px] font-black text-green-500 uppercase italic tracking-widest shrink-0 mt-0.5">{userBetType}</span>}
