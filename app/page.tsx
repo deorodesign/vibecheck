@@ -274,7 +274,8 @@ function HomeContent() {
                       <Link href="/faq" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">F.A.Q.</Link>
                       <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
                       <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
-                      <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
+                      {/* TADY JE ZMĚNA! Z <Link href="/rewards"> uděláno normální <a> tag, co vede rovnou na Zealy */}
+                      <a href="https://zealy.io/cw/vybecheck/questboard" target="_blank" rel="noopener noreferrer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</a>
                     </div>
                     
                     <div className="p-2 border-t border-zinc-100 dark:border-white/5 flex flex-col gap-1">
