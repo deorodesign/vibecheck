@@ -311,8 +311,7 @@ function HomeContent() {
             <div key={m.id} onClick={() => openMarket(m)} className="flex gap-4 items-center cursor-pointer group">
               <img src={m.imageUrl || m.image_url} alt={m.title} className="w-10 h-10 md:w-12 md:h-12 rounded-xl object-cover object-top shadow-sm group-hover:scale-105 transition-transform shrink-0" />
               <div className="flex-1">
-                {/* Zrušený line-clamp pro boční panel */}
-                <p className="text-[11px] md:text-xs font-bold text-zinc-900 dark:text-white leading-tight group-hover:text-fuchsia-500 transition-colors">{m.title}</p>
+                <p className="text-[11px] md:text-xs font-bold text-zinc-900 dark:text-white leading-tight group-hover:text-fuchsia-500 transition-colors line-clamp-3" title={m.title}>{m.title}</p>
                 <p className="text-[9px] md:text-[10px] text-zinc-500 font-mono mt-1">${(Number(m.volumeUsd || m.volume_usd || 0) + (marketPrices[m.id]?.vybePool || 0) + (marketPrices[m.id]?.noVybePool || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}</p>
               </div>
             </div>
@@ -403,7 +402,7 @@ function HomeContent() {
       <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col gap-5 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
         <div className="text-center mb-1">
           <h2 className="text-xl md:text-2xl font-black italic uppercase mb-2">Share the Vybe</h2>
-          <p className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-4">"{shareData.title}"</p>
+          <p className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-4 line-clamp-3">"{shareData.title}"</p>
           <div className="inline-block bg-gradient-to-r from-fuchsia-500/10 to-orange-500/10 border border-fuchsia-500/20 text-fuchsia-500 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm">🎁 Get +50 USDC & +50 XP daily!</div>
         </div>
         <div className="grid grid-cols-2 gap-3 mt-2">
@@ -589,7 +588,8 @@ function HomeContent() {
         </div>
       ) : (
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-6 lg:gap-8 py-6 md:py-8 px-3 sm:px-4">
-          <div className="w-full lg:flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 items-start">
+          {/* OPRAVA ZDE: přidáno items-stretch místo items-start */}
+          <div className="w-full lg:flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 items-stretch">
             {sortedMarkets.map((market: any) => {
               const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
               const isRes = !!marketStatus[market.id];
@@ -621,9 +621,9 @@ function HomeContent() {
                   </div>
 
                   <div className="p-4 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
-                    {/* ZDE ZRUŠENO omezování výšky (h-10) a line-clamp */}
+                    {/* OPRAVA ZDE: line-clamp-3 a title tag pro tooltip */}
                     <div className="flex justify-between items-start mb-3 gap-2">
-                        <h2 className="text-sm md:text-base font-black leading-tight text-zinc-900 dark:text-white uppercase italic">{market.title}</h2>
+                        <h2 className="text-sm md:text-base font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-3 w-full pr-1" title={market.title}>{market.title}</h2>
                         {userBetType && <span className="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-[6px] md:text-[7px] font-black text-green-500 uppercase italic tracking-widest shrink-0 mt-0.5">{userBetType}</span>}
                     </div>
 
