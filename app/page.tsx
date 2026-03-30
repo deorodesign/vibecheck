@@ -131,6 +131,17 @@ function HomeContent() {
     e.stopPropagation();
     if (isBetting) return; 
 
+    // OCHRANA PROTI FRONT-RUNNINGU (Zavřený trh)
+    const marketToCheck = markets.find((m: any) => m.id === marketId);
+    const isMarketClosed = marketToCheck && (marketToCheck.closesAt || marketToCheck.closes_at) 
+      ? new Date() > new Date(marketToCheck.closesAt || marketToCheck.closes_at) 
+      : false;
+    
+    if (isMarketClosed) {
+      showToast("Trading is closed for this market!", "error");
+      return;
+    }
+
     const amountToBet = parseFloat(betAmount);
     const safeBalance = Number(balance) || 0; 
     
@@ -232,6 +243,11 @@ function HomeContent() {
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
   const marketBetTotal = selectedMarket ? myBets.filter((b: any) => b.marketId === selectedMarket.id && (!b.status || b.status === 'pending')).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
 
+  // NOVÉ: Kontrola, zda vypršel čas pro sázky u otevřeného detailu karty
+  const isTradingClosed = selectedMarket && (selectedMarket.closesAt || selectedMarket.closes_at) 
+    ? new Date() > new Date(selectedMarket.closesAt || selectedMarket.closes_at) 
+    : false;
+
   let selectedMarketVol = 0;
   let estimatedDetailBets = 0;
   if (selectedMarket) {
@@ -274,10 +290,7 @@ function HomeContent() {
                       <Link href="/faq" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">F.A.Q.</Link>
                       <Link href="/rules" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Rules & Policies</Link>
                       <Link href="/disclaimer" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors">Disclaimer</Link>
-                      
-                      {/* Zde je oprava: Nejdřív původní rewards, pak nové výrazné tlačítko na Zealy */}
                       <Link href="/rewards" onClick={() => setIsProfileOpen(false)} className="text-left px-3 py-2.5 text-[11px] md:text-xs font-bold text-fuchsia-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 rounded-xl transition-colors">Airdrops & Rewards</Link>
-                      
                       <a href="https://zealy.io/cw/vybecheck/questboard" target="_blank" rel="noopener noreferrer" onClick={() => setIsProfileOpen(false)} className="flex items-center justify-between px-3 py-2.5 text-[11px] md:text-xs font-black uppercase tracking-widest text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-xl transition-colors mt-1">
                         <span>🚀 Zealy Quests</span>
                         <svg className="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
@@ -484,7 +497,9 @@ function HomeContent() {
                   <div className="h-full bg-green-500 flex items-center px-3 md:px-4 justify-start transition-all duration-500 ease-out shadow-[0_0_20px_rgba(34,197,94,0.6)]" style={{ width: `${(currentPrices?.vibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-xs md:text-sm z-10">{((currentPrices?.vibe || 0.5) * 100).toFixed(0)}%</span></div>
                   <div className="h-full bg-red-500 flex items-center px-3 md:px-4 justify-end transition-all duration-500 ease-out shadow-[0_0_20px_rgba(239,68,68,0.6)]" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-xs md:text-sm z-10">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span></div>
                 </div>
-                {!isResolved && (
+                
+                {/* TADY JE SKRYTÍ VSTUPU PRO ČÁSTKU POKUD JE ZAVŘENO */}
+                {!isResolved && !isTradingClosed && (
                   <div className="mb-5 md:mb-6 p-3 md:p-4 bg-zinc-50 dark:bg-white/5 rounded-xl md:rounded-2xl border border-zinc-100 dark:border-white/5">
                     <div className="flex justify-between items-center mb-2 md:mb-3"><label className="text-[9px] md:text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount to Bet (USDC)</label><span className="text-[9px] md:text-[10px] font-bold text-zinc-500">Bal: {balance.toFixed(2)}</span></div>
                     
@@ -502,12 +517,26 @@ function HomeContent() {
                     </div>
                   </div>
                 )}
+
                 <div className="flex flex-col gap-4">
                   {marketBetTotal > 0 && (
                     <div className="w-full flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95"><span className="font-black text-[10px] md:text-xs uppercase tracking-widest truncate mr-2">Vybechecked! ({marketBetTotal} USDC In Play)</span><button onClick={() => openShareModal('FLEX', selectedMarket)} className="bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:opacity-90 shadow-md shrink-0">FLEX</button></div>
                   )}
+
+                  {/* TADY JE LOGIKA PRO ZOBRAZENÍ STAVŮ */}
                   {isResolved ? (
-                    <div className="w-full text-center p-5 md:p-6 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex flex-col gap-2"><h4 className="font-black italic uppercase text-zinc-900 dark:text-white text-lg md:text-xl">Market Resolved</h4><p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p></div>
+                    <div className="w-full text-center p-5 md:p-6 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex flex-col gap-2">
+                      <h4 className="font-black italic uppercase text-zinc-900 dark:text-white text-lg md:text-xl">Market Resolved</h4>
+                      <p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p>
+                    </div>
+                  ) : isTradingClosed ? (
+                    <div className="w-full text-center p-5 md:p-6 rounded-2xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 flex flex-col gap-2">
+                      <h4 className="font-black italic uppercase text-orange-600 dark:text-orange-400 text-lg md:text-xl flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Trading Closed
+                      </h4>
+                      <p className="text-[10px] md:text-xs font-bold text-orange-600/70 dark:text-orange-400/70 uppercase tracking-widest">Awaiting official resolution.</p>
+                    </div>
                   ) : (
                     <div className="flex flex-col gap-3">
                       <div className="grid grid-cols-2 gap-3 md:gap-4 relative">
@@ -523,6 +552,7 @@ function HomeContent() {
                       </p>
                     </div>
                   )}
+
                 </div>
               </div>
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-md"><h3 className="text-[9px] md:text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 md:mb-4">Resolution Rules</h3><div className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed"><p className="mb-3">This market will resolve to <strong className="text-green-500">VYBE</strong> if the specified event officially occurs before the resolution date.</p><div className="p-3 bg-zinc-50 dark:bg-black/30 rounded-xl border border-zinc-200 dark:border-white/5"><p className="text-[9px] md:text-[10px] font-bold uppercase text-zinc-400 mb-1 tracking-widest">Resolution Source:</p><p className="text-zinc-900 dark:text-zinc-200 text-xs md:text-sm">{selectedMarket.resolutionSource || selectedMarket.resolution_source}</p></div></div></div>
@@ -611,6 +641,11 @@ function HomeContent() {
 
               const marketVol = Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0);
               const estimatedBets = market.total_bets !== undefined ? market.total_bets : (marketVol > 0 ? 1 : 0);
+              
+              // KONTROLA ZAVŘENÉHO TRHU PRO MŘÍŽKU
+              const isGridTradingClosed = (market.closesAt || market.closes_at) 
+                ? new Date() > new Date(market.closesAt || market.closes_at) 
+                : false;
 
               return (
                 <div key={market.id} onClick={() => openMarket(market)} className={`h-full w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isRes ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
@@ -618,7 +653,7 @@ function HomeContent() {
                     <img src={market.imageUrl || market.image_url} alt="" className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isRes ? 'grayscale' : 'group-hover:scale-105'}`} />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 dark:from-[#18181b] dark:via-[#18181b]/10 to-transparent z-10" />
                     
-                    {estimatedBets < 5 && !isRes && (
+                    {estimatedBets < 5 && !isRes && !isGridTradingClosed && (
                       <div className="absolute top-3 left-3 md:top-4 md:left-4 bg-orange-500 text-white px-2 py-1 rounded-md text-[8px] md:text-[9px] font-black uppercase tracking-widest shadow-lg z-20 flex items-center gap-1 animate-pulse">
                         🔥 2X XP ({estimatedBets}/5)
                       </div>
@@ -645,7 +680,22 @@ function HomeContent() {
                       <div className="relative h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${prices.vibe * 100}%` }} /><div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${prices.noVibe * 100}%` }} /></div>
                     </div>
                     
-                    <div className="flex flex-col gap-2">{isRes ? <div className="w-full text-center py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5"><p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]}</span></p></div> : <div className="grid grid-cols-2 gap-2"><div className="p-2 md:p-2.5 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-[9px] md:text-[10px] text-center transition-colors">Vybe</div><div className="p-2 md:p-2.5 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-[9px] md:text-[10px] text-center transition-colors">No Vybe</div></div>}</div>
+                    <div className="flex flex-col gap-2">
+                      {isRes ? (
+                        <div className="w-full text-center py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5">
+                          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]}</span></p>
+                        </div>
+                      ) : isGridTradingClosed ? (
+                        <div className="w-full text-center py-2.5 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20">
+                          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Trading Closed</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="p-2 md:p-2.5 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-[9px] md:text-[10px] text-center transition-colors">Vybe</div>
+                          <div className="p-2 md:p-2.5 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-[9px] md:text-[10px] text-center transition-colors">No Vybe</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

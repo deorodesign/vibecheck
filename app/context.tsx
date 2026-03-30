@@ -111,7 +111,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data: allBets } = await supabase.from('bets').select('market_id, type, amount, status');
 
     if (marketsData) {
-      setMarkets(marketsData.map(m => ({ ...m, imageUrl: m.image_url, volumeUsd: m.volume_usd, volume: `$${m.volume_usd || 0}`, resolutionSource: m.resolution_source })));
+      // TADY PŘIDÁNO closesAt: m.closes_at, aby systém věděl, kdy zavřít sázky
+      setMarkets(marketsData.map(m => ({ 
+        ...m, 
+        imageUrl: m.image_url, 
+        volumeUsd: m.volume_usd, 
+        volume: `$${m.volume_usd || 0}`, 
+        resolutionSource: m.resolution_source,
+        closesAt: m.closes_at 
+      })));
       
       let pools: any = {};
       marketsData.forEach((m: any) => { pools[m.id] = { vybe: 0, noVybe: 0 }; });
@@ -166,7 +174,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
     }
 
-    // OPRAVA TADY: Změněno .single() na .maybeSingle()
     const { data: archiveData } = await supabase.from('season_archives').select('*').order('season_date', { ascending: false }).limit(1).maybeSingle();
     if (archiveData) {
       setLatestArchive(archiveData);
@@ -276,6 +283,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
+    // DALŠÍ OCHRANA PROTI FRONT-RUNNINGU (Kontrola přímo před odesláním do DB)
+    const marketToCheck = markets.find((m: any) => m.id === marketId);
+    if (marketToCheck && marketToCheck.closesAt && new Date() > new Date(marketToCheck.closesAt)) {
+      showToast("Trading is officially closed for this market.", "error");
+      return;
+    }
+
     if (balance < amount) return showToast("Insufficient balance!", "error");
     const currentPriceRaw = marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5;
     const entryPrice = currentPriceRaw * 100;
@@ -295,6 +309,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const cashOutBet = async (betId: number, currentPriceRaw: number) => {
     const betToSell = myBets.find(b => b.id === betId);
     if (!betToSell) return;
+    
+    // OCHRANA CASH-OUTU: Zavřené trhy se nedají vycashoutovat
+    const marketToCheck = markets.find((m: any) => m.id === betToSell.marketId);
+    if (marketToCheck && marketToCheck.closesAt && new Date() > new Date(marketToCheck.closesAt)) {
+      showToast("Trading is closed. Await resolution.", "error");
+      return;
+    }
+
     const shares = betToSell.amount / (betToSell.entryPrice / 100);
     const cashOutValue = shares * (currentPriceRaw / 100);
     const { data, error } = await supabase.rpc('cash_out_bet', {
