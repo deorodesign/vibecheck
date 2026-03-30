@@ -63,6 +63,7 @@ export default function AdminPanel() {
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newRules, setNewRules] = useState('');
   const [fakeVolume, setFakeVolume] = useState('0');
+  const [closesAt, setClosesAt] = useState(''); // NOVÝ STAV PRO DEADLINE
   
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -131,6 +132,18 @@ export default function AdminPanel() {
     setNewImageUrl(market.image_url || market.imageUrl || '');
     setNewRules(market.rules || market.resolution_source || '');
     setFakeVolume(market.volume_usd?.toString() || '0');
+    
+    // NAČTENÍ ČASU DO FORMULÁŘE PŘI EDITACI (převod na formát pro datetime-local)
+    if (market.closes_at) {
+        const dateObj = new Date(market.closes_at);
+        // Posun kvůli časovému pásmu prohlížeče, aby to sedělo do inputu
+        const tzOffset = dateObj.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(dateObj.getTime() - tzOffset)).toISOString().slice(0, 16);
+        setClosesAt(localISOTime);
+    } else {
+        setClosesAt('');
+    }
+    
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -140,6 +153,7 @@ export default function AdminPanel() {
     setNewImageUrl('');
     setNewRules('');
     setFakeVolume('0');
+    setClosesAt(''); // RESET ČASU
     setCroppedImageBlob(null);
     setImageSrc(null);
   };
@@ -190,6 +204,7 @@ export default function AdminPanel() {
       }
     }
     
+    // PŘÍPRAVA DAT PRO DB VČETNĚ closes_at
     const marketData = {
       title: newTitle,
       category: newCategory,
@@ -197,7 +212,8 @@ export default function AdminPanel() {
       rules: newRules,
       resolution_source: newRules,
       volume_usd: Number(fakeVolume) || 0,
-      is_resolved: false
+      is_resolved: false,
+      closes_at: closesAt ? new Date(closesAt).toISOString() : null // Převede lokální čas z inputu do UTC pro Supabase
     };
 
     if (editingId) {
@@ -299,7 +315,8 @@ export default function AdminPanel() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* UPRAVENÝ GRID PRO PŘIDÁNÍ DEADLINE */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Category</label>
                 <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 appearance-none">
@@ -310,7 +327,16 @@ export default function AdminPanel() {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Fake Volume (For Trending)</label>
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Trading Deadline (Optional)</label>
+                <input 
+                  type="datetime-local" 
+                  value={closesAt} 
+                  onChange={(e) => setClosesAt(e.target.value)} 
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500 [color-scheme:dark]" 
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Fake Volume ($)</label>
                 <input type="number" value={fakeVolume} onChange={(e) => setFakeVolume(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-4 text-white outline-none focus:border-fuchsia-500" />
               </div>
             </div>
@@ -338,6 +364,7 @@ export default function AdminPanel() {
                     <div>
                       <h2 className="text-lg font-bold text-white leading-tight">{market.title}</h2>
                       <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">ID: {market.id} | {market.category}</p>
+                      {market.closes_at && <p className="text-[9px] text-orange-500 font-bold uppercase tracking-widest mt-1">Closes: {new Date(market.closes_at).toLocaleString()}</p>}
                     </div>
                   </div>
                   <div className="flex gap-2">
