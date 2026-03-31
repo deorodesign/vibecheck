@@ -256,6 +256,15 @@ function HomeContent() {
     estimatedDetailBets = selectedMarket.total_bets !== undefined ? selectedMarket.total_bets : (selectedMarketVol > 0 ? 1 : 0);
   }
 
+  // VÝPOČET PRO HOT NOW (Seřazeno podle Volume)
+  const hotMarkets = [...markets].sort((a: any, b: any) => {
+    const aPrices = marketPrices[a.id] || { vybePool: 0, noVybePool: 0 };
+    const bPrices = marketPrices[b.id] || { vybePool: 0, noVybePool: 0 };
+    const aVol = Number(a.volumeUsd || a.volume_usd || 0) + (aPrices.vybePool || 0) + (aPrices.noVybePool || 0);
+    const bVol = Number(b.volumeUsd || b.volume_usd || 0) + (bPrices.vybePool || 0) + (bPrices.noVybePool || 0);
+    return bVol - aVol; // Nejvyšší volume bude první
+  }).slice(0, 3);
+
   const headerContent = (
     <div className="sticky top-0 z-50 w-full flex flex-col items-center px-4 md:px-8 pt-6 pb-4 bg-zinc-50/90 dark:bg-[#0e0e12]/90 backdrop-blur-xl border-b border-zinc-200 dark:border-white/5 transition-colors duration-500">
       <div className="w-full max-w-7xl flex justify-between items-center mb-6">
@@ -335,7 +344,7 @@ function HomeContent() {
       <div className="bg-white dark:bg-[#18181b] rounded-[2rem] p-5 md:p-6 border border-zinc-200 dark:border-white/5 shadow-sm">
         <h3 className="text-zinc-900 dark:text-white font-black italic uppercase mb-5 md:mb-6 flex items-center gap-2 tracking-tight text-sm md:text-base">Hot Now</h3>
         <div className="flex flex-col gap-4 md:gap-5">
-          {markets.slice(0, 3).map((m: any) => (
+          {hotMarkets.map((m: any) => (
             <div key={m.id} onClick={() => openMarket(m)} className="flex gap-4 items-center cursor-pointer group">
               <img src={m.imageUrl || m.image_url} alt={m.title} className="w-10 h-10 md:w-12 md:h-12 rounded-xl object-cover object-top shadow-sm group-hover:scale-105 transition-transform shrink-0" />
               <div className="flex-1">
