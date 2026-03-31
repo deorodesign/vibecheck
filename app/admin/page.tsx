@@ -63,7 +63,7 @@ export default function AdminPanel() {
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newRules, setNewRules] = useState('');
   const [fakeVolume, setFakeVolume] = useState('0');
-  const [closesAt, setClosesAt] = useState(''); // NOVÝ STAV PRO DEADLINE
+  const [closesAt, setClosesAt] = useState(''); 
   
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -133,10 +133,8 @@ export default function AdminPanel() {
     setNewRules(market.rules || market.resolution_source || '');
     setFakeVolume(market.volume_usd?.toString() || '0');
     
-    // NAČTENÍ ČASU DO FORMULÁŘE PŘI EDITACI (převod na formát pro datetime-local)
     if (market.closes_at) {
         const dateObj = new Date(market.closes_at);
-        // Posun kvůli časovému pásmu prohlížeče, aby to sedělo do inputu
         const tzOffset = dateObj.getTimezoneOffset() * 60000;
         const localISOTime = (new Date(dateObj.getTime() - tzOffset)).toISOString().slice(0, 16);
         setClosesAt(localISOTime);
@@ -153,7 +151,7 @@ export default function AdminPanel() {
     setNewImageUrl('');
     setNewRules('');
     setFakeVolume('0');
-    setClosesAt(''); // RESET ČASU
+    setClosesAt(''); 
     setCroppedImageBlob(null);
     setImageSrc(null);
   };
@@ -204,7 +202,6 @@ export default function AdminPanel() {
       }
     }
     
-    // PŘÍPRAVA DAT PRO DB VČETNĚ closes_at
     const marketData = {
       title: newTitle,
       category: newCategory,
@@ -213,7 +210,7 @@ export default function AdminPanel() {
       resolution_source: newRules,
       volume_usd: Number(fakeVolume) || 0,
       is_resolved: false,
-      closes_at: closesAt ? new Date(closesAt).toISOString() : null // Převede lokální čas z inputu do UTC pro Supabase
+      closes_at: closesAt ? new Date(closesAt).toISOString() : null 
     };
 
     if (editingId) {
@@ -315,7 +312,6 @@ export default function AdminPanel() {
               </div>
             </div>
 
-            {/* UPRAVENÝ GRID PRO PŘIDÁNÍ DEADLINE */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-2">Category</label>
@@ -364,6 +360,10 @@ export default function AdminPanel() {
                     <div>
                       <h2 className="text-lg font-bold text-white leading-tight">{market.title}</h2>
                       <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">ID: {market.id} | {market.category}</p>
+                      
+                      {/* PŘIDÁNO: Datum vytvoření */}
+                      <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mt-1">Created: {new Date(market.created_at).toLocaleString()}</p>
+                      
                       {market.closes_at && <p className="text-[9px] text-orange-500 font-bold uppercase tracking-widest mt-1">Closes: {new Date(market.closes_at).toLocaleString()}</p>}
                     </div>
                   </div>
@@ -420,6 +420,9 @@ export default function AdminPanel() {
                     <div>
                       <h2 className="text-sm font-bold text-white line-clamp-1">{market.title}</h2>
                       <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Won: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span></p>
+                      
+                      {/* PŘIDÁNO: Datum vytvoření v archivu */}
+                      <p className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mt-1">Created: {new Date(market.created_at).toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
