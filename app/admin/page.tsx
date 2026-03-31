@@ -362,7 +362,7 @@ export default function AdminPanel() {
                       <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">ID: {market.id} | {market.category}</p>
                       
                       {/* PŘIDÁNO: Datum vytvoření */}
-                      <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mt-1">Created: {new Date(market.created_at).toLocaleString()}</p>
+                      <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mt-1">Created: {new Date(market.created_at).toLocaleString('cs-CZ')}</p>
                       
                       {market.closes_at && <p className="text-[9px] text-orange-500 font-bold uppercase tracking-widest mt-1">Closes: {new Date(market.closes_at).toLocaleString()}</p>}
                     </div>
@@ -422,7 +422,7 @@ export default function AdminPanel() {
                       <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Won: <span className={market.winning_outcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{market.winning_outcome}</span></p>
                       
                       {/* PŘIDÁNO: Datum vytvoření v archivu */}
-                      <p className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mt-1">Created: {new Date(market.created_at).toLocaleString()}</p>
+                      <p className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mt-1">Created: {new Date(market.created_at).toLocaleString('cs-CZ')}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
