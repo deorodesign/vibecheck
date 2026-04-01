@@ -111,7 +111,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data: allBets } = await supabase.from('bets').select('market_id, type, amount, status');
 
     if (marketsData) {
-      // TADY PŘIDÁNO closesAt: m.closes_at, aby systém věděl, kdy zavřít sázky
       setMarkets(marketsData.map(m => ({ 
         ...m, 
         imageUrl: m.image_url, 
@@ -207,13 +206,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [fetchData]);
 
+  // OPRAVA: Kontrola výherců nyní hledá podle PŘEZDÍVKY, nikoliv emailu
   useEffect(() => {
-    if (isLoggedIn && walletAddress && latestArchive) {
+    if (isLoggedIn && walletAddress && latestArchive && nickname) {
       const seenArchiveId = localStorage.getItem('seen_season_archive_id');
       
       if (seenArchiveId !== latestArchive.id.toString()) {
         const topPlayers = latestArchive.top_players || [];
-        const index = topPlayers.findIndex((p: any) => p.wallet_address === walletAddress);
+        // Hledáme hráče podle jeho nickname
+        const index = topPlayers.findIndex((p: any) => p.nickname === nickname);
         
         if (index !== -1 && index < 3) {
           setIsTop3Winner(true);
@@ -226,7 +227,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setTimeout(() => setShowSeasonModal(true), 1500);
       }
     }
-  }, [isLoggedIn, walletAddress, latestArchive]);
+  }, [isLoggedIn, walletAddress, latestArchive, nickname]);
 
   const closeSeasonModal = () => {
     if (latestArchive) {
@@ -283,7 +284,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
-    // DALŠÍ OCHRANA PROTI FRONT-RUNNINGU (Kontrola přímo před odesláním do DB)
     const marketToCheck = markets.find((m: any) => m.id === marketId);
     if (marketToCheck && marketToCheck.closesAt && new Date() > new Date(marketToCheck.closesAt)) {
       showToast("Trading is officially closed for this market.", "error");
@@ -310,7 +310,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const betToSell = myBets.find(b => b.id === betId);
     if (!betToSell) return;
     
-    // OCHRANA CASH-OUTU: Zavřené trhy se nedají vycashoutovat
     const marketToCheck = markets.find((m: any) => m.id === betToSell.marketId);
     if (marketToCheck && marketToCheck.closesAt && new Date() > new Date(marketToCheck.closesAt)) {
       showToast("Trading is closed. Await resolution.", "error");
@@ -334,6 +333,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const claimReliefFund = useCallback(async () => {
     if (!isLoggedIn || !walletAddress) {
       showToast("Please log in to claim funds!", "info");
+      return;
+    }
+
+    // OPRAVA: Ochrana proti Infinite Money Glitch
+    if (balance >= 10) {
+      showToast("You have enough USDC! Relief is only for balances below 10 USDC.", "error");
       return;
     }
 
@@ -361,7 +366,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsAuthLoading(false);
     }
-  }, [isLoggedIn, walletAddress, fetchData, showToast]);
+  }, [isLoggedIn, walletAddress, balance, fetchData, showToast]);
 
   const claimShareReward = async () => {
     if (!walletAddress) return;
@@ -382,10 +387,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       claimReliefFund, claimShareReward, fetchData
     }}>
       {children}
+      {/* OPRAVA: Plnohodnotné okno pro vyhlášení výherců sezóny */}
       {showSeasonModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-md">
-           <div className={`relative w-full max-w-md p-8 md:p-10 rounded-[2rem] shadow-2xl flex flex-col items-center text-center bg-white dark:bg-[#18181b]`}>
-             <button onClick={closeSeasonModal} className="w-full py-4 bg-black text-white dark:bg-white dark:text-black font-black uppercase tracking-widest rounded-xl">Let's Go</button>
+           <div className={`relative w-full max-w-md p-8 md:p-10 rounded-[2rem] shadow-2xl flex flex-col items-center text-center bg-white dark:bg-[#18181b] border ${isTop3Winner ? 'border-fuchsia-500/50 shadow-[0_0_50px_rgba(217,70,239,0.3)]' : 'border-zinc-200 dark:border-white/10'}`}>
+             
+             {isTop3Winner ? (
+               <>
+                  <div className="w-20 h-20 bg-gradient-to-tr from-fuchsia-500 to-orange-500 rounded-full flex items-center justify-center text-4xl mb-6 shadow-lg animate-bounce">🏆</div>
+                  <h2 className="text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">You Won Season!</h2>
+                  <p className="text-sm font-bold text-fuchsia-500 uppercase tracking-widest mb-4">Rank #{playerRank} • Airdrop Secured</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-8 leading-relaxed">
+                    Congratulations! You finished in the Top 3 this season. Take a screenshot and open a ticket in our Discord to claim your USDC Airdrop.
+                  </p>
+               </>
+             ) : (
+               <>
+                  <div className="w-16 h-16 bg-zinc-100 dark:bg-white/5 rounded-full flex items-center justify-center text-3xl mb-6">🏁</div>
+                  <h2 className="text-2xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">Season Ended</h2>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-8 leading-relaxed">
+                    A new season has begun and all XP has been reset. The leaderboard is wide open. Time to start grinding again!
+                  </p>
+               </>
+             )}
+
+             <button onClick={closeSeasonModal} className={`w-full py-4 font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 ${isTop3Winner ? 'bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white shadow-lg' : 'bg-black text-white dark:bg-white dark:text-black'}`}>
+               {isTop3Winner ? 'Claim Victory' : 'Let\'s Go'}
+             </button>
            </div>
         </div>
       )}
