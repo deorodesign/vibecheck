@@ -192,11 +192,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       channel = supabase.channel('vybecheck-live-v4')
         .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+            console.log("🔥 RADAR NĚCO ZACHYTIL:", payload);
             if(isMounted) {
               fetchData();
             }
         })
-        .subscribe();
+        .subscribe((status: string) => {
+            console.log("📡 STATUS RADARU:", status);
+        });
     }, 50);
 
     return () => { 
@@ -206,14 +209,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [fetchData]);
 
-  // OPRAVA: Kontrola výherců nyní hledá podle PŘEZDÍVKY, nikoliv emailu
   useEffect(() => {
     if (isLoggedIn && walletAddress && latestArchive && nickname) {
       const seenArchiveId = localStorage.getItem('seen_season_archive_id');
       
       if (seenArchiveId !== latestArchive.id.toString()) {
         const topPlayers = latestArchive.top_players || [];
-        // Hledáme hráče podle jeho nickname
         const index = topPlayers.findIndex((p: any) => p.nickname === nickname);
         
         if (index !== -1 && index < 3) {
@@ -336,7 +337,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // OPRAVA: Ochrana proti Infinite Money Glitch
     if (balance >= 10) {
       showToast("You have enough USDC! Relief is only for balances below 10 USDC.", "error");
       return;
@@ -387,7 +387,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       claimReliefFund, claimShareReward, fetchData
     }}>
       {children}
-      {/* OPRAVA: Plnohodnotné okno pro vyhlášení výherců sezóny */}
       {showSeasonModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-md">
            <div className={`relative w-full max-w-md p-8 md:p-10 rounded-[2rem] shadow-2xl flex flex-col items-center text-center bg-white dark:bg-[#18181b] border ${isTop3Winner ? 'border-fuchsia-500/50 shadow-[0_0_50px_rgba(217,70,239,0.3)]' : 'border-zinc-200 dark:border-white/10'}`}>
