@@ -1,4 +1,5 @@
 'use client';
+
 import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -251,8 +252,8 @@ function HomeContent() {
   let selectedMarketVol = 0;
   let estimatedDetailBets = 0;
   if (selectedMarket) {
+    // Opraveno: Počítání zobrazeného Volume pro detailní kartu
     selectedMarketVol = Number(selectedMarket.volumeUsd || selectedMarket.volume_usd || 0) + (currentPrices?.vybePool || 0) + (currentPrices?.noVybePool || 0);
-    // Úprava výpočtu pro Turbo XP detail
     estimatedDetailBets = selectedMarket.total_bets !== undefined ? selectedMarket.total_bets : (selectedMarketVol > 0 ? 1 : 0);
   }
 
