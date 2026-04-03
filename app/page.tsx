@@ -7,7 +7,7 @@ import { useAppContext, CATEGORIES } from './context';
 import confetti from 'canvas-confetti';
 
 const createSlug = (title: string) => {
-  return title.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');     
+  return title.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');      
 };
 
 function formatTimeAgo(dateString: string) {
@@ -537,7 +537,7 @@ function HomeContent() {
                   {isResolved ? (
                     <div className="w-full text-center p-5 md:p-6 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex flex-col gap-2">
                       <h4 className="font-black italic uppercase text-zinc-900 dark:text-white text-lg md:text-xl">Market Resolved</h4>
-                      <p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome}</span></p>
+                      <p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest">Winning Outcome: <span className={winningOutcome === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{winningOutcome?.replace('_', ' ')}</span></p>
                     </div>
                   ) : isTradingClosed ? (
                     <div className="w-full text-center p-5 md:p-6 rounded-2xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 flex flex-col gap-2">
@@ -586,7 +586,19 @@ function HomeContent() {
                               <div className="flex items-center gap-2 flex-wrap">
                                 <Link href={`/user/${encodeURIComponent(msg.user)}`} className="font-black uppercase tracking-widest text-[8px] md:text-[9px] text-fuchsia-500 hover:underline">{msg.user}</Link>
                                 <span className="text-[7px] md:text-[8px] text-zinc-400 font-mono">{formatTimeAgo(msg.timestamp)}</span>
-                                {userBadge && <span className="px-1 md:px-1.5 py-[1px] rounded bg-green-500/10 border border-green-500/20 text-[6px] md:text-[7px] font-black text-green-500 uppercase italic tracking-widest">{userBadge}</span>}
+                                
+                                {userBadge && (
+                                  <span className={`px-1 md:px-1.5 py-[1px] rounded border text-[6px] md:text-[7px] font-black uppercase italic tracking-widest ${
+                                    userBadge === 'VYBE' 
+                                      ? 'bg-green-500/10 border-green-500/20 text-green-500' 
+                                      : userBadge === 'NO_VYBE' 
+                                        ? 'bg-red-500/10 border-red-500/20 text-red-500' 
+                                        : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500 dark:text-zinc-400'
+                                  }`}>
+                                    {userBadge.replace('_', ' ')}
+                                  </span>
+                                )}
+
                               </div>
                               <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed bg-zinc-100 dark:bg-white/5 p-2.5 md:p-3 rounded-2xl rounded-tl-sm border border-zinc-200 dark:border-white/10 inline-block w-fit max-w-[95%] text-[11px] md:text-xs">{msg.text}</span>
                               <div className="flex items-center gap-3 md:gap-4 mt-0.5 ml-1">
@@ -682,7 +694,19 @@ function HomeContent() {
                   <div className="p-4 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
                     <div className="flex justify-between items-start mb-3 gap-2">
                         <h2 className="text-sm md:text-base font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-3 w-full pr-1" title={market.title}>{market.title}</h2>
-                        {userBetType && <span className="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-[6px] md:text-[7px] font-black text-green-500 uppercase italic tracking-widest shrink-0 mt-0.5">{userBetType}</span>}
+                        
+                        {userBetType && (
+                          <span className={`px-1.5 py-0.5 rounded border text-[6px] md:text-[7px] font-black uppercase italic tracking-widest shrink-0 mt-0.5 ${
+                            userBetType === 'VYBE' 
+                              ? 'bg-green-500/10 border-green-500/20 text-green-500' 
+                              : userBetType === 'NO_VYBE' 
+                                ? 'bg-red-500/10 border-red-500/20 text-red-500' 
+                                : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500 dark:text-zinc-400'
+                          }`}>
+                            {userBetType.replace('_', ' ')}
+                          </span>
+                        )}
+
                     </div>
 
                     <div className="mb-4 p-2.5 rounded-2xl bg-zinc-50 dark:bg-black/30 border border-zinc-100 dark:border-white/5 shadow-inner mt-auto">
@@ -693,7 +717,7 @@ function HomeContent() {
                     <div className="flex flex-col gap-2">
                       {isRes ? (
                         <div className="w-full text-center py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5">
-                          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]}</span></p>
+                          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]?.replace('_', ' ')}</span></p>
                         </div>
                       ) : isGridTradingClosed ? (
                         <div className="w-full text-center py-2.5 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20">
