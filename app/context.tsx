@@ -179,6 +179,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // 🔥 TADY JE TEN OPRAVENÝ REALTIME RADAR 🔥
   useEffect(() => {
     let isMounted = true;
     let channel: any;
@@ -188,14 +189,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     supabase.removeAllChannels();
 
     const initRealtime = setTimeout(() => {
-      console.log("Zapínám SUPER-RADAR (V4)...");
+      console.log("Zapínám explicitní SUPER-RADAR (V5)...");
       
-      channel = supabase.channel('vybecheck-live-v4')
-        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-            console.log("🔥 RADAR NĚCO ZACHYTIL:", payload);
-            if(isMounted) {
-              fetchData();
-            }
+      channel = supabase.channel('vybecheck-live-v5')
+        // Anténa 1: Změny v kartách (Nová karta, upravené volume)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'markets' }, (payload) => {
+            console.log("🔥 NOVÁ KARTA NEBO UPDATE KARTY:", payload);
+            if(isMounted) fetchData();
+        })
+        // Anténa 2: Změny v sázkách (Někdo vsadil, měníme ceny)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, (payload) => {
+            console.log("💸 NOVÁ SÁZKA ZAZNAMENÁNA:", payload);
+            if(isMounted) fetchData();
+        })
+        // Anténa 3: Změny v chatu
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, (payload) => {
+            console.log("💬 NOVÁ ZPRÁVA V CHATU:", payload);
+            if(isMounted) fetchData();
         })
         .subscribe((status: string) => {
             console.log("📡 STATUS RADARU:", status);
@@ -267,6 +277,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (activeUserBetsForMarket.some(b => b.type === 'NO_VYBE')) finalBetType = 'NO_VYBE';
     }
     
+    // Lokální state update necháme, ať je zpráva vidět OKAMŽITĚ u odesílatele bez čekání
     const tempId = crypto.randomUUID();
     const tempMessage = { id: tempId, marketId, parentId, text, user, avatar, betType: finalBetType, timestamp: new Date().toISOString(), color: 'text-fuchsia-500', likedBy: [] };
     setChatMessages((prev: any) => [...prev, tempMessage]);
@@ -302,6 +313,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setBalance(data.new_balance);
       setUserXp(data.new_xp);
       setMyBets(prev => [...prev, { id: data.bet_id, marketId, type, amount, entryPrice, status: 'pending' }]);
+      // Dáváme refresh i hned na straně klienta, který to odklikl
       fetchData();
       showToast(`Successfully bet ${amount} USDC!`, "success");
     }
