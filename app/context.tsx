@@ -219,6 +219,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [fetchData]);
 
+  // 🔥 ZÁCHYTNÁ SÍŤ: Když se uživatel vrátí na záložku po delší době (probudí mobil/PC)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("Záložka probuzena! Dělám bleskový update dat pro jistotu...");
+        fetchData();
+      }
+    };
+
+    // Poslouchá, když se uživatel vrátí na záložku
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    // Poslouchá, když okno prohlížeče znovu získá fokus
+    window.addEventListener("focus", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
+    };
+  }, [fetchData]);
+
   useEffect(() => {
     if (isLoggedIn && walletAddress && latestArchive && nickname) {
       const seenArchiveId = localStorage.getItem('seen_season_archive_id');
