@@ -645,7 +645,10 @@ function HomeContent() {
         </div>
       ) : (
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-6 lg:gap-8 py-6 md:py-8 px-3 sm:px-4">
-          <div className="w-full lg:flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 items-start">
+          
+          {/* TADY JE HLAVNÍ OPRAVA: CSS Masonry místo CSS Gridu */}
+          <div className="w-full lg:flex-1 columns-1 sm:columns-2 xl:columns-3 gap-4 md:gap-5">
+            
             {sortedMarkets.map((market: any) => {
               const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
               const isRes = !!marketStatus[market.id];
@@ -658,15 +661,59 @@ function HomeContent() {
                 ? new Date() > new Date(market.closesAt || market.closes_at) 
                 : false;
 
-              // --- NOVÉ: KOMPAKTNÍ KARTA PRO VYHODNOCENÉ TRHY S OPRAVOU VÝŠKY ---
+              // --- KOMPAKTNÍ KARTA PRO VYHODNOCENÉ TRHY ---
               if (isRes) {
                 return (
-                  <div key={market.id} onClick={() => openMarket(market)} className="w-full h-fit self-start flex flex-col justify-center p-4 md:p-5 group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all cursor-pointer opacity-60 hover:opacity-100 hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
-                    <div className="flex items-center justify-between gap-3">
-                       <div className="flex flex-col items-start gap-2 flex-1 pr-2">
-                          <h2 className="text-xs md:text-sm font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-2" title={market.title}>{market.title}</h2>
+                  <div key={market.id} className="w-full break-inside-avoid mb-4 md:mb-5 inline-block">
+                    <div onClick={() => openMarket(market)} className="w-full flex flex-col justify-center p-4 md:p-5 group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all cursor-pointer opacity-60 hover:opacity-100 hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
+                      <div className="flex items-center justify-between gap-3">
+                         <div className="flex flex-col items-start gap-2 flex-1 pr-2">
+                            <h2 className="text-xs md:text-sm font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-2" title={market.title}>{market.title}</h2>
+                            {userBetType && (
+                              <span className={`px-1.5 py-0.5 rounded border text-[6px] md:text-[7px] font-black uppercase italic tracking-widest ${
+                                userBetType === 'VYBE' 
+                                  ? 'bg-green-500/10 border-green-500/20 text-green-500' 
+                                  : userBetType === 'NO_VYBE' 
+                                    ? 'bg-red-500/10 border-red-500/20 text-red-500' 
+                                    : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500 dark:text-zinc-400'
+                              }`}>
+                                {userBetType.replace('_', ' ')}
+                              </span>
+                            )}
+                         </div>
+                         <div className="shrink-0 flex flex-col items-end text-right pl-3 border-l border-zinc-200 dark:border-white/10">
+                            <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Result</span>
+                            <span className={`text-[10px] md:text-xs font-black uppercase tracking-widest ${marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}`}>{marketStatus[market.id]?.replace('_', ' ')}</span>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // --- PŮVODNÍ KARTA PRO AKTIVNÍ A UZAVŘENÉ TRHY ---
+              return (
+                <div key={market.id} className="w-full break-inside-avoid mb-4 md:mb-5 inline-block">
+                  <div onClick={() => openMarket(market)} className="w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
+                    <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
+                      <img src={market.imageUrl || market.image_url} alt="" className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 dark:from-[#18181b] dark:via-[#18181b]/10 to-transparent z-10" />
+                      
+                      {estimatedBets < 5 && !isGridTradingClosed && (
+                        <div className="absolute top-3 left-3 md:top-4 md:left-4 bg-orange-500 text-white px-2 py-1 rounded-md text-[8px] md:text-[9px] font-black uppercase tracking-widest shadow-lg z-20 flex items-center gap-1 animate-pulse">
+                          🔥 2X XP ({estimatedBets}/5)
+                        </div>
+                      )}
+                      
+                      <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-2.5 md:py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${(Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}</div>
+                    </div>
+
+                    <div className="p-4 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
+                      <div className="flex justify-between items-start mb-3 gap-2">
+                          <h2 className="text-sm md:text-base font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-3 w-full pr-1" title={market.title}>{market.title}</h2>
+                          
                           {userBetType && (
-                            <span className={`px-1.5 py-0.5 rounded border text-[6px] md:text-[7px] font-black uppercase italic tracking-widest ${
+                            <span className={`px-1.5 py-0.5 rounded border text-[6px] md:text-[7px] font-black uppercase italic tracking-widest shrink-0 mt-0.5 ${
                               userBetType === 'VYBE' 
                                 ? 'bg-green-500/10 border-green-500/20 text-green-500' 
                                 : userBetType === 'NO_VYBE' 
@@ -676,66 +723,26 @@ function HomeContent() {
                               {userBetType.replace('_', ' ')}
                             </span>
                           )}
-                       </div>
-                       <div className="shrink-0 flex flex-col items-end text-right pl-3 border-l border-zinc-200 dark:border-white/10">
-                          <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Result</span>
-                          <span className={`text-[10px] md:text-xs font-black uppercase tracking-widest ${marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}`}>{marketStatus[market.id]?.replace('_', ' ')}</span>
-                       </div>
-                    </div>
-                  </div>
-                );
-              }
 
-              // --- PŮVODNÍ KARTA PRO AKTIVNÍ A UZAVŘENÉ (ALE NEVYHODNOCENÉ) TRHY ---
-              return (
-                <div key={market.id} onClick={() => openMarket(market)} className="h-full w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
-                  <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
-                    <img src={market.imageUrl || market.image_url} alt="" className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 dark:from-[#18181b] dark:via-[#18181b]/10 to-transparent z-10" />
-                    
-                    {estimatedBets < 5 && !isGridTradingClosed && (
-                      <div className="absolute top-3 left-3 md:top-4 md:left-4 bg-orange-500 text-white px-2 py-1 rounded-md text-[8px] md:text-[9px] font-black uppercase tracking-widest shadow-lg z-20 flex items-center gap-1 animate-pulse">
-                        🔥 2X XP ({estimatedBets}/5)
                       </div>
-                    )}
-                    
-                    <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-2.5 md:py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${(Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}</div>
-                  </div>
 
-                  <div className="p-4 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
-                    <div className="flex justify-between items-start mb-3 gap-2">
-                        <h2 className="text-sm md:text-base font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-3 w-full pr-1" title={market.title}>{market.title}</h2>
-                        
-                        {userBetType && (
-                          <span className={`px-1.5 py-0.5 rounded border text-[6px] md:text-[7px] font-black uppercase italic tracking-widest shrink-0 mt-0.5 ${
-                            userBetType === 'VYBE' 
-                              ? 'bg-green-500/10 border-green-500/20 text-green-500' 
-                              : userBetType === 'NO_VYBE' 
-                                ? 'bg-red-500/10 border-red-500/20 text-red-500' 
-                                : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500 dark:text-zinc-400'
-                          }`}>
-                            {userBetType.replace('_', ' ')}
-                          </span>
+                      <div className="mb-4 p-2.5 rounded-2xl bg-zinc-50 dark:bg-black/30 border border-zinc-100 dark:border-white/5 shadow-inner mt-auto">
+                        <div className="flex justify-between items-center mb-1.5 px-1"><span className="text-[9px] md:text-[10px] font-black text-green-500 uppercase italic">{(prices.vibe * 100).toFixed(0)}% Vybe</span><span className="text-[9px] md:text-[10px] font-black text-red-500 uppercase italic">{(prices.noVibe * 100).toFixed(0)}% No Vybe</span></div>
+                        <div className="relative h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${prices.vibe * 100}%` }} /><div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${prices.noVibe * 100}%` }} /></div>
+                      </div>
+                      
+                      <div className="flex flex-col gap-2">
+                        {isGridTradingClosed ? (
+                          <div className="w-full text-center py-2.5 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20">
+                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Trading Closed</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="p-2 md:p-2.5 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-[9px] md:text-[10px] text-center transition-colors">Vybe</div>
+                            <div className="p-2 md:p-2.5 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-[9px] md:text-[10px] text-center transition-colors">No Vybe</div>
+                          </div>
                         )}
-
-                    </div>
-
-                    <div className="mb-4 p-2.5 rounded-2xl bg-zinc-50 dark:bg-black/30 border border-zinc-100 dark:border-white/5 shadow-inner mt-auto">
-                      <div className="flex justify-between items-center mb-1.5 px-1"><span className="text-[9px] md:text-[10px] font-black text-green-500 uppercase italic">{(prices.vibe * 100).toFixed(0)}% Vybe</span><span className="text-[9px] md:text-[10px] font-black text-red-500 uppercase italic">{(prices.noVibe * 100).toFixed(0)}% No Vybe</span></div>
-                      <div className="relative h-2 bg-zinc-100 dark:bg-black/40 rounded-full overflow-hidden flex border border-zinc-100 dark:border-white/5"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${prices.vibe * 100}%` }} /><div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${prices.noVibe * 100}%` }} /></div>
-                    </div>
-                    
-                    <div className="flex flex-col gap-2">
-                      {isGridTradingClosed ? (
-                        <div className="w-full text-center py-2.5 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20">
-                          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Trading Closed</p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="p-2 md:p-2.5 rounded-xl bg-zinc-50 dark:bg-green-500/5 group-hover:bg-green-500/10 border border-zinc-100 dark:border-green-500/20 text-green-600 dark:text-green-400 font-black italic uppercase text-[9px] md:text-[10px] text-center transition-colors">Vybe</div>
-                          <div className="p-2 md:p-2.5 rounded-xl bg-zinc-50 dark:bg-red-500/5 group-hover:bg-red-500/10 border border-zinc-100 dark:border-red-500/20 text-red-600 dark:text-red-400 font-black italic uppercase text-[9px] md:text-[10px] text-center transition-colors">No Vybe</div>
-                        </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>
