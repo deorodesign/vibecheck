@@ -237,6 +237,10 @@ function HomeContent() {
     return 0;
   });
 
+  // TADY SI TRHY ROZDĚLÍME DO DVOU SKUPIN PRO DOKONALÝ LAYOUT
+  const activeMarketsList = sortedMarkets.filter(m => !marketStatus[m.id]);
+  const resolvedMarketsList = sortedMarkets.filter(m => !!marketStatus[m.id]);
+
   const isResolved = selectedMarket ? !!marketStatus[selectedMarket.id] : false;
   const winningOutcome = selectedMarket ? marketStatus[selectedMarket.id] : null;
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
@@ -645,56 +649,23 @@ function HomeContent() {
         </div>
       ) : (
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-6 lg:gap-8 py-6 md:py-8 px-3 sm:px-4">
-          
-          {/* TADY JE HLAVNÍ OPRAVA: CSS Masonry místo CSS Gridu */}
-          <div className="w-full lg:flex-1 columns-1 sm:columns-2 xl:columns-3 gap-4 md:gap-5">
+          <div className="w-full lg:flex-1 flex flex-col gap-6 md:gap-8">
             
-            {sortedMarkets.map((market: any) => {
-              const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
-              const isRes = !!marketStatus[market.id];
-              const userBetType = getUserBetStatus(nickname, market.id);
+            {/* AKTIVNÍ KARTY */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 items-start">
+              {activeMarketsList.map((market: any) => {
+                const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
+                const userBetType = getUserBetStatus(nickname, market.id);
 
-              const marketVol = Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0);
-              const estimatedBets = market.total_bets !== undefined ? market.total_bets : (marketVol > 0 ? 1 : 0);
-              
-              const isGridTradingClosed = (market.closesAt || market.closes_at) 
-                ? new Date() > new Date(market.closesAt || market.closes_at) 
-                : false;
+                const marketVol = Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0);
+                const estimatedBets = market.total_bets !== undefined ? market.total_bets : (marketVol > 0 ? 1 : 0);
+                
+                const isGridTradingClosed = (market.closesAt || market.closes_at) 
+                  ? new Date() > new Date(market.closesAt || market.closes_at) 
+                  : false;
 
-              // --- KOMPAKTNÍ KARTA PRO VYHODNOCENÉ TRHY ---
-              if (isRes) {
                 return (
-                  <div key={market.id} className="w-full break-inside-avoid mb-4 md:mb-5 inline-block">
-                    <div onClick={() => openMarket(market)} className="w-full flex flex-col justify-center p-4 md:p-5 group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all cursor-pointer opacity-60 hover:opacity-100 hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
-                      <div className="flex items-center justify-between gap-3">
-                         <div className="flex flex-col items-start gap-2 flex-1 pr-2">
-                            <h2 className="text-xs md:text-sm font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-2" title={market.title}>{market.title}</h2>
-                            {userBetType && (
-                              <span className={`px-1.5 py-0.5 rounded border text-[6px] md:text-[7px] font-black uppercase italic tracking-widest ${
-                                userBetType === 'VYBE' 
-                                  ? 'bg-green-500/10 border-green-500/20 text-green-500' 
-                                  : userBetType === 'NO_VYBE' 
-                                    ? 'bg-red-500/10 border-red-500/20 text-red-500' 
-                                    : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500 dark:text-zinc-400'
-                              }`}>
-                                {userBetType.replace('_', ' ')}
-                              </span>
-                            )}
-                         </div>
-                         <div className="shrink-0 flex flex-col items-end text-right pl-3 border-l border-zinc-200 dark:border-white/10">
-                            <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Result</span>
-                            <span className={`text-[10px] md:text-xs font-black uppercase tracking-widest ${marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}`}>{marketStatus[market.id]?.replace('_', ' ')}</span>
-                         </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              // --- PŮVODNÍ KARTA PRO AKTIVNÍ A UZAVŘENÉ TRHY ---
-              return (
-                <div key={market.id} className="w-full break-inside-avoid mb-4 md:mb-5 inline-block">
-                  <div onClick={() => openMarket(market)} className="w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
+                  <div key={market.id} onClick={() => openMarket(market)} className="h-full w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
                     <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
                       <img src={market.imageUrl || market.image_url} alt="" className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 dark:from-[#18181b] dark:via-[#18181b]/10 to-transparent z-10" />
@@ -723,7 +694,6 @@ function HomeContent() {
                               {userBetType.replace('_', ' ')}
                             </span>
                           )}
-
                       </div>
 
                       <div className="mb-4 p-2.5 rounded-2xl bg-zinc-50 dark:bg-black/30 border border-zinc-100 dark:border-white/5 shadow-inner mt-auto">
@@ -745,9 +715,52 @@ function HomeContent() {
                       </div>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+
+            {/* VYHODNOCENÉ KARTY (Pokud nějaké jsou) */}
+            {resolvedMarketsList.length > 0 && (
+              <div className="flex flex-col gap-4 md:gap-5 mt-4">
+                <div className="flex items-center justify-center gap-4 py-2">
+                  <div className="h-px bg-zinc-200 dark:bg-white/10 flex-1"></div>
+                  <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-400">Resolved Markets</span>
+                  <div className="h-px bg-zinc-200 dark:bg-white/10 flex-1"></div>
                 </div>
-              );
-            })}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 items-start">
+                  {resolvedMarketsList.map((market: any) => {
+                    const userBetType = getUserBetStatus(nickname, market.id);
+
+                    return (
+                      <div key={market.id} onClick={() => openMarket(market)} className="w-full flex flex-col justify-center p-4 md:p-5 group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all cursor-pointer opacity-60 hover:opacity-100 hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
+                        <div className="flex items-center justify-between gap-3">
+                           <div className="flex flex-col items-start gap-2 flex-1 pr-2">
+                              <h2 className="text-xs md:text-sm font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-2" title={market.title}>{market.title}</h2>
+                              {userBetType && (
+                                <span className={`px-1.5 py-0.5 rounded border text-[6px] md:text-[7px] font-black uppercase italic tracking-widest ${
+                                  userBetType === 'VYBE' 
+                                    ? 'bg-green-500/10 border-green-500/20 text-green-500' 
+                                    : userBetType === 'NO_VYBE' 
+                                      ? 'bg-red-500/10 border-red-500/20 text-red-500' 
+                                      : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500 dark:text-zinc-400'
+                                }`}>
+                                  {userBetType.replace('_', ' ')}
+                                </span>
+                              )}
+                           </div>
+                           <div className="shrink-0 flex flex-col items-end text-right pl-3 border-l border-zinc-200 dark:border-white/10">
+                              <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Result</span>
+                              <span className={`text-[10px] md:text-xs font-black uppercase tracking-widest ${marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}`}>{marketStatus[market.id]?.replace('_', ' ')}</span>
+                           </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
           </div>
           {rightSidebar}
         </div>
