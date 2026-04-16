@@ -669,13 +669,42 @@ function HomeContent() {
                 ? new Date() > new Date(market.closesAt || market.closes_at) 
                 : false;
 
+              // --- NOVÉ: KOMPAKTNÍ KARTA PRO VYHODNOCENÉ TRHY ---
+              if (isRes) {
+                return (
+                  <div key={market.id} onClick={() => openMarket(market)} className="w-full flex flex-col justify-center p-4 md:p-5 group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all cursor-pointer opacity-60 hover:opacity-100 hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
+                    <div className="flex items-center justify-between gap-3">
+                       <div className="flex flex-col items-start gap-2 flex-1 pr-2">
+                          <h2 className="text-xs md:text-sm font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-2" title={market.title}>{market.title}</h2>
+                          {userBetType && (
+                            <span className={`px-1.5 py-0.5 rounded border text-[6px] md:text-[7px] font-black uppercase italic tracking-widest ${
+                              userBetType === 'VYBE' 
+                                ? 'bg-green-500/10 border-green-500/20 text-green-500' 
+                                : userBetType === 'NO_VYBE' 
+                                  ? 'bg-red-500/10 border-red-500/20 text-red-500' 
+                                  : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500 dark:text-zinc-400'
+                            }`}>
+                              {userBetType.replace('_', ' ')}
+                            </span>
+                          )}
+                       </div>
+                       <div className="shrink-0 flex flex-col items-end text-right pl-3 border-l border-zinc-200 dark:border-white/10">
+                          <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Result</span>
+                          <span className={`text-[10px] md:text-xs font-black uppercase tracking-widest ${marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}`}>{marketStatus[market.id]?.replace('_', ' ')}</span>
+                       </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // --- PŮVODNÍ KARTA PRO AKTIVNÍ A UZAVŘENÉ (ALE NEVYHODNOCENÉ) TRHY ---
               return (
-                <div key={market.id} onClick={() => openMarket(market)} className={`h-full w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer ${isRes ? 'opacity-60 hover:opacity-100' : 'hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl'}`}>
+                <div key={market.id} onClick={() => openMarket(market)} className="h-full w-full flex flex-col group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-zinc-200 dark:border-white/5 transition-all cursor-pointer hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
                   <div className="aspect-video w-full shrink-0 relative overflow-hidden bg-black/10">
-                    <img src={market.imageUrl || market.image_url} alt="" className={`absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ${isRes ? 'grayscale' : 'group-hover:scale-105'}`} />
+                    <img src={market.imageUrl || market.image_url} alt="" className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 dark:from-[#18181b] dark:via-[#18181b]/10 to-transparent z-10" />
                     
-                    {estimatedBets < 5 && !isRes && !isGridTradingClosed && (
+                    {estimatedBets < 5 && !isGridTradingClosed && (
                       <div className="absolute top-3 left-3 md:top-4 md:left-4 bg-orange-500 text-white px-2 py-1 rounded-md text-[8px] md:text-[9px] font-black uppercase tracking-widest shadow-lg z-20 flex items-center gap-1 animate-pulse">
                         🔥 2X XP ({estimatedBets}/5)
                       </div>
@@ -683,12 +712,10 @@ function HomeContent() {
                     
                     <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-2.5 md:py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${(Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}</div>
                     
-                    {!isRes && (
-                       <button onClick={(e) => { e.stopPropagation(); openShareModal('ASK', market); }} className="absolute bottom-4 right-4 z-30 px-3 py-2 bg-black/60 hover:bg-black/90 text-white rounded-lg text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-lg flex items-center gap-1.5 transition-all active:scale-95 opacity-0 group-hover:opacity-100">
-                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 105.368-2.684z" /></svg>
-                         Share
-                       </button>
-                    )}
+                    <button onClick={(e) => { e.stopPropagation(); openShareModal('ASK', market); }} className="absolute bottom-4 right-4 z-30 px-3 py-2 bg-black/60 hover:bg-black/90 text-white rounded-lg text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-lg flex items-center gap-1.5 transition-all active:scale-95 opacity-0 group-hover:opacity-100">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 105.368-2.684z" /></svg>
+                      Share
+                    </button>
                   </div>
 
                   <div className="p-4 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
@@ -715,11 +742,7 @@ function HomeContent() {
                     </div>
                     
                     <div className="flex flex-col gap-2">
-                      {isRes ? (
-                        <div className="w-full text-center py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5">
-                          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500">Winner: <span className={marketStatus[market.id] === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{marketStatus[market.id]?.replace('_', ' ')}</span></p>
-                        </div>
-                      ) : isGridTradingClosed ? (
+                      {isGridTradingClosed ? (
                         <div className="w-full text-center py-2.5 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20">
                           <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Trading Closed</p>
                         </div>
