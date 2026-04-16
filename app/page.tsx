@@ -77,7 +77,6 @@ function HomeContent() {
     }
   }, [vybecardParam, markets]);
 
-  // RESET SÁZKY PŘI ZMĚNĚ KARTY
   useEffect(() => {
     if (selectedMarket) {
       setBetAmount("10");
@@ -132,7 +131,6 @@ function HomeContent() {
     e.stopPropagation();
     if (isBetting) return; 
 
-    // OCHRANA PROTI FRONT-RUNNINGU (Zavřený trh)
     const marketToCheck = markets.find((m: any) => m.id === marketId);
     const isMarketClosed = marketToCheck && (marketToCheck.closesAt || marketToCheck.closes_at) 
       ? new Date() > new Date(marketToCheck.closesAt || marketToCheck.closes_at) 
@@ -244,7 +242,6 @@ function HomeContent() {
   const currentPrices = selectedMarket ? (marketPrices[selectedMarket.id] || { vibe: 0.5, noVibe: 0.5 }) : null;
   const marketBetTotal = selectedMarket ? myBets.filter((b: any) => b.marketId === selectedMarket.id && (!b.status || b.status === 'pending')).reduce((sum: number, b: any) => sum + b.amount, 0) : 0;
 
-  // NOVÉ: Kontrola, zda vypršel čas pro sázky u otevřeného detailu karty
   const isTradingClosed = selectedMarket && (selectedMarket.closesAt || selectedMarket.closes_at) 
     ? new Date() > new Date(selectedMarket.closesAt || selectedMarket.closes_at) 
     : false;
@@ -252,18 +249,16 @@ function HomeContent() {
   let selectedMarketVol = 0;
   let estimatedDetailBets = 0;
   if (selectedMarket) {
-    // Opraveno: Počítání zobrazeného Volume pro detailní kartu
     selectedMarketVol = Number(selectedMarket.volumeUsd || selectedMarket.volume_usd || 0) + (currentPrices?.vybePool || 0) + (currentPrices?.noVybePool || 0);
     estimatedDetailBets = selectedMarket.total_bets !== undefined ? selectedMarket.total_bets : (selectedMarketVol > 0 ? 1 : 0);
   }
 
-  // VÝPOČET PRO HOT NOW (Seřazeno podle Volume)
   const hotMarkets = [...markets].sort((a: any, b: any) => {
     const aPrices = marketPrices[a.id] || { vybePool: 0, noVybePool: 0 };
     const bPrices = marketPrices[b.id] || { vybePool: 0, noVybePool: 0 };
     const aVol = Number(a.volumeUsd || a.volume_usd || 0) + (aPrices.vybePool || 0) + (aPrices.noVybePool || 0);
     const bVol = Number(b.volumeUsd || b.volume_usd || 0) + (bPrices.vybePool || 0) + (bPrices.noVybePool || 0);
-    return bVol - aVol; // Nejvyšší volume bude první
+    return bVol - aVol; 
   }).slice(0, 3);
 
   const headerContent = (
@@ -508,7 +503,6 @@ function HomeContent() {
                   <div className="h-full bg-red-500 flex items-center px-3 md:px-4 justify-end transition-all duration-500 ease-out shadow-[0_0_20px_rgba(239,68,68,0.6)]" style={{ width: `${(currentPrices?.noVibe || 0.5) * 100}%` }}><span className="text-white dark:text-black font-black italic text-xs md:text-sm z-10">{((currentPrices?.noVibe || 0.5) * 100).toFixed(0)}%</span></div>
                 </div>
                 
-                {/* TADY JE SKRYTÍ VSTUPU PRO ČÁSTKU POKUD JE ZAVŘENO */}
                 {!isResolved && !isTradingClosed && (
                   <div className="mb-5 md:mb-6 p-3 md:p-4 bg-zinc-50 dark:bg-white/5 rounded-xl md:rounded-2xl border border-zinc-100 dark:border-white/5">
                     <div className="flex justify-between items-center mb-2 md:mb-3"><label className="text-[9px] md:text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount to Bet (USDC)</label><span className="text-[9px] md:text-[10px] font-bold text-zinc-500">Bal: {balance.toFixed(2)}</span></div>
@@ -530,10 +524,9 @@ function HomeContent() {
 
                 <div className="flex flex-col gap-4">
                   {marketBetTotal > 0 && (
-                    <div className="w-full flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95"><span className="font-black text-[10px] md:text-xs uppercase tracking-widest truncate mr-2">Vybechecked! ({marketBetTotal} USDC In Play)</span><button onClick={() => openShareModal('FLEX', selectedMarket)} className="bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:opacity-90 shadow-md shrink-0">FLEX</button></div>
+                    <div className="w-full flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95"><span className="font-black text-[10px] md:text-xs uppercase tracking-widest truncate mr-2">Vybechecked! ({marketBetTotal} USDC In Play)</span></div>
                   )}
 
-                  {/* TADY JE LOGIKA PRO ZOBRAZENÍ STAVŮ */}
                   {isResolved ? (
                     <div className="w-full text-center p-5 md:p-6 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex flex-col gap-2">
                       <h4 className="font-black italic uppercase text-zinc-900 dark:text-white text-lg md:text-xl">Market Resolved</h4>
@@ -557,9 +550,6 @@ function HomeContent() {
                           NO VYBE
                         </button>
                       </div>
-                      <p className="text-center text-[8px] md:text-[9px] text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed px-2 md:px-4">
-                        By trading, you agree to the <Link href="/rules" className="underline hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">Rules & Policies</Link>. All trades use <strong>virtual USDC</strong> for entertainment. Winning trades yield virtual profits and <strong>Season XP</strong> for the monthly leaderboard.
-                      </p>
                     </div>
                   )}
 
@@ -655,7 +645,7 @@ function HomeContent() {
         </div>
       ) : (
         <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-start gap-6 lg:gap-8 py-6 md:py-8 px-3 sm:px-4">
-          <div className="w-full lg:flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 items-stretch">
+          <div className="w-full lg:flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 items-start">
             {sortedMarkets.map((market: any) => {
               const prices = marketPrices[market.id] || { vibe: 0.5, noVibe: 0.5, vybePool: 0, noVybePool: 0 };
               const isRes = !!marketStatus[market.id];
@@ -664,15 +654,14 @@ function HomeContent() {
               const marketVol = Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0);
               const estimatedBets = market.total_bets !== undefined ? market.total_bets : (marketVol > 0 ? 1 : 0);
               
-              // KONTROLA ZAVŘENÉHO TRHU PRO MŘÍŽKU
               const isGridTradingClosed = (market.closesAt || market.closes_at) 
                 ? new Date() > new Date(market.closesAt || market.closes_at) 
                 : false;
 
-              // --- NOVÉ: KOMPAKTNÍ KARTA PRO VYHODNOCENÉ TRHY ---
+              // --- NOVÉ: KOMPAKTNÍ KARTA PRO VYHODNOCENÉ TRHY S OPRAVOU VÝŠKY ---
               if (isRes) {
                 return (
-                  <div key={market.id} onClick={() => openMarket(market)} className="w-full flex flex-col justify-center p-4 md:p-5 group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all cursor-pointer opacity-60 hover:opacity-100 hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
+                  <div key={market.id} onClick={() => openMarket(market)} className="w-full h-fit self-start flex flex-col justify-center p-4 md:p-5 group bg-white dark:bg-[#18181b] rounded-[1.5rem] md:rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all cursor-pointer opacity-60 hover:opacity-100 hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-xl">
                     <div className="flex items-center justify-between gap-3">
                        <div className="flex flex-col items-start gap-2 flex-1 pr-2">
                           <h2 className="text-xs md:text-sm font-black leading-tight text-zinc-900 dark:text-white uppercase italic line-clamp-2" title={market.title}>{market.title}</h2>
@@ -711,11 +700,6 @@ function HomeContent() {
                     )}
                     
                     <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/60 backdrop-blur-md text-white px-2 py-1 md:px-2.5 md:py-1 rounded-md text-[8px] md:text-[9px] font-mono font-bold tracking-widest border border-white/10 z-20">Vol: ${(Number(market.volumeUsd || market.volume_usd || 0) + (prices.vybePool || 0) + (prices.noVybePool || 0)).toLocaleString('en-US', {maximumFractionDigits: 0})}</div>
-                    
-                    <button onClick={(e) => { e.stopPropagation(); openShareModal('ASK', market); }} className="absolute bottom-4 right-4 z-30 px-3 py-2 bg-black/60 hover:bg-black/90 text-white rounded-lg text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-lg flex items-center gap-1.5 transition-all active:scale-95 opacity-0 group-hover:opacity-100">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 105.368-2.684z" /></svg>
-                      Share
-                    </button>
                   </div>
 
                   <div className="p-4 relative z-20 flex flex-col flex-1 bg-white dark:bg-[#18181b]">
