@@ -1,3 +1,5 @@
+'use client';
+import React from 'react';
 import Link from 'next/link';
 
 export default function RulesPage() {
@@ -9,47 +11,47 @@ export default function RulesPage() {
           <div className="p-1.5 rounded-full bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 group-hover:border-zinc-400 dark:group-hover:border-white/30 transition-colors shadow-sm">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </div>
-          Back to Vybecheck
+          Back to the Timeline
         </Link>
         
         <h1 className="text-3xl md:text-4xl font-black italic uppercase tracking-tight text-zinc-900 dark:text-white mb-6 md:mb-10 drop-shadow-sm px-1">
-          Rules & Policies
+          The House Rules
         </h1>
         
         <div className="space-y-4 sm:space-y-6 md:space-y-8 text-xs sm:text-sm leading-relaxed px-1">
           <section className="bg-white dark:bg-[#18181b] p-5 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-shadow">
             <h2 className="text-base sm:text-lg font-black uppercase tracking-widest text-fuchsia-500 mb-3 md:mb-4 flex items-center gap-2">
-              <span className="text-xl sm:text-2xl shrink-0">🎮</span> 1. Virtual Currency Only
+              <span className="text-xl sm:text-2xl shrink-0">🛑</span> 1. Fake Money, Real Feds
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 font-medium">
-              Vybecheck is a social prediction game. <strong>All "USDC" balances displayed on this platform are strictly virtual and possess zero real-world monetary value.</strong> You cannot deposit real fiat or cryptocurrency into Vybecheck, nor can you withdraw the virtual USDC balance. The virtual balance is used solely for scorekeeping, entertainment, and educational purposes.
+              Let's get this straight so the three-letter agencies stay away: Vybecheck is a free-to-play prediction game. <strong>All "USDC" balances you trade with are strictly virtual and have ZERO real-world value.</strong> You cannot deposit real fiat or crypto, and you can't withdraw your virtual bankroll. It's strictly for farming clout, proving you can read the chaos, and keeping score.
             </p>
           </section>
 
           <section className="bg-white dark:bg-[#18181b] p-5 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-shadow">
             <h2 className="text-base sm:text-lg font-black uppercase tracking-widest text-orange-500 mb-3 md:mb-4 flex items-center gap-2">
-              <span className="text-xl sm:text-2xl shrink-0">🏆</span> 2. Season XP & Leaderboard
+              <span className="text-xl sm:text-2xl shrink-0">🏆</span> 2. XP, Clout & Airdrops
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 font-medium">
-              Players earn <strong>Season XP</strong> based on their trading volume and profitability using virtual USDC. At the end of specific promotional periods (Seasons), Vybecheck may, at its sole discretion, reward top-ranking players with promotional airdrops. These airdrops are a free promotional reward, not a payout of user funds.
+              You farm <strong>Season XP</strong> by trading volume and printing profit with virtual USDC. At the end of every Season (14 days), the top degens on the Leaderboard get blessed with real USDC airdrops. These airdrops are promotional rewards sent straight from our treasury, NOT a payout of your virtual funds. Play smart, take the bag.
             </p>
           </section>
 
           <section className="bg-white dark:bg-[#18181b] p-5 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-shadow">
             <h2 className="text-base sm:text-lg font-black uppercase tracking-widest text-zinc-900 dark:text-white mb-3 md:mb-4 flex items-center gap-2">
-              <span className="text-xl sm:text-2xl shrink-0">⚖️</span> 3. Market Resolution
+              <span className="text-xl sm:text-2xl shrink-0">🔨</span> 3. The Admin is God
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 font-medium">
-              Markets resolve based on the criteria specified in the "Resolution Rules" section of each Vybecard. Admins strive for complete accuracy and neutrality. In the event of a dispute or ambiguous real-world outcome, Vybecheck reserves the right to resolve the market based on consensus or void the market entirely, returning all virtual stakes.
+              Markets resolve strictly based on the "Resolution Rules" written on each card. We look for concrete receipts to determine the outcome. If the timeline gets too blurry, a dispute breaks out, or the simulation glitches, Vybecheck admins reserve the right to rule based on consensus or just void the market entirely (refunding everyone's bags). Our word is final.
             </p>
           </section>
 
           <section className="bg-white dark:bg-[#18181b] p-5 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-shadow">
             <h2 className="text-base sm:text-lg font-black uppercase tracking-widest text-zinc-900 dark:text-white mb-3 md:mb-4 flex items-center gap-2">
-              <span className="text-xl sm:text-2xl shrink-0">🛡️</span> 4. Compliance & Usage
+              <span className="text-xl sm:text-2xl shrink-0">⚖️</span> 4. Not a Casino
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 font-medium">
-              By using Vybecheck, you agree that you are participating in a free-to-play social game. Because no real money is wagered, Vybecheck is not a gambling platform, real-money prediction market, or financial exchange. 
+              By logging in, you agree you're here to play a social game. Because you literally cannot deposit or wager real money, Vybecheck is NOT a gambling platform, NOT an unlicensed exchange, and definitely NOT financial advice. Don't be an idiot, just have fun predicting the timeline.
             </p>
           </section>
         </div>
