@@ -8,31 +8,31 @@ export default function FaqPage() {
   const faqs = [
     {
       question: "What is Vybecheck?",
-      answer: "Vybecheck is a cultural prediction market. Instead of trading boring stocks, you trade on the outcomes of pop culture, gaming, and internet events. You use virtual USDC to buy 'VYBE' (Yes) or 'NO VYBE' (No) shares."
+      answer: "Vybecheck is the internet's chaos prediction market. Instead of trading boomer stocks, you bet on internet drama, timeline events, and pop culture disasters. You use virtual USDC to buy 'VYBE' (Yes) or 'NO VYBE' (No) shares and monetize your screen time."
     },
     {
       question: "Am I betting real money?",
-      answer: "No. All trades on Vybecheck use virtual USDC (play money) to keep the platform fun, legal, and accessible globally. You cannot deposit real money."
+      answer: "Fake money, real clout. All trades on Vybecheck use virtual USDC to keep the feds away and make the platform accessible globally. You cannot deposit real money."
     },
     {
       question: "How do I win real money (Airdrops)?",
-      answer: "By being right! Winning trades earn you Season XP. At the end of every 14 days (Season), the top 3 players on the Leaderboard share a real USDC airdrop pool sent directly to their crypto wallets."
+      answer: "By reading the timeline better than anyone else! Winning trades earn you Season XP. At the end of the season, the top 3 degens on the Leaderboard take the bag—a real USDC airdrop sent directly to their crypto wallets."
     },
     {
       question: "How do I earn Season XP?",
-      answer: "You get +1 XP for every 1 virtual USDC you trade (just for participating). If your prediction is correct, you also get +10 XP for every 1 USDC of net profit you make. The smarter you trade, the faster you climb."
+      answer: "You get +1 XP for every 1 virtual USDC you trade (just for being in the game). If your prediction hits, you farm an extra +10 XP for every 1 USDC of net profit. The smarter you read the chaos, the faster you climb."
     },
     {
       question: "I ran out of virtual USDC. Now what?",
-      answer: "Don't worry! If your bankroll drops below 20 USDC, a 'Claim Relief Fund' button will appear in your profile to give you a free +50 USDC boost. You can also get +50 USDC daily by sharing a market on social media!"
+      answer: "Don't panic. If your bankroll drops below 20 USDC, a 'Claim Stimmy' button will appear in your profile to give you a free +50 USDC bailout. You can also farm +50 USDC daily by sharing a market on X (Twitter) or TikTok!"
     },
     {
-      question: "Which crypto wallet address should I use for payouts?",
-      answer: "You can use any EVM-compatible wallet (like MetaMask, Trust Wallet, Coinbase Wallet) or a Solana wallet (like Phantom). Just go to your Profile and paste your main receiving address (e.g., your 0x... address from MetaMask)."
+      question: "Which crypto wallet address should I use for the bag?",
+      answer: "You can drop any EVM-compatible wallet (MetaMask, Trust Wallet, Coinbase) or a Solana wallet (Phantom). Just go to your Profile and paste your main receiving address (e.g., your 0x... address) so we know where to send your airdrop."
     },
     {
       question: "MetaMask doesn't show a specific 'USDC address'. What do I do?",
-      answer: "That is completely normal! On networks like Ethereum, Base, or Arbitrum, your address (starting with 0x...) is exactly the same for all tokens. Just copy your main wallet address and save it in your Profile. When we send you the USDC prize, it will safely arrive at that exact address."
+      answer: "That is completely normal! On networks like Ethereum, Base, or Arbitrum, your address (starting with 0x...) is exactly the same for all tokens. Just copy your main wallet address and save it in your Profile. When you secure the bag, the USDC will safely arrive there."
     }
   ];
 
@@ -49,7 +49,7 @@ export default function FaqPage() {
             <div className="p-2 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 group-hover:border-zinc-400 dark:group-hover:border-zinc-600 transition-colors shadow-sm">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </div>
-            <span className="font-black text-xs uppercase tracking-widest hidden sm:inline">Back to Markets</span>
+            <span className="font-black text-xs uppercase tracking-widest hidden sm:inline">Back to the Chaos</span>
           </Link>
           <h1 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 uppercase tracking-tighter cursor-default italic">
             Vybecheck FAQ
@@ -57,8 +57,8 @@ export default function FaqPage() {
         </header>
 
         <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter mb-4">Got Questions?</h2>
-          <p className="text-zinc-500 font-medium max-w-xl mx-auto text-sm md:text-base">Everything you need to know about trading culture, leveling up your XP, and claiming your real-world airdrops.</p>
+          <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter mb-4">The Degen FAQ</h2>
+          <p className="text-zinc-500 font-medium max-w-xl mx-auto text-sm md:text-base">Everything you need to know about surviving the timeline, farming XP, and securing the bag.</p>
         </div>
 
         <div className="space-y-3">
@@ -93,10 +93,10 @@ export default function FaqPage() {
         </div>
 
         <div className="mt-12 p-8 bg-gradient-to-br from-fuchsia-500/10 to-orange-500/10 border border-fuchsia-500/20 rounded-[2rem] text-center">
-          <h3 className="text-xl font-black uppercase italic text-zinc-900 dark:text-white mb-2">Still confused?</h3>
-          <p className="text-zinc-500 text-sm mb-6">Drop a message in the Live Chat on any market. The Vybecheck community is always helping out.</p>
+          <h3 className="text-xl font-black uppercase italic text-zinc-900 dark:text-white mb-2">Still lost?</h3>
+          <p className="text-zinc-500 text-sm mb-6">We get it, the simulation is glitching. Hit up the community on socials or just start clicking buttons.</p>
           <Link href="/" className="inline-block bg-zinc-900 text-white dark:bg-white dark:text-black font-black px-8 py-4 rounded-xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-transform shadow-lg">
-            Start Trading Now
+            Join the Chaos
           </Link>
         </div>
 
