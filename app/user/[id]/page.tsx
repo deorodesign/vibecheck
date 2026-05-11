@@ -56,9 +56,9 @@ export default function PublicProfilePage() {
   if (!profileData) {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-[#0e0e12] flex flex-col items-center justify-center p-4">
-        <h1 className="text-2xl md:text-4xl font-black italic uppercase text-zinc-900 dark:text-white mb-4">Vyber Not Found</h1>
-        <p className="text-zinc-500 uppercase tracking-widest text-xs mb-8">This user doesn't exist or changed their name.</p>
-        <Link href="/" className="px-6 py-3 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-black font-black uppercase tracking-widest text-xs">Back to Markets</Link>
+        <h1 className="text-2xl md:text-4xl font-black italic uppercase text-zinc-900 dark:text-white mb-4">Degen Not Found</h1>
+        <p className="text-zinc-500 uppercase tracking-widest text-xs mb-8">This degen doesn't exist or nuked their profile.</p>
+        <Link href="/" className="px-6 py-3 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-black font-black uppercase tracking-widest text-xs">Back to the Chaos</Link>
       </div>
     );
   }
@@ -88,7 +88,7 @@ export default function PublicProfilePage() {
             <span className="font-black text-[9px] md:text-xs uppercase tracking-widest">Back</span>
           </Link>
           <h1 className="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 uppercase tracking-tighter cursor-default italic">
-            Vyber Profile
+            Degen Profile
           </h1>
         </header>
 
@@ -103,7 +103,7 @@ export default function PublicProfilePage() {
 
             <div className="flex-1 w-full mt-2 sm:mt-0 flex flex-col items-center sm:items-start justify-center">
               <h2 className="text-xl sm:text-3xl font-black uppercase tracking-widest truncate max-w-[250px] sm:max-w-full">
-                {profileData.nickname || 'ANONYMOUS VYBER'}
+                {profileData.nickname || 'ANONYMOUS DEGEN'}
               </h2>
               
               <div className="mt-3 flex flex-wrap items-center justify-center sm:justify-start gap-2">
@@ -123,7 +123,7 @@ export default function PublicProfilePage() {
               <p className="text-xs sm:text-lg font-black font-mono">${totalVolume.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-[8px] md:text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Active Positions</p>
+              <p className="text-[8px] md:text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Active Bags</p>
               <p className="text-xs sm:text-lg font-black font-mono">{activeBetsList.length}</p>
             </div>
             <div>
@@ -137,11 +137,11 @@ export default function PublicProfilePage() {
 
         {/* AKTIVNÍ POZICE */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-md">
-          <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-4 md:mb-5">Active Positions</h3>
+          <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-4 md:mb-5">Active Bags</h3>
           <div className="space-y-3">
             {activeBetsList.length === 0 ? (
               <div className="text-center py-6 md:py-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-[1rem] md:rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-950/50">
-                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">No active positions right now.</p>
+                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">Fading the timeline. No active bags.</p>
               </div>
             ) : (
               activeBetsList.map((bet: any) => {
@@ -155,7 +155,7 @@ export default function PublicProfilePage() {
                       )}
                       <div>
                         <p className="font-bold text-[11px] sm:text-sm line-clamp-1">{bet.markets?.title || 'Unknown Market'}</p>
-                        <p className="text-[8px] sm:text-[9px] font-black text-zinc-500 uppercase tracking-widest mt-1">Holding: <span className={bet.type === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{bet.type}</span></p>
+                        <p className="text-[8px] sm:text-[9px] font-black text-zinc-500 uppercase tracking-widest mt-1">Bag: <span className={bet.type === 'VYBE' ? 'text-green-500' : 'text-red-500'}>{bet.type}</span></p>
                       </div>
                     </div>
                     
@@ -171,11 +171,11 @@ export default function PublicProfilePage() {
 
         {/* HISTORIE (ZAVŘENÉ POZICE) */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-md">
-          <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-4 md:mb-5">Past Trades</h3>
+          <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-4 md:mb-5">The Receipts</h3>
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
             {resolvedBetsList.length === 0 ? (
               <div className="text-center py-6 md:py-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-[1rem] md:rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-950/50">
-                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">No completed trades yet.</p>
+                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">No receipts yet.</p>
               </div>
             ) : (
               resolvedBetsList.map((bet: any) => (
