@@ -7,12 +7,12 @@ import { Analytics } from '@vercel/analytics/react'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Vybecheck | The Cultural Prediction Market',
-  description: 'Stop betting on boring charts. We bet on culture. Predict events, trade virtual USDC, and win real airdrops.',
+  title: 'Vybecheck | The Chaos Prediction Market',
+  description: 'Stop trading boomer stocks. Bet on internet drama, timeline events, and pure chaos. Read the vybe, farm XP, and secure real USDC airdrops.',
   metadataBase: new URL('https://vybecheck.xyz'),
   openGraph: {
-    title: 'Vybecheck | Predict the Culture',
-    description: 'Trade on pop culture, gaming, and crypto events. Play smart, level up your Season XP, and win real monthly airdrops.',
+    title: 'Vybecheck | Bet on the Chaos',
+    description: 'The internet is glitching. Trade virtual USDC on timeline disasters, farm Season XP, and take the bag. Are you fading the rumor or riding the vybe?',
     url: 'https://vybecheck.xyz',
     siteName: 'Vybecheck',
     images: [
@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vybecheck | Predict the Culture',
-    description: 'Are you following the vybe or fading it? Trade virtual USDC and win real airdrops.',
+    title: 'Vybecheck | Bet on the Chaos',
+    description: 'Stop trading boomer stocks. Bet on internet drama, farm XP, and secure real USDC airdrops. Are you fading the timeline or riding the vybe?',
     creator: '@vybecheck_xyz',
     images: ['https://vybecheck.xyz/og-image-v4.jpg'], // TVRDÁ ZMĚNA NÁZVU SOUBORU
   },

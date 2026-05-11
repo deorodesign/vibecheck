@@ -7,7 +7,6 @@ import { useAppContext } from '../../context';
 
 export default function PublicProfilePage() {
   const params = useParams();
-  // TADY JE TA ZMĚNA: čteme params.id místo params.username
   const usernameParam = decodeURIComponent(params.id as string);
   const { markets, marketPrices } = useAppContext();
 
@@ -17,7 +16,6 @@ export default function PublicProfilePage() {
 
   useEffect(() => {
     const fetchUserAndBets = async () => {
-      // 1. Najdeme hráče podle přezdívky (ignorujeme velikost písmen)
       const { data: users } = await supabase
         .from('users')
         .select('*')
@@ -28,7 +26,6 @@ export default function PublicProfilePage() {
         const targetUser = users[0];
         setProfileData(targetUser);
 
-        // 2. Vytáhneme všechny jeho sázky
         const { data: bets } = await supabase
           .from('bets')
           .select('*')
@@ -56,8 +53,8 @@ export default function PublicProfilePage() {
   if (!profileData) {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-[#0e0e12] flex flex-col items-center justify-center p-4">
-        <h1 className="text-2xl md:text-4xl font-black italic uppercase text-zinc-900 dark:text-white mb-4">Degen Not Found</h1>
-        <p className="text-zinc-500 uppercase tracking-widest text-xs mb-8">This degen doesn't exist or nuked their profile.</p>
+        <h1 className="text-2xl md:text-4xl font-black italic uppercase text-zinc-900 dark:text-white mb-4">Vyber Not Found</h1>
+        <p className="text-zinc-500 uppercase tracking-widest text-xs mb-8">This Vyber doesn't exist or nuked their profile.</p>
         <Link href="/" className="px-6 py-3 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-black font-black uppercase tracking-widest text-xs">Back to the Chaos</Link>
       </div>
     );
@@ -88,7 +85,7 @@ export default function PublicProfilePage() {
             <span className="font-black text-[9px] md:text-xs uppercase tracking-widest">Back</span>
           </Link>
           <h1 className="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 uppercase tracking-tighter cursor-default italic">
-            Degen Profile
+            Vyber Profile
           </h1>
         </header>
 
@@ -103,7 +100,7 @@ export default function PublicProfilePage() {
 
             <div className="flex-1 w-full mt-2 sm:mt-0 flex flex-col items-center sm:items-start justify-center">
               <h2 className="text-xl sm:text-3xl font-black uppercase tracking-widest truncate max-w-[250px] sm:max-w-full">
-                {profileData.nickname || 'ANONYMOUS DEGEN'}
+                {profileData.nickname || 'ANONYMOUS VYBER'}
               </h2>
               
               <div className="mt-3 flex flex-wrap items-center justify-center sm:justify-start gap-2">

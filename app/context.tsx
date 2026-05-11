@@ -164,7 +164,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return {
           id: u.wallet_address || `unknown-${i}`, 
           rank: i + 1, 
-          name: u.nickname || 'Anonymous Vyber',
+          name: u.nickname || 'Anonymous Degen',
           address: displayAddress,
           points: u.xp_points || 0, 
           avatar: u.avatar_url || '', 
@@ -284,7 +284,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     resetAppStaleState();
     await supabase.auth.signOut();
     localStorage.removeItem('vybe_session'); 
-    showToast("Logged out.", "info");
+    showToast("Logged out. Cya.", "info");
     window.location.reload();
   };
 
@@ -318,11 +318,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const placeBet = async (marketId: number, type: 'VYBE' | 'NO_VYBE', amount: number) => {
     const marketToCheck = markets.find((m: any) => m.id === marketId);
     if (marketToCheck && marketToCheck.closesAt && new Date() > new Date(marketToCheck.closesAt)) {
-      showToast("Trading is officially closed for this market.", "error");
+      showToast("Trading is closed. Too late to join the chaos.", "error");
       return;
     }
 
-    if (balance < amount) return showToast("Insufficient balance!", "error");
+    if (balance < amount) return showToast("You are too broke. Claim your stimmy.", "error");
     const currentPriceRaw = marketPrices[marketId]?.[type === 'VYBE' ? 'vibe' : 'noVibe'] || 0.5;
     const entryPrice = currentPriceRaw * 100;
     const { data, error } = await supabase.rpc('place_bet_secure', {
@@ -335,7 +335,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setMyBets(prev => [...prev, { id: data.bet_id, marketId, type, amount, entryPrice, status: 'pending' }]);
       // Dáváme refresh i hned na straně klienta, který to odklikl
       fetchData();
-      showToast(`Successfully bet ${amount} USDC!`, "success");
+      showToast(`Secured ${amount} USDC on ${type}!`, "success");
     }
   };
 
@@ -359,25 +359,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setBalance(data.new_balance);
       setMyBets(prev => prev.map(b => b.id === betId ? { ...b, status: 'cashed_out', payout: cashOutValue } : b));
       fetchData();
-      showToast(`Cashed out for ${cashOutValue.toFixed(2)} USDC`, "success");
+      showToast(`Bag secured for ${cashOutValue.toFixed(2)} USDC`, "success");
     }
   };
 
   const claimReliefFund = useCallback(async () => {
     if (!isLoggedIn || !walletAddress) {
-      showToast("Please log in to claim funds!", "info");
+      showToast("Log in to claim your stimmy!", "info");
       return;
     }
 
     if (balance >= 10) {
-      showToast("You have enough USDC! Relief is only for balances below 10 USDC.", "error");
+      showToast("You are too rich for a bailout. Trade what you have.", "error");
       return;
     }
 
     try {
       setIsAuthLoading(true); 
       
-      const { data, error } = await supabase.rpc('claim_relief_fund', { 
+      const { data, error } = await supabase.rpc('claim_stimmy', { 
         p_wallet_address: walletAddress 
       });
 
@@ -386,10 +386,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else if (data) {
         if (data.success) {
           setBalance(data.new_balance);
-          showToast(`+50 USDC added to your Bankroll! Stay in the game.`, "success");
+          showToast(`+50 USDC Stimmy dropped. Back to the trenches.`, "success");
           await fetchData(); 
         } else {
-          showToast(data.message || "Relief Fund currently unavailable.", "error");
+          showToast(data.message || "Stimmy machine is currently broken.", "error");
         }
       }
     } catch (err: any) {
@@ -425,25 +425,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
              
              {isTop3Winner ? (
                <>
-                  <div className="w-20 h-20 bg-gradient-to-tr from-fuchsia-500 to-orange-500 rounded-full flex items-center justify-center text-4xl mb-6 shadow-lg animate-bounce">🏆</div>
-                  <h2 className="text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">You Won Season!</h2>
+                  <div className="w-20 h-20 bg-gradient-to-tr from-fuchsia-500 to-orange-500 rounded-full flex items-center justify-center text-4xl mb-6 shadow-lg animate-bounce">💰</div>
+                  <h2 className="text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">You Took The Bag!</h2>
                   <p className="text-sm font-bold text-fuchsia-500 uppercase tracking-widest mb-4">Rank #{playerRank} • Airdrop Secured</p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-8 leading-relaxed">
-                    Congratulations! You finished in the Top 3 this season. Take a screenshot and open a ticket in our Discord to claim your USDC Airdrop.
+                    You survived the chaos and finished Top 3. Take a screenshot, flex on socials, and open a ticket in Discord to claim your real USDC.
                   </p>
                </>
              ) : (
                <>
-                  <div className="w-16 h-16 bg-zinc-100 dark:bg-white/5 rounded-full flex items-center justify-center text-3xl mb-6">🏁</div>
-                  <h2 className="text-2xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">Season Ended</h2>
+                  <div className="w-16 h-16 bg-zinc-100 dark:bg-white/5 rounded-full flex items-center justify-center text-3xl mb-6">☢️</div>
+                  <h2 className="text-2xl font-black italic uppercase text-zinc-900 dark:text-white mb-2">Season Nuke</h2>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-8 leading-relaxed">
-                    A new season has begun and all XP has been reset. The leaderboard is wide open. Time to start grinding again!
+                    The simulation reset. All XP has been wiped. The leaderboard is empty. Time to farm from zero.
                   </p>
                </>
              )}
 
              <button onClick={closeSeasonModal} className={`w-full py-4 font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 ${isTop3Winner ? 'bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white shadow-lg' : 'bg-black text-white dark:bg-white dark:text-black'}`}>
-               {isTop3Winner ? 'Claim Victory' : 'Let\'s Go'}
+               {isTop3Winner ? 'Flex Victory' : 'Back to the Trenches'}
              </button>
            </div>
         </div>

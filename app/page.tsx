@@ -237,7 +237,6 @@ function HomeContent() {
     return 0;
   });
 
-  // TADY SI TRHY ROZDĚLÍME DO DVOU SKUPIN PRO DOKONALÝ LAYOUT
   const activeMarketsList = sortedMarkets.filter(m => !marketStatus[m.id]);
   const resolvedMarketsList = sortedMarkets.filter(m => !!marketStatus[m.id]);
 
@@ -365,7 +364,7 @@ function HomeContent() {
             <div className="py-8 px-4 text-center flex flex-col items-center justify-center opacity-70">
               <span className="text-2xl mb-2">🏆</span>
               <p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest italic">No ranked Vybers yet.</p>
-              <p className="text-[9px] text-fuchsia-500/80 font-black uppercase mt-1">Be the first!</p>
+              <p className="text-[9px] text-fuchsia-500/80 font-black uppercase mt-1">Start farming!</p>
             </div>
           ) : (
             dynamicLeaderboard.map((user: any) => (
@@ -391,7 +390,7 @@ function HomeContent() {
   const loginModalContent = isLoginModalOpen && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/80 dark:bg-black/80 backdrop-blur-sm" onClick={() => setIsLoginModalOpen(false)}>
       <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-        <div className="text-center mb-2"><h2 className="text-2xl md:text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-1 md:mb-2">Log In</h2><p className="text-zinc-500 text-[10px] md:text-xs font-medium uppercase tracking-widest">Connect to start trading culture.</p></div>
+        <div className="text-center mb-2"><h2 className="text-2xl md:text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-1 md:mb-2">Log In</h2><p className="text-zinc-500 text-[10px] md:text-xs font-medium uppercase tracking-widest">Connect to start trading the chaos.</p></div>
         <div className="flex flex-col gap-3">
           <button onClick={loginWithTwitter} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black hover:scale-105 transition-all font-black uppercase tracking-widest text-[11px] md:text-sm shadow-md active:scale-95">Continue with X</button>
           <button onClick={loginWithGoogle} className="flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-white text-black border border-zinc-200 font-black uppercase tracking-widest text-[11px] md:text-xs shadow-md active:scale-95 transition-all">
@@ -417,14 +416,14 @@ function HomeContent() {
           <div className="w-16 h-16 bg-gradient-to-tr from-fuchsia-500/20 to-orange-500/20 text-fuchsia-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-fuchsia-500/30">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
           </div>
-          <h2 className="text-2xl md:text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-1">Out of USDC?</h2>
+          <h2 className="text-2xl md:text-3xl font-black italic uppercase text-zinc-900 dark:text-white mb-1">Bag is empty?</h2>
           <p className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-widest leading-relaxed mt-2">
-            Your bankroll is empty. But don't worry, the community has your back.
+            You got liquidated. Time for a government bailout.
           </p>
         </div>
         <div className="flex flex-col gap-3 mt-2">
           <Link href="/profile" onClick={() => setShowFundModal(false)} className="flex items-center justify-center w-full py-3.5 rounded-xl bg-gradient-to-r from-fuchsia-500 to-orange-500 text-white hover:opacity-90 font-black uppercase tracking-widest text-[11px] md:text-sm shadow-md active:scale-95 transition-all">
-            Claim Relief Fund (+50)
+            Claim Stimmy (+50)
           </Link>
           <button onClick={() => setShowFundModal(false)} className="py-3 rounded-xl bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white font-bold uppercase tracking-widest text-[10px] md:text-xs transition-colors w-full">
             Cancel
@@ -463,13 +462,13 @@ function HomeContent() {
             {!isFetchingTimeout ? (
               <>
                 <div className="w-10 h-10 md:w-12 md:h-12 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-zinc-500">Loading Vybecards...</p>
+                <p className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-zinc-500">Loading the chaos...</p>
               </>
             ) : (
               <>
                 <span className="text-5xl md:text-6xl mb-6">👨‍🍳</span>
-                <p className="font-black text-lg md:text-xl uppercase italic tracking-widest text-zinc-400">Admin is cooking...</p>
-                <p className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-zinc-600 mt-3 border border-zinc-200 dark:border-white/10 px-4 py-2 rounded-full">No active markets right now.</p>
+                <p className="font-black text-lg md:text-xl uppercase italic tracking-widest text-zinc-400">Simulation is rendering...</p>
+                <p className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-zinc-600 mt-3 border border-zinc-200 dark:border-white/10 px-4 py-2 rounded-full">Timeline is dead. No active chaos.</p>
               </>
             )}
           </div>
@@ -496,7 +495,7 @@ function HomeContent() {
                 >
                   <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-fuchsia-500/20 to-orange-500/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
                   <svg className="w-3.5 h-3.5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 105.368-2.684z" /></svg>
-                  <span className="relative z-10">Share & Earn <span className="hidden sm:inline">50 USDC</span></span>
+                  <span className="relative z-10">Shill & Earn <span className="hidden sm:inline">50 USDC</span></span>
                 </button>
               </div>
 
@@ -509,7 +508,7 @@ function HomeContent() {
                 
                 {!isResolved && !isTradingClosed && (
                   <div className="mb-5 md:mb-6 p-3 md:p-4 bg-zinc-50 dark:bg-white/5 rounded-xl md:rounded-2xl border border-zinc-100 dark:border-white/5">
-                    <div className="flex justify-between items-center mb-2 md:mb-3"><label className="text-[9px] md:text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount to Bet (USDC)</label><span className="text-[9px] md:text-[10px] font-bold text-zinc-500">Bal: {balance.toFixed(2)}</span></div>
+                    <div className="flex justify-between items-center mb-2 md:mb-3"><label className="text-[9px] md:text-[10px] font-black uppercase text-zinc-400 tracking-widest">Amount to Stake (USDC)</label><span className="text-[9px] md:text-[10px] font-bold text-zinc-500">Bal: {balance.toFixed(2)}</span></div>
                     
                     {estimatedDetailBets < 5 && (
                       <div className="mb-3 flex items-center justify-between px-3 md:px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500/10 to-fuchsia-500/10 border border-orange-500/20 text-orange-500 dark:text-orange-400 shadow-sm animate-pulse">
@@ -528,7 +527,7 @@ function HomeContent() {
 
                 <div className="flex flex-col gap-4">
                   {marketBetTotal > 0 && (
-                    <div className="w-full flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95"><span className="font-black text-[10px] md:text-xs uppercase tracking-widest truncate mr-2">Vybechecked! ({marketBetTotal} USDC In Play)</span></div>
+                    <div className="w-full flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm animate-in zoom-in-95"><span className="font-black text-[10px] md:text-xs uppercase tracking-widest truncate mr-2">Bag Secured! ({marketBetTotal} USDC In Play)</span></div>
                   )}
 
                   {isResolved ? (
@@ -542,7 +541,7 @@ function HomeContent() {
                         <svg className="w-5 h-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         Trading Closed
                       </h4>
-                      <p className="text-[10px] md:text-xs font-bold text-orange-600/70 dark:text-orange-400/70 uppercase tracking-widest">Awaiting official resolution.</p>
+                      <p className="text-[10px] md:text-xs font-bold text-orange-600/70 dark:text-orange-400/70 uppercase tracking-widest">Awaiting the receipts.</p>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-3">
@@ -559,10 +558,10 @@ function HomeContent() {
 
                 </div>
               </div>
-              <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-md"><h3 className="text-[9px] md:text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 md:mb-4">Resolution Rules</h3><div className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed"><p className="mb-3">This market will resolve to <strong className="text-green-500">VYBE</strong> if the specified event officially occurs before the resolution date.</p><div className="p-3 bg-zinc-50 dark:bg-black/30 rounded-xl border border-zinc-200 dark:border-white/5"><p className="text-[9px] md:text-[10px] font-bold uppercase text-zinc-400 mb-1 tracking-widest">Resolution Source:</p><p className="text-zinc-900 dark:text-zinc-200 text-xs md:text-sm">{selectedMarket.resolutionSource || selectedMarket.resolution_source}</p></div></div></div>
+              <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-md"><h3 className="text-[9px] md:text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 md:mb-4">How it Resolves</h3><div className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed"><p className="mb-3">This market will resolve to <strong className="text-green-500">VYBE</strong> if the specified event officially occurs before the resolution date.</p><div className="p-3 bg-zinc-50 dark:bg-black/30 rounded-xl border border-zinc-200 dark:border-white/5"><p className="text-[9px] md:text-[10px] font-bold uppercase text-zinc-400 mb-1 tracking-widest">The Receipts:</p><p className="text-zinc-900 dark:text-zinc-200 text-xs md:text-sm">{selectedMarket.resolutionSource || selectedMarket.resolution_source}</p></div></div></div>
               <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 rounded-[1.5rem] md:rounded-[2rem] shadow-md overflow-hidden flex flex-col">
                 <div ref={chatTopRef} />
-                <div className="p-4 md:p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between"><h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight text-sm md:text-base">Live Chat</h3></div>
+                <div className="p-4 md:p-5 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 flex items-center justify-between"><h3 className="text-zinc-900 dark:text-white font-black italic uppercase tracking-tight text-sm md:text-base">The Trenches (Chat)</h3></div>
                 <div className="p-3 md:p-4 border-b border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20">
                   {replyingTo && (<div className="flex items-center justify-between bg-fuchsia-500/10 px-3 py-1.5 rounded-t-lg border-x border-t border-fuchsia-500/20 text-[8px] md:text-[9px] font-medium text-fuchsia-500 mb-[-1px]"><span>Replying to <strong>@{replyingTo.user}</strong></span><button onClick={() => setReplyingTo(null)} className="font-bold hover:text-fuchsia-700">✕</button></div>)}
                   <div className="relative flex items-center"><input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendChat()} placeholder={isLoggedIn ? (replyingTo ? "Write a reply..." : "Share your vybe...") : "Log in to chat..."} className={`w-full bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 px-3 md:px-4 py-2.5 md:py-3 text-[10px] md:text-xs outline-none focus:border-fuchsia-500 text-zinc-900 dark:text-white ${replyingTo ? 'rounded-b-xl rounded-tr-xl' : 'rounded-xl'}`} /><button onClick={handleSendChat} className="absolute right-2 p-2 text-zinc-400 hover:text-fuchsia-500 transition-colors"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg></button></div>
@@ -724,7 +723,7 @@ function HomeContent() {
               <div className="flex flex-col gap-4 md:gap-5 mt-4">
                 <div className="flex items-center justify-center gap-4 py-2">
                   <div className="h-px bg-zinc-200 dark:bg-white/10 flex-1"></div>
-                  <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-400">Resolved Markets</span>
+                  <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-400">Resolved Chaos</span>
                   <div className="h-px bg-zinc-200 dark:bg-white/10 flex-1"></div>
                 </div>
                 
