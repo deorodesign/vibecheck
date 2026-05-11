@@ -195,7 +195,7 @@ export default function ProfilePage() {
             <div className="p-2 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 group-hover:border-zinc-400 dark:group-hover:border-zinc-600 transition-colors shadow-sm">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </div>
-            <span className="font-black text-xs uppercase tracking-widest hidden sm:inline">Back to Markets</span>
+            <span className="font-black text-xs uppercase tracking-widest hidden sm:inline">Back to the Chaos</span>
           </Link>
           <h1 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-orange-500 uppercase tracking-tighter cursor-default italic">
             Vybecheck
@@ -226,7 +226,7 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="flex items-center justify-center sm:justify-start gap-3 mb-1 group/name cursor-pointer w-fit mx-auto sm:mx-0" onClick={() => setIsEditingName(true)}>
-                  <h2 className="text-xl sm:text-3xl font-black uppercase tracking-widest truncate max-w-[200px] sm:max-w-full">{nickname || 'ANONYMOUS VYBER'}</h2>
+                  <h2 className="text-xl sm:text-3xl font-black uppercase tracking-widest truncate max-w-[200px] sm:max-w-full">{nickname || 'ANONYMOUS DEGEN'}</h2>
                   <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-zinc-400 group-hover/name:bg-fuchsia-500 group-hover/name:text-white transition-colors shrink-0">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                   </div>
@@ -244,11 +244,11 @@ export default function ProfilePage() {
                       onClick={claimReliefFund}
                       className="px-3 py-1.5 bg-fuchsia-500/10 text-fuchsia-500 hover:bg-fuchsia-500 hover:text-white border border-fuchsia-500/30 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95 w-full sm:w-auto text-center"
                     >
-                      Claim Relief Fund (+50)
+                      Claim Stimmy (+50)
                     </button>
                     {showClaimTooltip && (
                       <div className="absolute top-full left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:right-0 mt-2 w-48 p-3 bg-zinc-900 dark:bg-black border border-zinc-700 dark:border-zinc-800 rounded-xl shadow-2xl z-50 animate-in fade-in zoom-in-95 text-center">
-                        <p className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest">Relief Fund Rules</p>
+                        <p className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest">Stimmy Rules</p>
                         <p className="text-[10px] text-zinc-300 mt-1">Claim is available once every 24 hours.</p>
                       </div>
                     )}
@@ -268,7 +268,7 @@ export default function ProfilePage() {
                         <li className="flex items-start gap-2"><span className="text-fuchsia-500 mt-0.5 font-bold">▪</span><span><strong>+1 XP</strong> for every 1 USDC traded.</span></li>
                         <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5 font-bold">▪</span><span><strong>+10 XP</strong> for every 1 USDC of net profit.</span></li>
                       </ul>
-                      <p className="text-[10px] text-fuchsia-400 mt-3 font-bold italic">Top 3 players win monthly airdrops.</p>
+                      <p className="text-[10px] text-fuchsia-400 mt-3 font-bold italic">Top 3 degens take the bag every month.</p>
                     </div>
                   )}
                 </div>
@@ -286,13 +286,13 @@ export default function ProfilePage() {
               <p className="text-sm sm:text-lg font-black font-mono">{activeBetsList.length}</p>
             </div>
             <div>
-              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Net Return</p>
+              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Net PNL</p>
               <p className={`text-sm sm:text-lg font-black font-mono ${netReturn > 0 ? 'text-green-500' : netReturn < 0 ? 'text-red-500' : 'text-zinc-400'}`}>
                 {netReturn > 0 ? '+' : ''}{netReturn.toFixed(2)}%
               </p>
             </div>
             <div>
-              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Win / Loss</p>
+              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">W / L</p>
               <p className="text-sm sm:text-lg font-black font-mono">
                 <span className="text-green-500">{wins}</span> <span className="text-zinc-300 dark:text-zinc-600">/</span> <span className="text-red-500">{losses}</span>
               </p>
@@ -302,9 +302,9 @@ export default function ProfilePage() {
 
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-5 md:p-8 shadow-md">
           <div className="mb-5">
-            <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-2">Payout Wallet</h3>
+            <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-2">The Bag (Payout Wallet)</h3>
             <p className="text-[9px] sm:text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-relaxed max-w-xl">
-              Add your Solana or EVM address to receive monthly USDC airdrops if you make it to the top 3 on the leaderboard.
+              Drop your Solana or EVM address. Top 3 degens on the leaderboard get blessed with real USDC airdrops every month.
             </p>
           </div>
 
@@ -321,8 +321,8 @@ export default function ProfilePage() {
           <div className="space-y-3">
             {activeBetsList.length === 0 ? (
               <div className="text-center py-8 flex flex-col items-center justify-center border border-zinc-200 dark:border-zinc-800 border-dashed rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-950/50">
-                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-4">No active bets.</p>
-                <Link href="/" className="px-5 py-2.5 rounded-xl bg-zinc-900 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">Start Trading</Link>
+                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-4">You are fading the timeline.</p>
+                <Link href="/" className="px-5 py-2.5 rounded-xl bg-zinc-900 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">Join the Chaos</Link>
               </div>
             ) : (
               activeBetsList.map((bet: any) => {
@@ -361,7 +361,7 @@ export default function ProfilePage() {
                         }}
                         className="px-4 py-2 sm:px-5 sm:py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-[9px] sm:text-[10px] rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md shrink-0"
                       >
-                        SELL
+                        CASH OUT
                       </button>
                     </div>
                   </div>
@@ -372,11 +372,11 @@ export default function ProfilePage() {
         </div>
 
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-5 md:p-8 shadow-md">
-          <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-5">History</h3>
+          <h3 className="text-base sm:text-lg font-black uppercase italic tracking-widest mb-5">The Receipts</h3>
           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {resolvedBetsList.length === 0 ? (
               <div className="text-center py-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-[1.5rem] bg-zinc-50 dark:bg-zinc-950/50">
-                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">No history yet.</p>
+                <p className="text-[9px] sm:text-[10px] text-zinc-500 font-black uppercase tracking-widest">No receipts yet.</p>
               </div>
             ) : (
               resolvedBetsList.map((bet: any) => {
@@ -405,7 +405,7 @@ export default function ProfilePage() {
                             const cleanTitle = marketDetails?.title || 'a market';
                             const link = `${window.location.origin}`; 
                             
-                            const tweetText = `Just secured a massive +${roi}% ROI ($${profit.toFixed(0)} profit) predicting "${cleanTitle}" on @Vybecheck! 🔮📈\n\nAre you fading me or following my vybe? 👀👇\n${link}`;
+                            const tweetText = `Just farmed a +${roi}% ROI ($${profit.toFixed(0)} profit) reading the chaos on "${cleanTitle}" at @Vybecheck! 🔮📈\n\nAre you fading the timeline or riding the vybe? 👀👇\n${link}`;
                             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
                           }}
                           className="mt-1 flex items-center gap-1.5 px-2 py-1 bg-black dark:bg-white text-white dark:text-black rounded text-[7px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md active:scale-95"
@@ -432,16 +432,16 @@ export default function ProfilePage() {
           </div>
           <div className="space-y-4 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
             <p>
-              <strong className="text-zinc-900 dark:text-white uppercase text-[10px] tracking-widest block mb-1">1. Culture is Predictable</strong>
-              We believe that if you know how to read the room, you can foresee the outcome. Vybecheck is built to quantify that intuition. Don't just watch the culture shift—predict it.
+              <strong className="text-zinc-900 dark:text-white uppercase text-[10px] tracking-widest block mb-1">1. Chaos is Predictable.</strong>
+              The internet is completely unhinged, but if you know how to read the timeline, you already know how this ends. Vybecheck is built to monetize that intuition. Don't just scroll through the madness—predict it.
             </p>
             <p>
-              <strong className="text-zinc-900 dark:text-white uppercase text-[10px] tracking-widest block mb-1">2. Virtual Money, Real Reputation</strong>
-              To keep the platform accessible, fun, and globally compliant, we use <strong>virtual USDC</strong>. You can't deposit real money, and you can't buy your way to the top. Your most valuable asset here is your <strong className="text-fuchsia-500">Season XP</strong>.
+              <strong className="text-zinc-900 dark:text-white uppercase text-[10px] tracking-widest block mb-1">2. Fake Money, Real Clout</strong>
+              To keep the feds away and the platform global, we use <strong>virtual USDC</strong>. You can't deposit real money, and you can't buy your way to the top. Your most valuable asset here is your <strong className="text-fuchsia-500">Season XP</strong>.
             </p>
             <p>
-              <strong className="text-zinc-900 dark:text-white uppercase text-[10px] tracking-widest block mb-1">3. The Top 3 Take It All</strong>
-              Every winning trade earns you XP. At the end of the season, the top 3 players on the leaderboard are rewarded with real-world airdrops directly to their payout wallets. Play smart, trade well, and prove you have the best vybe.
+              <strong className="text-zinc-900 dark:text-white uppercase text-[10px] tracking-widest block mb-1">3. The Top 3 Take the Bag</strong>
+              Every winning trade earns you XP. At the end of the season, the top 3 players on the leaderboard are rewarded with real-world airdrops directly to their payout wallets. Play smart, read the timeline, and prove you're the ultimate degen.
             </p>
           </div>
         </div>
